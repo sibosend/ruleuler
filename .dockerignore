@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+.kiro
+logs
+tmp
+dist
+node_modules
+**/node_modules
+**/target
+**/.DS_Store
+*.log

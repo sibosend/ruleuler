@@ -1,0 +1,26 @@
+urule:
+  debug: true
+  resporityServerUrl: http://localhost:16009
+  knowledgeUpdateCycle: 1
+
+server:
+  port: 16001
+  max-http-header-size: 4048576
+  tomcat:
+    max-http-post-size: -1  # 设置为 -1 表示无限制，允许任意大小的 POST 请求体
+    max-http-form-post-size: -1
+    max-parameter-count: 100000  # 增加参数数量限制，默认 10000，可能有助于解析
+    max-swallow-size: -1  # 设置为 -1 允许读取任意大小的请求体到内存
+
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1000MB  #单个文件的最大上限
+      max-request-size: 1000MB #单个请求的文件总大小上限
+
+log4j2:
+  formatMsgNoLookups: true
+
+name:
+  dev

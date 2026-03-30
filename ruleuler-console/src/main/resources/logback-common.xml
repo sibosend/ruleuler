@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <springProperty scope="context" name="LOG_HOME" source="logging.file.path" defaultValue="logs"/>
+    <springProperty scope="context" name="LOG_NAME" source="logging.file.name-suffix" defaultValue="app"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/${LOG_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+</included>

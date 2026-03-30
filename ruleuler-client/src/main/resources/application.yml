@@ -1,0 +1,11 @@
+spring:
+  profiles:
+    active: @profileActive@
+  main:
+    allow-circular-references: true
+
+
+logging:
+  file:
+    path: logs
+    name-suffix: client

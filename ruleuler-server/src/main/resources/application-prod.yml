@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    tomcat:
+      min-idle: 5
+      max-idle: 10
+      max-active: 50
+      test-on-borrow: true
+      test-while-idle: true
+      validation-query: SELECT 1
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      remove-abandoned: true
+      remove-abandoned-timeout: 180
+
+  jackson:
+    default-property-inclusion: non_null
+
+urule:
+  debug: false
+  console:
+    title: RulEuler v@revision@
+  admin:
+    baseUrl: ${ADMIN_BASE_URL}
+  repository:
+    databasetype: mysql
+    datasourcename: datasource
+    dir: ${URULE_REPO_DIR}
+
+server:
+  port: 16009
+
+auth:
+  jwt:
+    secret: ${AUTH_JWT_SECRET}
+    expiration-hours: ${AUTH_JWT_EXPIRATION_HOURS}

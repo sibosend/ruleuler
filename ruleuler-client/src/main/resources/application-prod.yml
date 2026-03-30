@@ -1,0 +1,20 @@
+urule:
+  debug: false
+  resporityServerUrl: ${SERVER_URL}
+  knowledgeUpdateCycle: 60
+
+server:
+  port: 16001
+  max-http-header-size: 4048576
+  tomcat:
+    max-http-post-size: -1
+    max-http-form-post-size: -1
+    max-parameter-count: 100000
+    max-swallow-size: -1
+
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1000MB
+      max-request-size: 1000MB

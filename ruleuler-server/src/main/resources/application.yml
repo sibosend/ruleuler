@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    active: @profileActive@
+  main:
+    allow-circular-references: true
+    allow-bean-definition-overriding: true
+
+logging:
+  file:
+    path: logs
+    name-suffix: server
+

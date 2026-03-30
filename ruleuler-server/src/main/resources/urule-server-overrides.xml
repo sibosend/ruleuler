@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 覆盖 console 模块的 frameServletHandler，注入 storageType ThreadLocal -->
+    <bean id="urule.frameServletHandler" class="com.caritasem.ruleuler.server.servlet.StorageAwareFrameServletHandler">
+        <property name="repositoryService" ref="urule.repositoryService"/>
+        <property name="welcomePage" value="${urule.welcomePage}"/>
+        <property name="title" value="${urule.console.title}"/>
+    </bean>
+
+    <!-- JCR 存储委托（bstek 文件，package 未迁移，需显式声明以确保被扫描到） -->
+    <bean id="jcrRepositoryDelegate" class="com.urule.server.repository.JcrRepositoryDelegate"/>
+
+    <!-- 覆盖 console 模块的 repositoryService，使用路由器版本 -->
+    <bean id="urule.repositoryService" class="com.urule.server.repository.RepositoryServiceRouter"/>
+
+    <!-- JdbcTemplate for autotest DAO -->
+    <bean id="urule.jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg ref="datasource"/>
+    </bean>
+
+</beans>

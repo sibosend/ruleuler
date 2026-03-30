@@ -1,0 +1,82 @@
+name: ruleuler
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruleuler_data}
+      MYSQL_USER: ${MYSQL_USER:-ruleuler}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./deploy/example_airport_gate.sql:/docker-entrypoint-initdb.d/02-example.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --character-set-client-handshake=FALSE
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  server:
+    build:
+      context: .
+      target: server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${SERVER_PORT:-16009}:16009"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-ruleuler_data}?useUnicode=true&characterEncoding=utf-8&autoReconnect=true
+      DB_USERNAME: ${MYSQL_USER:-ruleuler}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_JWT_EXPIRATION_HOURS: ${AUTH_JWT_EXPIRATION_HOURS:-24}
+      ADMIN_BASE_URL: ${ADMIN_BASE_URL:-http://localhost:16009/admin}
+      URULE_REPO_DIR: /app/urule-repo
+      JAVA_OPTS: ${SERVER_JAVA_OPTS:--Xms512m -Xmx2g}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${LOG_DIR:-./logs}/server:/app/logs
+      - urule_repo:/app/urule-repo
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  client:
+    build:
+      context: .
+      target: client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${CLIENT_PORT:-16001}:16001"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_URL: http://server:16009
+      JAVA_OPTS: ${CLIENT_JAVA_OPTS:--Xms256m -Xmx1g}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${LOG_DIR:-./logs}/client:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+volumes:
+  mysql_data:
+  urule_repo:

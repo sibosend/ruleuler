@@ -1,0 +1,37 @@
+RulEuler Rule Engine
+Copyright 2024-2026 RulEuler Contributors
+
+This product includes software developed by Bstek (http://www.bstek.com/).
+
+The following components are included under the Apache License 2.0:
+
+- URule (com.bstek.urule)
+  Copyright 2017 Bstek
+  Licensed under the Apache License, Version 2.0
+  https://github.com/youseries/urule
+
+This product also includes the following third-party dependencies:
+
+- Spring Boot (https://spring.io/projects/spring-boot)
+  Copyright Pivotal Software, Inc.
+  Licensed under the Apache License, Version 2.0
+
+- Apache Jackrabbit (https://jackrabbit.apache.org/)
+  Copyright The Apache Software Foundation
+  Licensed under the Apache License, Version 2.0
+
+- Apache Velocity (https://velocity.apache.org/)
+  Copyright The Apache Software Foundation
+  Licensed under the Apache License, Version 2.0
+
+- Apache POI (https://poi.apache.org/)
+  Copyright The Apache Software Foundation
+  Licensed under the Apache License, Version 2.0
+
+- Ant Design (https://ant.design/)
+  Copyright Ant Group Co., Ltd.
+  Licensed under the MIT License
+
+- React (https://react.dev/)
+  Copyright Meta Platforms, Inc.
+  Licensed under the MIT License

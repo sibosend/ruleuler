@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MYSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+auth:
+  jwt:
+    secret: test-secret-key-that-is-at-least-32-bytes-long!!
+    expiration-hours: 1
