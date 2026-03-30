@@ -1,0 +1,22 @@
+/* section 标题（快速开始、使用指南…）*/
+.md-nav__item--section > .md-nav__link {
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+}
+
+/* section 下的子导航容器 — 整体缩进 */
+.md-nav__item--section > nav.md-nav {
+  margin-left: 16px !important;
+}
+
+/* section 之间加分隔线 */
+.md-nav__item--section + .md-nav__item--section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* 子项字号略小 */
+.md-nav__item--section > nav.md-nav .md-nav__link {
+  font-size: 0.72rem !important;
+}
