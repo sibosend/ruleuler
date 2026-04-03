@@ -18,3 +18,11 @@ spring:
       enabled: true
       max-file-size: 1000MB
       max-request-size: 1000MB
+
+monitoring:
+  enabled: true
+  clickhouse:
+    jdbc-url: ${CLICKHOUSE_URL}
+    batch-size: 500
+    flush-interval-ms: 1000
+    queue-capacity: 50000

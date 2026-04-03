@@ -3,6 +3,7 @@ import {
   DashboardOutlined,
   ProjectOutlined,
   CodeOutlined,
+  MonitorOutlined,
   SettingOutlined,
   UserOutlined,
   SafetyOutlined,
@@ -82,6 +83,30 @@ export const routeConfigs: RouteConfig[] = [
     path: '/console/:project/edit/*',
     label: '规则编辑器',
     permissionCode: 'menu:console',
+    hideInMenu: true,
+  },
+  {
+    path: '/monitoring',
+    label: '变量监控',
+    icon: <MonitorOutlined />,
+    permissionCode: 'menu:monitoring',
+  },
+  {
+    path: '/monitoring/compare',
+    label: '周期对比',
+    permissionCode: 'menu:monitoring',
+    hideInMenu: true,
+  },
+  {
+    path: '/monitoring/executions',
+    label: '执行日志',
+    permissionCode: 'menu:monitoring',
+    hideInMenu: true,
+  },
+  {
+    path: '/monitoring/executions/:id',
+    label: '执行详情',
+    permissionCode: 'menu:monitoring',
     hideInMenu: true,
   },
   {

@@ -343,3 +343,52 @@ CREATE TABLE IF NOT EXISTS `ruleuler_test_segment` (
   KEY `idx_run` (`run_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- ============================================================
+-- 5. 变量监控表
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_variable_daily_stats` (
+    `id`              BIGINT NOT NULL AUTO_INCREMENT,
+    `project`         VARCHAR(255) NOT NULL,
+    `package_id`      VARCHAR(255) NOT NULL,
+    `var_category`    VARCHAR(255) NOT NULL,
+    `var_name`        VARCHAR(255) NOT NULL,
+    `var_type`        VARCHAR(50)  NOT NULL,
+    `io_type`         VARCHAR(10)  NOT NULL COMMENT 'input / output',
+    `stat_date`       DATE         NOT NULL,
+    -- 通用指标
+    `sample_count`    INT          NOT NULL DEFAULT 0,
+    `missing_rate`    DOUBLE       DEFAULT NULL,
+    -- 数值型指标
+    `mean`            DOUBLE       DEFAULT NULL,
+    `std`             DOUBLE       DEFAULT NULL,
+    `min_val`         DOUBLE       DEFAULT NULL,
+    `p25`             DOUBLE       DEFAULT NULL,
+    `p50`             DOUBLE       DEFAULT NULL,
+    `p75`             DOUBLE       DEFAULT NULL,
+    `max_val`         DOUBLE       DEFAULT NULL,
+    `skewness`        DOUBLE       DEFAULT NULL,
+    `outlier_count`   INT          DEFAULT NULL,
+    `outlier_rate`    DOUBLE       DEFAULT NULL,
+    -- 类别型指标
+    `distinct_count`  INT          DEFAULT NULL,
+    `top_value`       VARCHAR(500) DEFAULT NULL,
+    `top_freq_ratio`  DOUBLE       DEFAULT NULL,
+    -- 告警
+    `alert_flags`     VARCHAR(255) DEFAULT NULL COMMENT '逗号分隔的告警类型',
+    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_var_date` (`project`, `package_id`, `var_category`, `var_name`, `io_type`, `stat_date`),
+    KEY `idx_stat_date` (`stat_date`),
+    KEY `idx_project_pkg` (`project`, `package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 监控菜单权限
+INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `parent_id`, `sort_order`) VALUES
+(20, 'menu:monitoring', '变量监控', 'menu', NULL, 5),
+(21, 'api:GET:/api/monitoring/*', '监控数据查询', 'api', NULL, 40);
+
+-- 分配给 admin 角色
+INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`) VALUES (1, 20), (1, 21);

@@ -22,5 +22,13 @@ spring:
 log4j2:
   formatMsgNoLookups: true
 
+monitoring:
+  enabled: true
+  clickhouse:
+    jdbc-url: jdbc:ch://localhost:8123/default
+    batch-size: 500
+    flush-interval-ms: 1000
+    queue-capacity: 50000
+
 name:
   dev

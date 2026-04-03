@@ -37,3 +37,12 @@ auth:
   jwt:
     secret: ${AUTH_JWT_SECRET}
     expiration-hours: ${AUTH_JWT_EXPIRATION_HOURS}
+
+monitoring:
+  enabled: true
+  clickhouse:
+    jdbc-url: ${CLICKHOUSE_URL}
+  alert:
+    missing-rate-max: 0.05
+    outlier-rate-max: 0.03
+    skewness-abs-max: 2.0

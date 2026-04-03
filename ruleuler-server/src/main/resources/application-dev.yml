@@ -47,5 +47,14 @@ auth:
     secret: dev-only-secret-key-that-is-at-least-32-bytes!!
     expiration-hours: 24
 
+monitoring:
+  enabled: true
+  clickhouse:
+    jdbc-url: jdbc:ch://localhost:8123/default
+  alert:
+    missing-rate-max: 0.05
+    outlier-rate-max: 0.03
+    skewness-abs-max: 2.0
+
 name:
   dev

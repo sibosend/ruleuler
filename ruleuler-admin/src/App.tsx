@@ -19,6 +19,11 @@ const PackListPage = React.lazy(() => import('@/pages/autotest/PackListPage'));
 const PackDetailPage = React.lazy(() => import('@/pages/autotest/PackDetailPage'));
 const TestReportPage = React.lazy(() => import('@/pages/autotest/TestReportPage'));
 
+const MonitoringPage = React.lazy(() => import('@/pages/monitoring/MonitoringPage'));
+const PeriodComparePage = React.lazy(() => import('@/pages/monitoring/PeriodComparePage'));
+const ExecutionLogPage = React.lazy(() => import('@/pages/monitoring/ExecutionLogPage'));
+const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/ExecutionDetailPage'));
+
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
     <Routes>
@@ -109,6 +114,38 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:console">
               <ConsolePage />
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><MonitoringPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/compare"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><PeriodComparePage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/executions"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><ExecutionLogPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/executions/:id"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><ExecutionDetailPage /></Suspense>
             </AuthorizedRoute>
           }
         />

@@ -27,6 +27,19 @@ services:
         limits:
           memory: 1g
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    restart: unless-stopped
+    ports:
+      - "${CLICKHOUSE_PORT:-8123}:8123"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./deploy/clickhouse/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+
   server:
     build:
       context: .
@@ -35,6 +48,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      clickhouse:
+        condition: service_started
     ports:
       - "${SERVER_PORT:-16009}:16009"
     environment:
@@ -46,6 +61,7 @@ services:
       AUTH_JWT_EXPIRATION_HOURS: ${AUTH_JWT_EXPIRATION_HOURS:-24}
       ADMIN_BASE_URL: ${ADMIN_BASE_URL:-http://localhost:16009/admin}
       URULE_REPO_DIR: /app/urule-repo
+      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-jdbc:ch://clickhouse:8123/default}
       JAVA_OPTS: ${SERVER_JAVA_OPTS:--Xms512m -Xmx2g}
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
@@ -63,11 +79,13 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+      - clickhouse
     ports:
       - "${CLIENT_PORT:-16001}:16001"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_URL: http://server:16009
+      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-jdbc:ch://clickhouse:8123/default}
       JAVA_OPTS: ${CLIENT_JAVA_OPTS:--Xms256m -Xmx1g}
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
@@ -80,3 +98,4 @@ services:
 volumes:
   mysql_data:
   urule_repo:
+  clickhouse_data:

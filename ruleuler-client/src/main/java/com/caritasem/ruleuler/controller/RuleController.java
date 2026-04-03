@@ -8,6 +8,7 @@ import com.bstek.urule.runtime.KnowledgeSession;
 import com.bstek.urule.runtime.KnowledgeSessionFactory;
 import com.bstek.urule.runtime.service.KnowledgeService;
 import com.caritasem.ruleuler.dto.RespDTO;
+import com.caritasem.ruleuler.monitoring.VarEventProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Desc
@@ -31,6 +33,9 @@ public class RuleController {
 
     @Autowired
     private WebServerApplicationContext webServerAppContext;
+
+    @Autowired(required = false)
+    private VarEventProducer varEventProducer;
 
     private static Logger log = LoggerFactory.getLogger(RuleController.class);
 
@@ -60,6 +65,8 @@ public class RuleController {
             @PathVariable String project,
             @PathVariable String process,
             @PathVariable String knowledge) {
+        String executionId = UUID.randomUUID().toString();
+        long startMs = System.currentTimeMillis();
         try {
             KnowledgeService knowledgeService = (KnowledgeService) Utils.getApplicationContext()
                     .getBean(KnowledgeService.BEAN_ID);
@@ -112,9 +119,30 @@ public class RuleController {
                     result.put(category, varOutput);
                 }
             }
+
+            // 监控采集 — 成功路径
+            long execMs = System.currentTimeMillis() - startMs;
+            if (varEventProducer != null) {
+                try {
+                    varEventProducer.produceSuccess(executionId, project, knowledgePackageId, process,
+                            execMs, body, entities, session, knowledgePackage);
+                } catch (Exception ex) {
+                    log.warn("监控采集异常", ex);
+                }
+            }
+
             return new RespDTO(200, "ok", result);
 
         } catch (Exception e) {
+            // 监控采集 — 失败路径
+            long execMs = System.currentTimeMillis() - startMs;
+            if (varEventProducer != null) {
+                try {
+                    varEventProducer.produceFailure(executionId, project, project + "/" + knowledge, process, execMs);
+                } catch (Exception ex) {
+                    log.warn("监控采集异常", ex);
+                }
+            }
             e.printStackTrace();
             return new RespDTO(500, e.getMessage());
         }
