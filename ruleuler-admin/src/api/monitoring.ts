@@ -55,3 +55,94 @@ export async function fetchExecutionDetail(id: string) {
   const res = await request.get(`/api/monitoring/executions/${id}`);
   return res.data.data;
 }
+
+// 实时大盘
+export async function fetchRealtimeDashboard(params: {
+  project: string;
+  packageId: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/dashboard', { params });
+  return res.data.data;
+}
+
+// 实时变量列表
+export async function fetchRealtimeVariables(params: {
+  project: string;
+  packageId: string;
+  ioType?: string;
+  sortBy?: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/variables', { params });
+  return res.data.data;
+}
+
+// 实时变量列表（含 DoD/WoW 对比）
+export async function fetchRealtimeVariablesWithComparison(params: {
+  project: string;
+  packageId: string;
+  ioType?: string;
+  sortBy?: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/variables-with-comparison', { params });
+  return res.data.data;
+}
+
+// PSI 分布稳定性指数
+export async function fetchRealtimePsi(params: {
+  project: string;
+  packageId: string;
+  varCategory: string;
+  varName: string;
+  ioType?: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/psi', { params });
+  return res.data.data;
+}
+
+// 枚举漂移检测
+export async function fetchRealtimeEnumDrift(params: {
+  project: string;
+  packageId: string;
+  ioType?: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/enum-drift', { params });
+  return res.data.data;
+}
+
+// 实时缺失率趋势
+export async function fetchRealtimeMissingRateTrend(params: {
+  project: string;
+  packageId: string;
+  varCategory: string;
+  varName: string;
+  ioType?: string;
+}) {
+  const res = await request.get('/api/monitoring/realtime/missing-rate-trend', { params });
+  return res.data.data;
+}
+
+// 版本对比
+export async function fetchVersionCompare(body: {
+  project: string;
+  packageId: string;
+  versionA: string;
+  versionB: string;
+}) {
+  const res = await request.post('/api/monitoring/realtime/version-compare', body);
+  return res.data.data;
+}
+
+// 异常记录下钻
+export async function fetchAnomalyRecords(params: {
+  project: string;
+  packageId: string;
+  varCategory: string;
+  varName: string;
+  ioType?: string;
+  anomalyType?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const res = await request.get('/api/monitoring/realtime/anomaly-records', { params });
+  return res.data.data;
+}

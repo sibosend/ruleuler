@@ -14,22 +14,20 @@ import java.util.List;
 @ConditionalOnProperty(name = "monitoring.enabled", havingValue = "true")
 public class AlertChecker {
 
-    @Value("${monitoring.alert.missing-rate-max:0.05}")
-    private double missingRateMax;
+    private final AlertConfigService configService;
 
-    @Value("${monitoring.alert.outlier-rate-max:0.03}")
-    private double outlierRateMax;
-
-    @Value("${monitoring.alert.skewness-abs-max:2.0}")
-    private double skewnessAbsMax;
+    public AlertChecker(AlertConfigService configService) {
+        this.configService = configService;
+    }
 
     /**
      * 检查统计指标，返回告警标记（逗号分隔的告警类型）。
      * 返回 null 表示无告警。
      */
     public String check(AggregationJob.DailyStatRow row) {
+        AlertConfig config = configService.getCachedConfig();
         return check(row.missingRate, row.outlierRate, row.skewness,
-                missingRateMax, outlierRateMax, skewnessAbsMax);
+                config.getMissingRateMax(), config.getOutlierRateMax(), config.getSkewnessAbsMax());
     }
 
     /**

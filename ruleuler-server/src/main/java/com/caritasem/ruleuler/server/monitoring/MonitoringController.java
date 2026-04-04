@@ -38,6 +38,9 @@ public class MonitoringController {
     @Qualifier("clickHouseDataSource")
     private DataSource clickHouseDs;
 
+    @Autowired
+    private AlertConfigService alertConfigService;
+
     /**
      * 变量列表 + 最新指标摘要（MySQL）。
      * 默认只展示最近7天有数据的活跃变量，showAll=true 展示全部。
@@ -181,6 +184,21 @@ public class MonitoringController {
                 """;
         List<Map<String, Object>> rows = queryClickHouse(sql, id);
         return ApiResult.ok(rows);
+    }
+
+    @GetMapping("/alert-config")
+    public ApiResult getAlertConfig() {
+        return ApiResult.ok(alertConfigService.getCachedConfig());
+    }
+
+    @PutMapping("/alert-config")
+    public ApiResult updateAlertConfig(@RequestBody AlertConfig config) {
+        try {
+            alertConfigService.update(config);
+            return ApiResult.ok(null);
+        } catch (IllegalArgumentException e) {
+            return ApiResult.error(400, e.getMessage());
+        }
     }
 
     // ---- 内部方法 ----

@@ -392,3 +392,27 @@ INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `
 
 -- 分配给 admin 角色
 INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`) VALUES (1, 20), (1, 21);
+
+-- ============================================================
+-- 6. 监控告警配置表
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_monitoring_alert_config` (
+    `id`                        INT NOT NULL DEFAULT 1,
+    `missing_rate_max`          DOUBLE NOT NULL DEFAULT 0.05,
+    `missing_rate_spike_delta`  DOUBLE NOT NULL DEFAULT 0.1,
+    `outlier_rate_max`          DOUBLE NOT NULL DEFAULT 0.03,
+    `skewness_abs_max`          DOUBLE NOT NULL DEFAULT 2.0,
+    `psi_warning`               DOUBLE NOT NULL DEFAULT 0.1,
+    `psi_alert`                 DOUBLE NOT NULL DEFAULT 0.2,
+    `enum_drift_threshold`      DOUBLE NOT NULL DEFAULT 0.15,
+    `updated_at`                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    CONSTRAINT `chk_single_row` CHECK (`id` = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 默认配置
+INSERT IGNORE INTO `ruleuler_monitoring_alert_config`
+    (`id`, `missing_rate_max`, `missing_rate_spike_delta`, `outlier_rate_max`,
+     `skewness_abs_max`, `psi_warning`, `psi_alert`, `enum_drift_threshold`)
+VALUES (1, 0.05, 0.1, 0.03, 2.0, 0.1, 0.2, 0.15);

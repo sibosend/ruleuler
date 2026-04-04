@@ -94,20 +94,41 @@ public class VarEventProducer {
         // 3. 参数输出
         Map<String, Object> params = session.getParameters();
         Map<String, String> paramDefs = knowledgePackage.getParameters();
-        if (params != null && paramDefs != null) {
+        if (params != null) {
             for (Map.Entry<String, Object> entry : params.entrySet()) {
                 String paramName = entry.getKey();
-                String typeName = paramDefs.get(paramName);
-                if (typeName == null) continue;
-
-                Datatype dt;
-                try {
-                    dt = Datatype.valueOf(typeName);
-                } catch (IllegalArgumentException e) {
-                    continue;
+                Object paramValue = entry.getValue();
+                String typeName = paramDefs != null ? paramDefs.get(paramName) : null;
+                
+                Datatype dt = null;
+                if (typeName != null) {
+                    try {
+                        dt = Datatype.valueOf(typeName);
+                    } catch (IllegalArgumentException e) {
+                        dt = null;
+                    }
+                }
+                
+                // 类型未定义时，根据实际值推断，保障参数监控不丢
+                if (dt == null) {
+                    if (paramValue == null) {
+                        dt = Datatype.String;
+                    } else if (paramValue instanceof Integer) {
+                        dt = Datatype.Integer;
+                    } else if (paramValue instanceof Long) {
+                        dt = Datatype.Long;
+                    } else if (paramValue instanceof Float || paramValue instanceof Double) {
+                        dt = Datatype.Double;
+                    } else if (paramValue instanceof Boolean) {
+                        dt = Datatype.Boolean;
+                    } else if (paramValue instanceof java.util.Date) {
+                        dt = Datatype.Date;
+                    } else {
+                        dt = Datatype.String; // Fallback
+                    }
                 }
 
-                VarTypeMapper.MapResult mr = VarTypeMapper.map(dt, entry.getValue());
+                VarTypeMapper.MapResult mr = VarTypeMapper.map(dt, paramValue);
                 if (mr.skip()) continue;
 
                 offer(new VarLogRow(executionId, project, packageId, flowId,

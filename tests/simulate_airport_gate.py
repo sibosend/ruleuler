@@ -38,6 +38,13 @@ def send_request(url):
         body = str(e)
     
     elapsed = time.time() - start_time
+    # Parse RespDTO from json
+    try:
+        data = json.loads(body)
+        if data.get('code') != 200:
+            status = data.get('code', 500)
+    except Exception:
+        pass
     return status, elapsed, body
 
 def main():
