@@ -380,9 +380,9 @@ CREATE TABLE IF NOT EXISTS `ruleuler_variable_daily_stats` (
     `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_var_date` (`project`, `package_id`, `var_category`, `var_name`, `io_type`, `stat_date`),
+    UNIQUE KEY `uk_var_date` (`project`(80), `package_id`(80), `var_category`(80), `var_name`(80), `io_type`, `stat_date`),
     KEY `idx_stat_date` (`stat_date`),
-    KEY `idx_project_pkg` (`project`, `package_id`)
+    KEY `idx_project_pkg` (`project`(80), `package_id`(80))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 监控菜单权限
