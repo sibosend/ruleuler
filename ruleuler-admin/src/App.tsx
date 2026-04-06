@@ -23,6 +23,7 @@ const MonitoringPage = React.lazy(() => import('@/pages/monitoring/MonitoringPag
 const PeriodComparePage = React.lazy(() => import('@/pages/monitoring/PeriodComparePage'));
 const ExecutionLogPage = React.lazy(() => import('@/pages/monitoring/ExecutionLogPage'));
 const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/ExecutionDetailPage'));
+const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
 
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
@@ -128,6 +129,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:monitoring">
               <Suspense fallback={<div>Loading...</div>}><MonitoringPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/trend"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><ExecutionTrendPage /></Suspense>
             </AuthorizedRoute>
           }
         />

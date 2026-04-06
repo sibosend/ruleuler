@@ -12,6 +12,7 @@ import {
   fetchRealtimeVariablesWithComparison, fetchRealtimePsi, fetchRealtimeEnumDrift,
   fetchAnomalyRecords, fetchVersionCompare, fetchDailyTrend,
 } from '../../api/monitoring';
+import IntradayChart from './components/IntradayChart';
 import { Line } from '@ant-design/charts';
 
 interface Variable {
@@ -562,6 +563,11 @@ const MonitoringPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* 当日分时走势 */}
+      {project && packageId && (
+        <IntradayChart project={project} packageId={packageId} autoRefresh={autoRefresh} />
+      )}
 
       {/* 近14日走势图 */}
       {dailyTrend.length > 0 && (

@@ -142,6 +142,26 @@ export async function fetchDailyTrend(params: {
   return res.data.data;
 }
 
+// 分时走势（5分钟粒度）
+export interface IntradayTrendPoint {
+  window_start: string;
+  sample_count: number;
+  missing_count: number;
+  error_count: number;
+  anomaly_rate: number;
+  error_rate: number;
+  day_type: 'target' | 'previous';
+}
+
+export async function fetchIntradayTrend(params: {
+  project: string;
+  packageId: string;
+  date?: string;
+}): Promise<IntradayTrendPoint[]> {
+  const res = await request.get('/api/monitoring/realtime/intraday-trend', { params });
+  return res.data.data;
+}
+
 // 异常记录下钻
 export async function fetchAnomalyRecords(params: {
   project: string;

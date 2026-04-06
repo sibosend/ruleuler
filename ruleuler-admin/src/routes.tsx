@@ -97,6 +97,11 @@ export const routeConfigs: RouteConfig[] = [
         permissionCode: 'menu:monitoring',
       },
       {
+        path: '/monitoring/trend',
+        label: '执行走势',
+        permissionCode: 'menu:monitoring',
+      },
+      {
         path: '/monitoring/compare',
         label: '周期对比',
         permissionCode: 'menu:monitoring',

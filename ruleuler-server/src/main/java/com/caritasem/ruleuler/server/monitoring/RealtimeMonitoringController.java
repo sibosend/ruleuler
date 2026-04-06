@@ -622,6 +622,82 @@ public class RealtimeMonitoringController {
     /**
      * 近N日执行量走势（执行量 + 异常率/错误率）。
      */
+    /**
+     * 分时走势（5分钟粒度），支持指定日期和前一天对比。
+     * Feature: monitoring-execution-trend, Requirements 1.1-1.6
+     */
+    @GetMapping("/intraday-trend")
+    public ApiResult intradayTrend(@RequestParam String project,
+                                   @RequestParam String packageId,
+                                   @RequestParam(required = false) String date) {
+        // 参数校验
+        if (project == null || project.isBlank()) {
+            return ApiResult.error(400, "project is required");
+        }
+        if (packageId == null || packageId.isBlank()) {
+            return ApiResult.error(400, "packageId is required");
+        }
+
+        // 日期处理：默认当天
+        String targetDate = (date != null && !date.isBlank()) ? date : java.time.LocalDate.now().toString();
+        String previousDate = java.time.LocalDate.parse(targetDate).minusDays(1).toString();
+
+        String sql = """
+            SELECT
+                formatDateTime(window_start, '%H:%M') AS window_time,
+                sum(sample_count) AS sample_count,
+                sum(missing_count) AS missing_count,
+                sum(error_count) AS error_count,
+                ?
+            FROM execution_var_log_5m
+            WHERE project = ? AND package_id IN (?, ?)
+              AND io_type = 'input'
+              AND toDate(window_start) = ?
+            GROUP BY window_time
+            ORDER BY window_time ASC
+        """;
+
+        List<Map<String, Object>> results = new ArrayList<>();
+
+        // 查询目标日
+        List<Map<String, Object>> targetRows = queryClickHouse(sql, "target", project, packageId, project + "/" + packageId, targetDate);
+        for (Map<String, Object> row : targetRows) {
+            long sample = ((Number) row.get("sample_count")).longValue();
+            long missing = ((Number) row.get("missing_count")).longValue();
+            long error = ((Number) row.get("error_count")).longValue();
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("window_start", row.get("window_time"));
+            item.put("sample_count", sample);
+            item.put("missing_count", missing);
+            item.put("error_count", error);
+            item.put("anomaly_rate", sample > 0 ? (double) missing / sample : 0.0);
+            item.put("error_rate", sample > 0 ? (double) error / sample : 0.0);
+            item.put("day_type", "target");
+            results.add(item);
+        }
+
+        // 查询前一天
+        List<Map<String, Object>> previousRows = queryClickHouse(sql, "previous", project, packageId, project + "/" + packageId, previousDate);
+        for (Map<String, Object> row : previousRows) {
+            long sample = ((Number) row.get("sample_count")).longValue();
+            long missing = ((Number) row.get("missing_count")).longValue();
+            long error = ((Number) row.get("error_count")).longValue();
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("window_start", row.get("window_time"));
+            item.put("sample_count", sample);
+            item.put("missing_count", missing);
+            item.put("error_count", error);
+            item.put("anomaly_rate", sample > 0 ? (double) missing / sample : 0.0);
+            item.put("error_rate", sample > 0 ? (double) error / sample : 0.0);
+            item.put("day_type", "previous");
+            results.add(item);
+        }
+
+        return ApiResult.ok(results);
+    }
+
     @GetMapping("/daily-trend")
     public ApiResult dailyTrend(@RequestParam String project,
                                 @RequestParam String packageId,
