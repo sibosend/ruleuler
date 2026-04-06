@@ -10,7 +10,7 @@ import { listPackages } from '../../api/autotest';
 import {
   fetchRealtimeVariables, fetchRealtimeDashboard, fetchRealtimeMissingRateTrend,
   fetchRealtimeVariablesWithComparison, fetchRealtimePsi, fetchRealtimeEnumDrift,
-  fetchAnomalyRecords, fetchVersionCompare,
+  fetchAnomalyRecords, fetchVersionCompare, fetchDailyTrend,
 } from '../../api/monitoring';
 import { Line } from '@ant-design/charts';
 
@@ -62,6 +62,7 @@ const MonitoringPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<any>(null);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [varLoading, setVarLoading] = useState(false);
+  const [dailyTrend, setDailyTrend] = useState<any[]>([]);
 
   // --- drawer state ---
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -137,14 +138,16 @@ const MonitoringPage: React.FC = () => {
     if (!project || !packageId) return;
     if (!silent) setVarLoading(true);
     try {
-      const [dashRet, varsRet, driftRet] = await Promise.all([
+      const [dashRet, varsRet, driftRet, trendRet] = await Promise.all([
         fetchRealtimeDashboard({ project, packageId }),
         fetchRealtimeVariablesWithComparison({ project, packageId, ioType, sortBy })
           .catch(() => fetchRealtimeVariables({ project, packageId, ioType, sortBy })),
         fetchRealtimeEnumDrift({ project, packageId, ioType }).catch(() => []),
+        fetchDailyTrend({ project, packageId, days: 14 }).catch(() => []),
       ]);
       setDashboard(dashRet);
       setVariables(Array.isArray(varsRet) ? varsRet : []);
+      setDailyTrend(Array.isArray(trendRet) ? trendRet : []);
       setLastRefresh(new Date());
 
       const driftMap: Record<string, { enum_drift: boolean; top_value_changed: boolean }> = {};
@@ -303,6 +306,22 @@ const MonitoringPage: React.FC = () => {
   }), [chartData, spikeTimes]);
 
   // --- variable folding: show first 20 anomaly vars, rest collapsed ---
+
+  // --- daily trend chart data ---
+  const execVolumeData = useMemo(() => {
+    return dailyTrend.flatMap(d => [
+      { date: d.stat_date, value: d.total_executions, type: '总执行量' },
+      { date: d.stat_date, value: d.missing_executions, type: '缺失量' },
+      { date: d.stat_date, value: d.error_executions, type: '错误量' },
+    ]);
+  }, [dailyTrend]);
+
+  const rateTrendData = useMemo(() => {
+    return dailyTrend.flatMap(d => [
+      { date: d.stat_date, value: +(d.anomaly_rate * 100).toFixed(2), type: '异常率(%)' },
+      { date: d.stat_date, value: +(d.error_rate * 100).toFixed(2), type: '错误率(%)' },
+    ]);
+  }, [dailyTrend]);
   const displayedVariables = useMemo(() => {
     if (showAllVars) return variables;
     return variables.slice(0, 20);
@@ -543,6 +562,22 @@ const MonitoringPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* 近14日走势图 */}
+      {dailyTrend.length > 0 && (
+        <Row gutter={16}>
+          <Col span={14}>
+            <Card size="small" title="近14日执行量走势">
+              <Line data={execVolumeData} xField="date" yField="value" colorField="type" height={220} />
+            </Card>
+          </Col>
+          <Col span={10}>
+            <Card size="small" title="近14日异常率/错误率走势">
+              <Line data={rateTrendData} xField="date" yField="value" colorField="type" height={220} />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* 中间漂移表 — 抽屉打开时压缩为 60% */}
       <div style={{ width: drawerOpen ? '60%' : '100%', transition: 'width 0.3s ease' }}>

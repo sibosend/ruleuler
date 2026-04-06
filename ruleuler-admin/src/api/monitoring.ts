@@ -132,6 +132,16 @@ export async function fetchVersionCompare(body: {
   return res.data.data;
 }
 
+// 近N日执行量走势
+export async function fetchDailyTrend(params: {
+  project: string;
+  packageId: string;
+  days?: number;
+}) {
+  const res = await request.get('/api/monitoring/realtime/daily-trend', { params });
+  return res.data.data;
+}
+
 // 异常记录下钻
 export async function fetchAnomalyRecords(params: {
   project: string;

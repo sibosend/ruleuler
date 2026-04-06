@@ -620,6 +620,48 @@ public class RealtimeMonitoringController {
     }
 
     /**
+     * 近N日执行量走势（执行量 + 异常率/错误率）。
+     */
+    @GetMapping("/daily-trend")
+    public ApiResult dailyTrend(@RequestParam String project,
+                                @RequestParam String packageId,
+                                @RequestParam(defaultValue = "14") int days) {
+        String sql = """
+            SELECT
+                toDate(window_start) AS stat_date,
+                sum(sample_count) AS total_executions,
+                sum(error_count) AS error_executions,
+                sum(missing_count) AS missing_executions
+            FROM execution_var_log_5m
+            WHERE project = ? AND package_id IN (?, ?)
+              AND io_type = 'input'
+              AND toDate(window_start) >= today() - ?
+            GROUP BY stat_date
+            ORDER BY stat_date ASC
+        """;
+
+        List<Map<String, Object>> rows = queryClickHouse(sql, project, packageId, project + "/" + packageId, days);
+
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            long total = ((Number) row.get("total_executions")).longValue();
+            long errors = ((Number) row.get("error_executions")).longValue();
+            long missing = ((Number) row.get("missing_executions")).longValue();
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("stat_date", row.get("stat_date").toString());
+            item.put("total_executions", total);
+            item.put("error_executions", errors);
+            item.put("missing_executions", missing);
+            item.put("error_rate", total > 0 ? (double) errors / total : 0.0);
+            item.put("anomaly_rate", total > 0 ? (double) missing / total : 0.0);
+            results.add(item);
+        }
+
+        return ApiResult.ok(results);
+    }
+
+    /**
      * 变量列表 + DoD/WoW 对比数据。
      * Feature: monitoring-realtime-enhancement, Requirements 7.1, 7.2
      */
