@@ -303,8 +303,12 @@ public class RealtimeMonitoringController {
     @GetMapping("/enum-drift")
     public ApiResult enumDrift(@RequestParam String project,
                                @RequestParam String packageId,
-                               @RequestParam(defaultValue = "input") String ioType) {
-        // 1. 从 ClickHouse 查当日类别型变量的 val_str 频率分布
+                               @RequestParam(defaultValue = "input") String ioType,
+                               @RequestParam(required = false) String date) {
+        LocalDate targetDate = (date != null && !date.isBlank())
+                ? LocalDate.parse(date) : LocalDate.now();
+
+        // 1. 从 ClickHouse 查目标日期类别型变量的 val_str 频率分布
         String varTypeIn = AggregationJob.CATEGORICAL_TYPES.stream()
                 .map(t -> "'" + t + "'")
                 .collect(java.util.stream.Collectors.joining(","));
@@ -313,7 +317,7 @@ public class RealtimeMonitoringController {
             SELECT var_category, var_name, val_str, count() AS cnt
             FROM execution_var_log
             WHERE project = ? AND package_id IN (?, ?) AND io_type = ?
-              AND toDate(created_at) = today()
+              AND toDate(created_at) = ?
               AND var_type IN (%s)
               AND var_name != ''
             GROUP BY var_category, var_name, val_str
@@ -321,7 +325,7 @@ public class RealtimeMonitoringController {
         """.formatted(varTypeIn);
 
         List<Map<String, Object>> currentRows = queryClickHouse(currentSql,
-                project, packageId, project + "/" + packageId, ioType);
+                project, packageId, project + "/" + packageId, ioType, targetDate.toString());
 
         // 按 (var_category, var_name) 分组，取第一行作为 top_value
         record VarKey(String varCategory, String varName) {}
@@ -353,18 +357,20 @@ public class RealtimeMonitoringController {
             currentTopFreqRatio.put(key, total > 0 ? (double) topCount / total : 0.0);
         }
 
-        // 2. 从 MySQL daily_stats 获取过去 7 天基准
+        // 2. 从 MySQL daily_stats 获取目标日期前 7 天基准
+        LocalDate baselineEnd = targetDate.minusDays(1);
+        LocalDate baselineStart = targetDate.minusDays(7);
         String baselineSql = """
             SELECT var_category, var_name, stat_date, top_value, top_freq_ratio
             FROM ruleuler_variable_daily_stats
             WHERE project = ? AND package_id = ? AND io_type = ?
               AND var_type IN (%s)
-              AND stat_date BETWEEN CURDATE() - INTERVAL 7 DAY AND CURDATE() - INTERVAL 1 DAY
+              AND stat_date BETWEEN ? AND ?
             ORDER BY stat_date DESC
         """.formatted(varTypeIn);
 
         List<Map<String, Object>> baselineRows = mysqlJdbcTemplate.queryForList(
-                baselineSql, project, packageId, ioType);
+                baselineSql, project, packageId, ioType, baselineStart, baselineEnd);
 
         // 按 (var_category, var_name) 分组：AVG(top_freq_ratio) 和最近一天的 top_value
         Map<VarKey, String> baselineTopValue = new LinkedHashMap<>();
@@ -399,6 +405,15 @@ public class RealtimeMonitoringController {
             double curRatio = currentTopFreqRatio.getOrDefault(key, 0.0);
             String baseTop = baselineTopValue.getOrDefault(key, null);
             double baseRatio = baselineAvgRatio.getOrDefault(key, 0.0);
+
+            // 无基准数据时不做漂移检测，标记 hasBaseline=false
+            if (baseTop == null) {
+                results.add(new EnumDriftDetector.DriftResult(
+                        key.varCategory(), key.varName(),
+                        curTop, curRatio,
+                        null, 0.0, false, false, false));
+                continue;
+            }
 
             results.add(EnumDriftDetector.detect(
                     key.varCategory(), key.varName(),
@@ -745,8 +760,12 @@ public class RealtimeMonitoringController {
     public ApiResult variablesWithComparison(@RequestParam String project,
                                               @RequestParam String packageId,
                                               @RequestParam(defaultValue = "input") String ioType,
-                                              @RequestParam(defaultValue = "anomaly") String sortBy) {
-        // 1. 从 ClickHouse 物化视图获取当日实时数据
+                                              @RequestParam(defaultValue = "anomaly") String sortBy,
+                                              @RequestParam(required = false) String date) {
+        LocalDate targetDate = (date != null && !date.isBlank())
+                ? LocalDate.parse(date) : LocalDate.now();
+
+        // 1. 从 ClickHouse 物化视图获取目标日期数据
         String realtimeSql = """
             SELECT
                 var_category, var_name, any(var_type) as var_type,
@@ -758,16 +777,16 @@ public class RealtimeMonitoringController {
                 max(max_val_num) AS max_val_num
             FROM execution_var_log_5m
             WHERE project = ? AND package_id IN (?, ?) AND io_type = ?
-              AND toDate(window_start) = today()
+              AND toDate(window_start) = ?
             GROUP BY var_category, var_name
         """;
 
-        List<Map<String, Object>> realtimeRows = queryClickHouse(realtimeSql, project, packageId, project + "/" + packageId, ioType);
+        List<Map<String, Object>> realtimeRows = queryClickHouse(realtimeSql,
+                project, packageId, project + "/" + packageId, ioType, targetDate.toString());
 
         // 2. 从 MySQL daily_stats 获取昨日和上周基准数据
-        LocalDate today = LocalDate.now();
-        LocalDate yesterday = today.minusDays(1);
-        LocalDate lastWeek = today.minusDays(7);
+        LocalDate yesterday = targetDate.minusDays(1);
+        LocalDate lastWeek = targetDate.minusDays(7);
 
         String baselineSql = """
             SELECT var_category, var_name,

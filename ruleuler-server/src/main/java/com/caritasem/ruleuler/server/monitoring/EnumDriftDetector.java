@@ -13,8 +13,18 @@ public final class EnumDriftDetector {
             String varCategory, String varName,
             String currentTopValue, double currentTopFreqRatio,
             String baselineTopValue, double baselineTopFreqRatio,
-            boolean enumDrift, boolean topValueChanged
-    ) {}
+            boolean enumDrift, boolean topValueChanged,
+            boolean hasBaseline
+    ) {
+        /** 兼容旧调用：有基准时的构造 */
+        public DriftResult(String varCategory, String varName,
+                           String currentTopValue, double currentTopFreqRatio,
+                           String baselineTopValue, double baselineTopFreqRatio,
+                           boolean enumDrift, boolean topValueChanged) {
+            this(varCategory, varName, currentTopValue, currentTopFreqRatio,
+                    baselineTopValue, baselineTopFreqRatio, enumDrift, topValueChanged, true);
+        }
+    }
 
     /**
      * 检测枚举漂移。

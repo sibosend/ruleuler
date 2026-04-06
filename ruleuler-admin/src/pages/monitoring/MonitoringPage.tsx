@@ -70,7 +70,7 @@ const MonitoringPage: React.FC = () => {
   const [selectedVar, setSelectedVar] = useState<Variable | null>(null);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [psiCache, setPsiCache] = useState<Record<string, number | null>>({});
-  const [enumDriftMap, setEnumDriftMap] = useState<Record<string, { enum_drift: boolean; top_value_changed: boolean }>>({});
+  const [enumDriftMap, setEnumDriftMap] = useState<Record<string, { enum_drift: boolean; top_value_changed: boolean; has_baseline?: boolean }>>({});
 
   // --- anomaly records state ---
   const [anomalyRecords, setAnomalyRecords] = useState<AnomalyRecord[]>([]);
@@ -151,12 +151,13 @@ const MonitoringPage: React.FC = () => {
       setDailyTrend(Array.isArray(trendRet) ? trendRet : []);
       setLastRefresh(new Date());
 
-      const driftMap: Record<string, { enum_drift: boolean; top_value_changed: boolean }> = {};
+      const driftMap: Record<string, { enum_drift: boolean; top_value_changed: boolean; has_baseline?: boolean }> = {};
       if (Array.isArray(driftRet)) {
         for (const d of driftRet) {
           driftMap[`${d.varCategory}:${d.varName}`] = {
             enum_drift: d.enumDrift,
             top_value_changed: d.topValueChanged,
+            has_baseline: d.hasBaseline !== false,
           };
         }
       }
@@ -454,9 +455,10 @@ const MonitoringPage: React.FC = () => {
         return (
           <Space size={4} wrap>
             {v && <Tag icon={<WarningOutlined />} color="error">{v}</Tag>}
+            {drift && !drift.has_baseline && <Tag color="default">无基准</Tag>}
             {drift?.enum_drift && <Tag color="warning">分布偏移</Tag>}
             {drift?.top_value_changed && <Tag color="error">主值变更</Tag>}
-            {!v && !drift?.enum_drift && !drift?.top_value_changed && '-'}
+            {!v && (!drift || (!drift.enum_drift && !drift.top_value_changed && drift.has_baseline !== false)) && '-'}
           </Space>
         );
       },

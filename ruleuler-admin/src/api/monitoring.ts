@@ -82,6 +82,7 @@ export async function fetchRealtimeVariablesWithComparison(params: {
   packageId: string;
   ioType?: string;
   sortBy?: string;
+  date?: string;
 }) {
   const res = await request.get('/api/monitoring/realtime/variables-with-comparison', { params });
   return res.data.data;
@@ -104,6 +105,7 @@ export async function fetchRealtimeEnumDrift(params: {
   project: string;
   packageId: string;
   ioType?: string;
+  date?: string;
 }) {
   const res = await request.get('/api/monitoring/realtime/enum-drift', { params });
   return res.data.data;
