@@ -201,6 +201,29 @@ public class MonitoringController {
         }
     }
 
+    @Autowired
+    private AggregationJob aggregationJob;
+
+    /**
+     * 手动触发指定日期的聚合任务。
+     * POST /api/monitoring/aggregate?date=2026-04-05
+     * 不传 date 则聚合昨天。
+     */
+    @PostMapping("/aggregate")
+    public ApiResult manualAggregate(@RequestParam(required = false) String date) {
+        try {
+            if (date != null) {
+                LocalDate target = LocalDate.parse(date);
+                aggregationJob.aggregateDate(target);
+            } else {
+                aggregationJob.aggregate();
+            }
+            return ApiResult.ok("聚合完成");
+        } catch (Exception e) {
+            return ApiResult.error(500, "聚合失败: " + e.getMessage());
+        }
+    }
+
     // ---- 内部方法 ----
 
     /**

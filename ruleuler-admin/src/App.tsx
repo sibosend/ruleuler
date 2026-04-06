@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 const ReaEditorPage = React.lazy(() => import('@/pages/rea/ReaEditorPage'));
 const ReaExpressionDoc = React.lazy(() => import('@/pages/docs/ReaExpressionDoc'));
@@ -119,6 +119,12 @@ const App: React.FC = () => (
         />
         <Route
           path="monitoring"
+          element={
+            <Navigate to="/monitoring/realtime" replace />
+          }
+        />
+        <Route
+          path="monitoring/realtime"
           element={
             <AuthorizedRoute permissionCode="menu:monitoring">
               <Suspense fallback={<div>Loading...</div>}><MonitoringPage /></Suspense>

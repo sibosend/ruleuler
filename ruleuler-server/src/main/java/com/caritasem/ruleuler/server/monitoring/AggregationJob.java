@@ -45,13 +45,15 @@ public class AggregationJob {
 
     @Scheduled(cron = "0 0 2 * * ?")
     public void aggregate() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        log.info("开始聚合 {} 的变量数据", yesterday);
+        aggregateDate(LocalDate.now().minusDays(1));
+    }
+
+    public void aggregateDate(LocalDate date) {
+        log.info("开始聚合 {} 的变量数据", date);
         try {
             List<DailyStatRow> rows = new ArrayList<>();
-            rows.addAll(aggregateNumeric(yesterday));
-            rows.addAll(aggregateCategorical(yesterday));
-            // 聚合完成后检查告警阈值
+            rows.addAll(aggregateNumeric(date));
+            rows.addAll(aggregateCategorical(date));
             for (DailyStatRow row : rows) {
                 row.alertFlags = alertChecker.check(row);
             }
@@ -62,6 +64,7 @@ public class AggregationJob {
             log.info("聚合完成，共写入 {} 条记录", rows.size());
         } catch (Exception e) {
             log.error("聚合任务执行失败", e);
+            throw new RuntimeException("聚合失败: " + date, e);
         }
     }
 

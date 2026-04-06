@@ -92,7 +92,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || "/favicon.ico".equals(path)
                 || path.startsWith("/admin/")
                 || path.startsWith("/urule/res/")
-                || "/urule/loadknowledge".equals(path);
+                || "/urule/loadknowledge".equals(path)
+                || "/urule/knowledge-package-service".equals(path);
     }
 
     private String extractToken(HttpServletRequest request) {

@@ -90,18 +90,23 @@ export const routeConfigs: RouteConfig[] = [
     label: '变量监控',
     icon: <MonitorOutlined />,
     permissionCode: 'menu:monitoring',
-  },
-  {
-    path: '/monitoring/compare',
-    label: '周期对比',
-    permissionCode: 'menu:monitoring',
-    hideInMenu: true,
-  },
-  {
-    path: '/monitoring/executions',
-    label: '执行日志',
-    permissionCode: 'menu:monitoring',
-    hideInMenu: true,
+    children: [
+      {
+        path: '/monitoring/realtime',
+        label: '实时监控',
+        permissionCode: 'menu:monitoring',
+      },
+      {
+        path: '/monitoring/compare',
+        label: '周期对比',
+        permissionCode: 'menu:monitoring',
+      },
+      {
+        path: '/monitoring/executions',
+        label: '执行日志',
+        permissionCode: 'menu:monitoring',
+      },
+    ],
   },
   {
     path: '/monitoring/executions/:id',

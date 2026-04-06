@@ -41,8 +41,8 @@ def send_request(url):
     # Parse RespDTO from json
     try:
         data = json.loads(body)
-        if data.get('code') != 200:
-            status = data.get('code', 500)
+        if data.get('code') != 200 and data.get('status') != 200:
+            status = data.get('code') or data.get('status') or 500
     except Exception:
         pass
     return status, elapsed, body
