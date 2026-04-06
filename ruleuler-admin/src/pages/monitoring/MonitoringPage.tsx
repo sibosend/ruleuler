@@ -4,7 +4,7 @@ import {
   Drawer, Tabs, Button, Descriptions,
 } from 'antd';
 import { WarningOutlined, ArrowUpOutlined, ArrowDownOutlined, DownOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import {
@@ -44,12 +44,13 @@ interface AnomalyRecord {
 
 const MonitoringPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // --- filter state ---
   const [projects, setProjects] = useState<string[]>([]);
   const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
-  const [project, setProject] = useState<string>();
-  const [packageId, setPackageId] = useState<string>();
+  const [project, setProject] = useState<string | undefined>(() => searchParams.get('project') || undefined);
+  const [packageId, setPackageId] = useState<string | undefined>(() => searchParams.get('packageId') || undefined);
   const [ioType, setIoType] = useState<string>('input');
 
   // --- realtime state ---
@@ -94,17 +95,17 @@ const MonitoringPage: React.FC = () => {
       .then((res) => {
         const list: string[] = (res.data?.data ?? []).map((p: { name: string }) => p.name);
         setProjects(list);
-        if (list.length > 0) setProject(list[0]);
+        // URL没指定project时默认选第一个
+        if (!project && list.length > 0) setProject(list[0]);
       })
       .catch(() => message.error('加载项目列表失败'));
   }, []);
 
   // --- load packages when project changes ---
-  const prevProject = useRef(project);
+  const prevProject = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (prevProject.current === project) return;
     prevProject.current = project;
-    setPackageId(undefined);
     setPackages([]);
     if (!project) return;
     listPackages(project)
@@ -112,10 +113,24 @@ const MonitoringPage: React.FC = () => {
         const list = res.data?.data ?? [];
         const pkgList = Array.isArray(list) ? list : [];
         setPackages(pkgList);
-        if (pkgList.length > 0) setPackageId(pkgList[0].id);
+        if (pkgList.length > 0) {
+          const urlPkgId = searchParams.get('packageId');
+          const found = urlPkgId && pkgList.some(p => p.id === urlPkgId);
+          setPackageId(found ? urlPkgId : pkgList[0].id);
+        } else {
+          setPackageId(undefined);
+        }
       })
       .catch(() => { /* silent */ });
   }, [project]);
+
+  // --- sync project/packageId to URL ---
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (project) params.set('project', project);
+    if (packageId) params.set('packageId', packageId);
+    setSearchParams(params, { replace: true });
+  }, [project, packageId, setSearchParams]);
 
   // --- load real-time data ---
   const loadData = useCallback(async (silent = false) => {

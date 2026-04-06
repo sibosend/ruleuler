@@ -58,7 +58,21 @@ const ExecutionDetailPage: React.FC = () => {
     fetched.current = true;
     setLoading(true);
     fetchExecutionDetail(id)
-      .then((data) => setDetail(data ?? null))
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length === 0) { setDetail(null); return; }
+        const first = rows[0] as Record<string, unknown>;
+        setDetail({
+          execution_id: first.execution_id as string,
+          project: first.project as string,
+          package_id: first.package_id as string,
+          flow_id: first.flow_id as string,
+          exec_ms: first.exec_ms as number,
+          created_at: first.created_at as string,
+          status: rows.some((r: Record<string, unknown>) => r.var_name === '') ? 'failed' : 'success',
+          variables: rows as unknown as VarDetail[],
+        });
+      })
       .catch(() => message.error('加载执行详情失败'))
       .finally(() => setLoading(false));
   }, [id]);

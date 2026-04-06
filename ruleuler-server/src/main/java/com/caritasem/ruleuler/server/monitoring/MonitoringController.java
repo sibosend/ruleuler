@@ -154,6 +154,22 @@ public class MonitoringController {
         if (rangeErr != null) return ApiResult.error(400, rangeErr);
 
         int offset = (page - 1) * pageSize;
+
+        // package_id 兼容短格式(gate_pkg)和全路径格式(airport_gate_allocation_db/gate_pkg)
+        String fullPkgId = project + "/" + packageId;
+
+        // 先查总数
+        String countSql = """
+                SELECT count(DISTINCT execution_id) AS total
+                FROM execution_var_log FINAL
+                WHERE toDate(created_at) BETWEEN ? AND ?
+                  AND project = ? AND package_id IN (?, ?)
+                """;
+        List<Map<String, Object>> countRows = queryClickHouse(countSql,
+                start.toString(), end.toString(), project, packageId, fullPkgId);
+        int total = countRows.isEmpty() ? 0 : ((Number) countRows.get(0).get("total")).intValue();
+
+        // 再查分页数据
         String sql = """
                 SELECT execution_id, project, package_id, flow_id,
                     min(created_at) AS exec_time,
@@ -162,14 +178,18 @@ public class MonitoringController {
                     if(countIf(var_name = '') > 0, 'failed', 'success') AS status
                 FROM execution_var_log FINAL
                 WHERE toDate(created_at) BETWEEN ? AND ?
-                  AND project = ? AND package_id = ?
+                  AND project = ? AND package_id IN (?, ?)
                 GROUP BY execution_id, project, package_id, flow_id
                 ORDER BY exec_time DESC
                 LIMIT ? OFFSET ?
                 """;
         List<Map<String, Object>> rows = queryClickHouse(sql,
-                start.toString(), end.toString(), project, packageId, pageSize, offset);
-        return ApiResult.ok(rows);
+                start.toString(), end.toString(), project, packageId, fullPkgId, pageSize, offset);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("records", rows);
+        result.put("total", total);
+        return ApiResult.ok(result);
     }
 
     /**

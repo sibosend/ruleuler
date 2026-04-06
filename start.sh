@@ -48,7 +48,20 @@ echo ""
 echo "=== 启动服务 (server:$SERVER_PORT, client:$CLIENT_PORT) ==="
 
 # 清理旧进程
-lsof -ti:$SERVER_PORT,$CLIENT_PORT | xargs kill -9 2>/dev/null || true
+for PORT in $SERVER_PORT $CLIENT_PORT; do
+  PID=$(lsof -ti:$PORT 2>/dev/null || true)
+  if [ -n "$PID" ]; then
+    echo "  关闭端口 $PORT 占用进程: $PID"
+    kill $PID 2>/dev/null || true
+    # 等待最多 5 秒让进程优雅退出
+    for i in $(seq 1 5); do
+      kill -0 $PID 2>/dev/null || break
+      sleep 1
+    done
+    # 仍未退出则强杀
+    kill -9 $PID 2>/dev/null || true
+  fi
+done
 
 # Ctrl+C 时停止所有子进程
 trap 'echo ""; echo "停止服务..."; kill $SERVER_PID $CLIENT_PID 2>/dev/null; wait; exit 0' INT TERM

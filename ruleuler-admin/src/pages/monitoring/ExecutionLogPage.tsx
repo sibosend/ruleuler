@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Table, Select, DatePicker, Tag, Space, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import { fetchExecutions } from '../../api/monitoring';
@@ -20,15 +20,16 @@ interface Execution {
   var_count: number;
 }
 
-const defaultRange: [Dayjs, Dayjs] = [dayjs().subtract(30, 'day'), dayjs()];
+const defaultRange: [Dayjs, Dayjs] = [dayjs().subtract(1, 'day'), dayjs()];
 
 const ExecutionLogPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [projects, setProjects] = useState<string[]>([]);
   const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
-  const [project, setProject] = useState<string>();
-  const [packageId, setPackageId] = useState<string>();
+  const [project, setProject] = useState<string | undefined>(() => searchParams.get('project') || undefined);
+  const [packageId, setPackageId] = useState<string | undefined>(() => searchParams.get('packageId') || undefined);
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(defaultRange);
 
   const [data, setData] = useState<Execution[]>([]);
@@ -36,6 +37,14 @@ const ExecutionLogPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // project/packageId 变更时同步到URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (project) params.set('project', project);
+    if (packageId) params.set('packageId', packageId);
+    setSearchParams(params, { replace: true });
+  }, [project, packageId, setSearchParams]);
 
   const fetched = useRef(false);
 
@@ -47,22 +56,32 @@ const ExecutionLogPage: React.FC = () => {
       .then((res) => {
         const list: string[] = (res.data?.data ?? []).map((p: { name: string }) => p.name);
         setProjects(list);
+        // URL没指定project时默认选第一个
+        if (!project && list.length > 0) setProject(list[0]);
       })
       .catch(() => message.error('加载项目列表失败'));
   }, []);
 
   // 项目变更时加载知识包
-  const prevProject = useRef(project);
+  const prevProject = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (prevProject.current === project) return;
     prevProject.current = project;
-    setPackageId(undefined);
     setPackages([]);
     if (!project) return;
     listPackages(project)
       .then((res) => {
         const list = res.data?.data ?? [];
-        setPackages(Array.isArray(list) ? list : []);
+        const pkgList = Array.isArray(list) ? list : [];
+        setPackages(pkgList);
+        // URL没指定packageId 或 项目变更时，默认选第一个
+        if (pkgList.length > 0) {
+          const urlPkgId = searchParams.get('packageId');
+          const found = urlPkgId && pkgList.some(p => p.id === urlPkgId);
+          setPackageId(found ? urlPkgId : pkgList[0].id);
+        } else {
+          setPackageId(undefined);
+        }
       })
       .catch(() => { /* silent */ });
   }, [project]);

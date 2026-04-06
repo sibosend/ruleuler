@@ -4,9 +4,10 @@ import {
 } from 'antd';
 import { SwapOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
-import { fetchVariables, fetchCompare } from '../../api/monitoring';
+import { fetchCompare, fetchRealtimeVariables } from '../../api/monitoring';
 
 const { RangePicker } = DatePicker;
 
@@ -110,17 +111,19 @@ const disabledDate = (current: Dayjs) =>
 /* ── 组件 ── */
 
 const PeriodComparePage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<string[]>([]);
   const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
-  const [project, setProject] = useState<string>();
-  const [packageId, setPackageId] = useState<string>();
+  const [project, setProject] = useState<string | undefined>(() => searchParams.get('project') || undefined);
+  const [packageId, setPackageId] = useState<string | undefined>(() => searchParams.get('packageId') || undefined);
   const [ioType, setIoType] = useState('input');
 
   const [varOptions, setVarOptions] = useState<VarOption[]>([]);
   const [selectedVars, setSelectedVars] = useState<string[]>([]);
 
-  const [periodA, setPeriodA] = useState<[Dayjs, Dayjs]>();
-  const [periodB, setPeriodB] = useState<[Dayjs, Dayjs]>();
+  // 默认周期：A = 上周, B = 本周
+  const [periodA, setPeriodA] = useState<[Dayjs, Dayjs]>([dayjs().subtract(14, 'day'), dayjs().subtract(7, 'day')]);
+  const [periodB, setPeriodB] = useState<[Dayjs, Dayjs]>([dayjs().subtract(7, 'day'), dayjs()]);
 
   const [results, setResults] = useState<CompareResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -135,16 +138,16 @@ const PeriodComparePage: React.FC = () => {
       .then((res) => {
         const list: string[] = (res.data?.data ?? []).map((p: { name: string }) => p.name);
         setProjects(list);
+        if (!project && list.length > 0) setProject(list[0]);
       })
       .catch(() => message.error('加载项目列表失败'));
   }, []);
 
   /* 加载知识包 */
-  const prevProject = useRef(project);
+  const prevProject = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (prevProject.current === project) return;
     prevProject.current = project;
-    setPackageId(undefined);
     setPackages([]);
     setVarOptions([]);
     setSelectedVars([]);
@@ -152,21 +155,26 @@ const PeriodComparePage: React.FC = () => {
     listPackages(project)
       .then((res) => {
         const list = res.data?.data ?? [];
-        setPackages(Array.isArray(list) ? list : []);
+        const pkgList = Array.isArray(list) ? list : [];
+        setPackages(pkgList);
+        if (pkgList.length > 0) {
+          const urlPkgId = searchParams.get('packageId');
+          const found = urlPkgId && pkgList.some((p: { id: string }) => p.id === urlPkgId);
+          setPackageId(found ? urlPkgId : pkgList[0].id);
+        }
       })
       .catch(() => { /* silent */ });
   }, [project]);
 
-  /* 加载变量列表 */
+  /* 加载变量列表 + 自动全选 */
   const prevPkgKey = useRef('');
   useEffect(() => {
     const key = `${project}|${packageId}|${ioType}`;
     if (prevPkgKey.current === key) return;
     prevPkgKey.current = key;
-    setSelectedVars([]);
     setVarOptions([]);
     if (!project || !packageId) return;
-    fetchVariables({ project, packageId, ioType, showAll: true })
+    fetchRealtimeVariables({ project, packageId, ioType })
       .then((data) => {
         const list: VarOption[] = (Array.isArray(data) ? data : []).map(
           (v: { var_category: string; var_name: string; var_type: string }) => ({
@@ -176,6 +184,8 @@ const PeriodComparePage: React.FC = () => {
           }),
         );
         setVarOptions(list);
+        // 自动选中所有变量
+        setSelectedVars(list.map((v) => `${v.var_category}:${v.var_name}`));
       })
       .catch(() => message.error('加载变量列表失败'));
   }, [project, packageId, ioType]);
@@ -207,6 +217,16 @@ const PeriodComparePage: React.FC = () => {
     }
   }, [project, packageId, selectedVars, varOptions, ioType, periodA, periodB]);
 
+  /* 变量加载完成后自动触发对比 */
+  const autoCompareKey = useRef('');
+  useEffect(() => {
+    const key = `${project}|${packageId}|${selectedVars.length}`;
+    if (autoCompareKey.current === key) return;
+    autoCompareKey.current = key;
+    if (!project || !packageId || selectedVars.length === 0) return;
+    handleCompare();
+  }, [selectedVars, handleCompare]);
+
   /* 构建对比表格行 */
   interface MetricRow { metric: string; a: unknown; b: unknown; key: string; drift: boolean }
 
@@ -223,6 +243,8 @@ const PeriodComparePage: React.FC = () => {
       drift,
     }));
   };
+
+  const [varFilterOpen, setVarFilterOpen] = useState(false);
 
   return (
     <div>
@@ -254,19 +276,31 @@ const PeriodComparePage: React.FC = () => {
             { label: '输出', value: 'output' },
           ]}
         />
-        <Select
-          mode="multiple"
-          style={{ minWidth: 300 }}
-          placeholder="选择变量（可多选）"
-          value={selectedVars}
-          onChange={setSelectedVars}
-          maxTagCount={3}
-          options={varOptions.map((v) => ({
-            label: `${v.var_category}.${v.var_name}`,
-            value: `${v.var_category}:${v.var_name}`,
-          }))}
-        />
+        <Button
+          size="small"
+          type="link"
+          onClick={() => setVarFilterOpen(!varFilterOpen)}
+        >
+          {varFilterOpen ? '收起变量筛选' : `变量筛选（已选 ${selectedVars.length}/${varOptions.length}）`}
+        </Button>
       </Space>
+
+      {varFilterOpen && (
+        <div style={{ marginBottom: 12 }}>
+          <Select
+            mode="multiple"
+            style={{ minWidth: 500 }}
+            placeholder="筛选变量（默认全部）"
+            value={selectedVars}
+            onChange={setSelectedVars}
+            maxTagCount={5}
+            options={varOptions.map((v) => ({
+              label: `${v.var_category}.${v.var_name}`,
+              value: `${v.var_category}:${v.var_name}`,
+            }))}
+          />
+        </div>
+      )}
 
       <Space wrap style={{ marginBottom: 12 }}>
         <span>周期A：</span>

@@ -55,6 +55,9 @@ ruleuler-admin/dist/assets/*
 # AI agent configs
 AGENTS.md
 GEMINI.md
+CLAUDE.md
 
 # mkdocs build output
 site/
+.claude/
+.github/
