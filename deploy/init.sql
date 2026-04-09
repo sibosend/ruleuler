@@ -416,3 +416,57 @@ INSERT IGNORE INTO `ruleuler_monitoring_alert_config`
     (`id`, `missing_rate_max`, `missing_rate_spike_delta`, `outlier_rate_max`,
      `skewness_abs_max`, `psi_warning`, `psi_alert`, `enum_drift_threshold`)
 VALUES (1, 0.05, 0.1, 0.03, 2.0, 0.1, 0.2, 0.15);
+
+-- ============================================================
+-- 7. 发布审批表
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project` varchar(255) NOT NULL,
+  `package_id` varchar(255) NOT NULL COMMENT '知识包 ID',
+  `package_name` varchar(255) DEFAULT NULL COMMENT '知识包名称',
+  `status` varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED/PUBLISH_FAILED',
+  `submitter` varchar(100) NOT NULL COMMENT '提交人',
+  `approver` varchar(100) DEFAULT NULL COMMENT '审批人',
+  `comment` varchar(500) DEFAULT NULL COMMENT '审批意见',
+  `fail_reason` text DEFAULT NULL COMMENT '发布失败原因',
+  `submitted_at` bigint NOT NULL COMMENT '提交时间（毫秒时间戳）',
+  `approved_at` bigint DEFAULT NULL COMMENT '审批时间（毫秒时间戳）',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_pkg` (`project`, `package_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_submitter` (`submitter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval_diff` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `approval_id` bigint NOT NULL,
+  `component_path` varchar(500) NOT NULL COMMENT '决策组件路径',
+  `component_name` varchar(255) NOT NULL COMMENT '决策组件名称',
+  `component_type` varchar(50) NOT NULL COMMENT '组件类型',
+  `change_type` varchar(20) NOT NULL COMMENT 'ADDED/MODIFIED/DELETED',
+  `prev_version` varchar(50) DEFAULT NULL COMMENT '上次发布版本号',
+  `curr_version` varchar(50) DEFAULT NULL COMMENT '本次版本引用',
+  PRIMARY KEY (`id`),
+  KEY `idx_approval_id` (`approval_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_publish_snapshot` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project` varchar(255) NOT NULL,
+  `package_id` varchar(255) NOT NULL,
+  `approval_id` bigint DEFAULT NULL COMMENT '关联审批单 ID',
+  `snapshot_data` json NOT NULL COMMENT '{path: version_name} 映射',
+  `created_at` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_project_pkg` (`project`, `package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 发布审批权限
+INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `parent_id`, `sort_order`) VALUES
+(30, 'menu:approvals',       '审批管理',     'menu', NULL, 6),
+(31, 'pack:publish:submit',  '提交发布审批', 'api',  NULL, 50),
+(32, 'pack:publish:approve', '审批发布',     'api',  NULL, 51);
+
+INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`) VALUES (1, 30), (1, 31), (1, 32);

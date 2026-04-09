@@ -1,0 +1,62 @@
+import request from './request';
+
+export interface ApprovalDiffItem {
+  id: number;
+  approvalId: number;
+  componentPath: string;
+  componentName: string;
+  componentType: string;
+  changeType: 'ADDED' | 'MODIFIED' | 'DELETED';
+  prevVersion: string | null;
+  currVersion: string | null;
+}
+
+export interface ApprovalVO {
+  id: number;
+  project: string;
+  packageId: string;
+  packageName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISH_FAILED';
+  submitter: string;
+  comment: string | null;
+  failReason: string | null;
+  submittedAt: number;
+  approver: string | null;
+  approvedAt: number | null;
+  diffs?: ApprovalDiffItem[];
+}
+
+export interface ApprovalListResult {
+  items: ApprovalVO[];
+  total: number;
+}
+
+export function submitApproval(data: { project: string; packageId: string }) {
+  return request.post('/api/approvals', data);
+}
+
+export function listApprovals(params: {
+  project: string;
+  packageId?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  return request.get('/api/approvals', { params });
+}
+
+export function getApprovalDetail(id: number) {
+  return request.get(`/api/approvals/${id}`);
+}
+
+export function approveApproval(id: number, comment?: string) {
+  return request.put(`/api/approvals/${id}/approve`, { comment });
+}
+
+export function rejectApproval(id: number, comment?: string) {
+  return request.put(`/api/approvals/${id}/reject`, { comment });
+}
+
+export function listPackages(project: string) {
+  return request.get(`/api/projects/${encodeURIComponent(project)}/packages`);
+}

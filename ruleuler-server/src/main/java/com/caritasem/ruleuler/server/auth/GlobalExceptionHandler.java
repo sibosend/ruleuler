@@ -21,4 +21,9 @@ public class GlobalExceptionHandler {
         log.error("服务器内部错误", e);
         return ResponseEntity.internalServerError().body(ApiResult.error(500, "服务器内部错误"));
     }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ApiResult> handleSecurity(SecurityException e) {
+        return ResponseEntity.status(403).body(ApiResult.error(403, e.getMessage()));
+    }
 }

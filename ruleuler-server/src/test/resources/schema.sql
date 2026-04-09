@@ -88,3 +88,49 @@ CREATE TABLE rbac_role_permission (
     FOREIGN KEY (role_id) REFERENCES rbac_role(id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES rbac_permission(id) ON DELETE CASCADE
 );
+
+-- ============================================================
+-- 发布审批表（H2 兼容版本）
+-- ============================================================
+
+CREATE TABLE ruleuler_publish_approval (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project VARCHAR(255) NOT NULL,
+    package_id VARCHAR(255) NOT NULL,
+    package_name VARCHAR(255),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    submitter VARCHAR(100) NOT NULL,
+    approver VARCHAR(100),
+    comment VARCHAR(500),
+    fail_reason CLOB,
+    submitted_at BIGINT NOT NULL,
+    approved_at BIGINT
+);
+
+CREATE INDEX idx_pa_project_pkg ON ruleuler_publish_approval (project, package_id);
+CREATE INDEX idx_pa_status ON ruleuler_publish_approval (status);
+CREATE INDEX idx_pa_submitter ON ruleuler_publish_approval (submitter);
+
+CREATE TABLE ruleuler_publish_approval_diff (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    approval_id BIGINT NOT NULL,
+    component_path VARCHAR(500) NOT NULL,
+    component_name VARCHAR(255) NOT NULL,
+    component_type VARCHAR(50) NOT NULL,
+    change_type VARCHAR(20) NOT NULL,
+    prev_version VARCHAR(50),
+    curr_version VARCHAR(50)
+);
+
+CREATE INDEX idx_pad_approval ON ruleuler_publish_approval_diff (approval_id);
+
+CREATE TABLE ruleuler_publish_snapshot (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project VARCHAR(255) NOT NULL,
+    package_id VARCHAR(255) NOT NULL,
+    approval_id BIGINT,
+    snapshot_data CLOB NOT NULL,
+    created_at BIGINT NOT NULL
+);
+
+CREATE INDEX idx_ps_project_pkg ON ruleuler_publish_snapshot (project, package_id);

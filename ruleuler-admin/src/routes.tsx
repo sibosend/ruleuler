@@ -68,6 +68,12 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
+    path: '/projects/:name/approvals',
+    label: '发布审批',
+    permissionCode: 'menu:approvals',
+    hideInMenu: true,
+  },
+  {
     path: '/console',
     label: '规则编辑器',
     icon: <CodeOutlined />,

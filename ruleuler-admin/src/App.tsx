@@ -25,6 +25,8 @@ const ExecutionLogPage = React.lazy(() => import('@/pages/monitoring/ExecutionLo
 const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/ExecutionDetailPage'));
 const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
 
+const ApprovalListPage = React.lazy(() => import('@/pages/approval/ApprovalListPage'));
+
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
     <Routes>
@@ -91,6 +93,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:projects">
               <Suspense fallback={<div>Loading...</div>}><TestReportPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="projects/:name/approvals"
+          element={
+            <AuthorizedRoute permissionCode="menu:approvals">
+              <Suspense fallback={<div>Loading...</div>}><ApprovalListPage /></Suspense>
             </AuthorizedRoute>
           }
         />

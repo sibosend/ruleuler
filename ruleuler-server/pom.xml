@@ -76,6 +76,10 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.caritasem.ruleuler</groupId>
             <artifactId>ruleuler-console</artifactId>
             <version>${urule.version}</version>
