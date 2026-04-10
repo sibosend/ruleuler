@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import {
   Button, Table, Tag, Space, Select, Drawer, Modal, Input,
   message, Descriptions,
@@ -7,9 +6,9 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
-  submitApproval, listPackages,
   type ApprovalVO, type ApprovalDiffItem,
 } from '@/api/approval';
+import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
@@ -26,7 +25,8 @@ const CHANGE_TYPE_MAP: Record<string, { color: string; label: string }> = {
 };
 
 const ApprovalListPage: React.FC = () => {
-  const { name: project } = useParams<{ name: string }>();
+  const [projects, setProjects] = useState<string[]>([]);
+  const [project, setProject] = useState<string | null>(null);
   const [data, setData] = useState<ApprovalVO[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -35,21 +35,28 @@ const ApprovalListPage: React.FC = () => {
   const [diffDrawer, setDiffDrawer] = useState<{ open: boolean; approval: ApprovalVO | null; diffs: ApprovalDiffItem[] }>({
     open: false, approval: null, diffs: [],
   });
-  const [submitModal, setSubmitModal] = useState(false);
-  const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
-  const [selectedPkg, setSelectedPkg] = useState<string | null>(null);
   const [commentModal, setCommentModal] = useState<{ open: boolean; type: 'approve' | 'reject'; id: number } | null>(null);
   const [comment, setComment] = useState('');
 
-  const canSubmit = usePermission('pack:publish:submit');
   const canApprove = usePermission('pack:publish:approve');
-  const fetched = useRef(false);
+  const projectsFetched = useRef(false);
 
-  const fetchData = useCallback(async (p = page, s = statusFilter) => {
-    if (!project) return;
+  // 加载项目列表
+  useEffect(() => {
+    if (projectsFetched.current) return;
+    projectsFetched.current = true;
+    loadProjects().then((res) => {
+      const list: { name: string }[] = res.data?.data ?? res.data ?? [];
+      setProjects(list.map((p: any) => p.name ?? p));
+    });
+  }, []);
+
+  // 加载审批列表
+  const fetchData = useCallback(async (p = page, proj = project, s = statusFilter) => {
+    if (!proj) return;
     setLoading(true);
     try {
-      const res = await listApprovals({ project, status: s, page: p, pageSize: 20 });
+      const res = await listApprovals({ project: proj, status: s, page: p, pageSize: 20 });
       setData(res.data?.data?.items ?? res.data?.items ?? []);
       setTotal(res.data?.data?.total ?? res.data?.total ?? 0);
     } finally {
@@ -58,26 +65,19 @@ const ApprovalListPage: React.FC = () => {
   }, [project, page, statusFilter]);
 
   useEffect(() => {
-    if (!fetched.current) {
-      fetched.current = true;
-      fetchData();
-    }
+    fetchData();
   }, [fetchData]);
 
-  useEffect(() => {
-    fetchData();
-  }, [page, statusFilter]);
-
-  const handleSubmit = async () => {
-    if (!project || !selectedPkg) return;
-    try {
-      await submitApproval({ project, packageId: selectedPkg });
-      message.success('提交审批成功');
-      setSubmitModal(false);
-      setSelectedPkg(null);
-      fetchData(1);
-    } catch { /* request.ts 已处理 */ }
+  // 切换项目时重置
+  const handleProjectChange = (v: string) => {
+    setProject(v);
+    setPage(1);
+    setStatusFilter(undefined);
   };
+
+  useEffect(() => {
+    if (project) fetchData(1, project);
+  }, [project]);
 
   const handleApprove = async () => {
     if (!commentModal) return;
@@ -100,16 +100,6 @@ const ApprovalListPage: React.FC = () => {
       const res = await getApprovalDetail(record.id);
       const detail: ApprovalVO = res.data?.data ?? res.data;
       setDiffDrawer({ open: true, approval: detail, diffs: detail.diffs ?? [] });
-    } catch { /* request.ts 已处理 */ }
-  };
-
-  const openSubmitModal = async () => {
-    if (!project) return;
-    try {
-      const res = await listPackages(project);
-      const list = res.data?.data ?? res.data ?? [];
-      setPackages(list.map((p: any) => ({ id: p.id, name: p.name })));
-      setSubmitModal(true);
     } catch { /* request.ts 已处理 */ }
   };
 
@@ -160,6 +150,17 @@ const ApprovalListPage: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
+          placeholder="选择项目"
+          showSearch
+          style={{ width: 200 }}
+          value={project}
+          onChange={handleProjectChange}
+        >
+          {projects.map(p => (
+            <Select.Option key={p} value={p}>{p}</Select.Option>
+          ))}
+        </Select>
+        <Select
           placeholder="状态筛选"
           allowClear
           style={{ width: 140 }}
@@ -170,9 +171,6 @@ const ApprovalListPage: React.FC = () => {
             <Select.Option key={k} value={k}>{v.label}</Select.Option>
           ))}
         </Select>
-        {canSubmit && (
-          <Button type="primary" onClick={openSubmitModal}>提交发布审批</Button>
-        )}
       </Space>
 
       <Table<ApprovalVO>
@@ -184,22 +182,6 @@ const ApprovalListPage: React.FC = () => {
         scroll={{ x: 1000 }}
         size="middle"
       />
-
-      {/* 提交审批弹窗 */}
-      <Modal title="提交发布审批" open={submitModal} onOk={handleSubmit}
-        onCancel={() => { setSubmitModal(false); setSelectedPkg(null); }}
-        okButtonProps={{ disabled: !selectedPkg }}>
-        <Select
-          placeholder="选择知识包"
-          style={{ width: '100%' }}
-          value={selectedPkg}
-          onChange={setSelectedPkg}
-        >
-          {packages.map(p => (
-            <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
-          ))}
-        </Select>
-      </Modal>
 
       {/* 审批意见弹窗 */}
       <Modal

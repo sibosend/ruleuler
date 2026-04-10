@@ -28,7 +28,7 @@ public class ApprovalController {
     }
 
     @GetMapping
-    public ApiResult list(@RequestParam String project,
+    public ApiResult list(@RequestParam(required = false) String project,
                           @RequestParam(required = false) String packageId,
                           @RequestParam(required = false) String status,
                           @RequestParam(required = false) String submitter,

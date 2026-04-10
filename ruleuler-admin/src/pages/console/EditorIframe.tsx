@@ -3,9 +3,13 @@ import { Spin, Result, Button } from 'antd';
 
 interface EditorIframeProps {
   editorSrc: string;
+  /** iframe 加载后注入的 CSS 文本（同源时生效） */
+  injectStyles?: string;
+  /** iframe 加载完成后回调，传入 iframe 的 contentDocument（同源时生效） */
+  onIframeReady?: (doc: Document) => void;
 }
 
-const EditorIframe: React.FC<EditorIframeProps> = ({ editorSrc }) => {
+const EditorIframe: React.FC<EditorIframeProps> = ({ editorSrc, injectStyles, onIframeReady }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [key, setKey] = useState(0);
@@ -27,7 +31,20 @@ const EditorIframe: React.FC<EditorIframeProps> = ({ editorSrc }) => {
   const handleLoad = useCallback(() => {
     setLoading(false);
     syncHeight();
-  }, [syncHeight]);
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (doc) {
+        // 注入自定义 CSS
+        if (injectStyles) {
+          const style = doc.createElement('style');
+          style.textContent = injectStyles;
+          doc.head.appendChild(style);
+        }
+        // 通知父组件
+        if (onIframeReady) onIframeReady(doc);
+      }
+    } catch { /* cross-origin, 忽略 */ }
+  }, [syncHeight, injectStyles, onIframeReady]);
 
   // 定时同步高度（iframe 内容可能动态变化）
   useEffect(() => {

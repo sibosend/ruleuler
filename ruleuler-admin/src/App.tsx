@@ -97,7 +97,7 @@ const App: React.FC = () => (
           }
         />
         <Route
-          path="projects/:name/approvals"
+          path="approvals"
           element={
             <AuthorizedRoute permissionCode="menu:approvals">
               <Suspense fallback={<div>Loading...</div>}><ApprovalListPage /></Suspense>

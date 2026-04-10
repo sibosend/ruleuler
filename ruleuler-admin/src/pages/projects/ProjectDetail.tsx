@@ -20,7 +20,7 @@ const ProjectDetail: React.FC = () => {
               进入规则编辑器
             </Button>
             {canApproval && (
-              <Button icon={<AuditOutlined />} onClick={() => navigate(`/projects/${name}/approvals`)}>
+              <Button icon={<AuditOutlined />} onClick={() => navigate(`/approvals`)}>
                 发布审批
               </Button>
             )}

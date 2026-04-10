@@ -7,6 +7,7 @@ import {
   SettingOutlined,
   UserOutlined,
   SafetyOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 
 /** 路由配置项 */
@@ -68,10 +69,10 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
-    path: '/projects/:name/approvals',
-    label: '发布审批',
+    path: '/approvals',
+    label: '审批管理',
+    icon: <AuditOutlined />,
     permissionCode: 'menu:approvals',
-    hideInMenu: true,
   },
   {
     path: '/console',
