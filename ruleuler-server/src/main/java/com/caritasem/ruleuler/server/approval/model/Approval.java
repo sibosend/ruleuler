@@ -19,6 +19,8 @@ public class Approval {
     private String approver;
     private String comment;
     private String failReason;
+    private String publisher;
     private Long submittedAt;
     private Long approvedAt;
+    private Long publishedAt;
 }

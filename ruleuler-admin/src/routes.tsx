@@ -7,7 +7,7 @@ import {
   SettingOutlined,
   UserOutlined,
   SafetyOutlined,
-  AuditOutlined,
+  CloudUploadOutlined,
 } from '@ant-design/icons';
 
 /** 路由配置项 */
@@ -69,10 +69,32 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
-    path: '/approvals',
-    label: '审批管理',
-    icon: <AuditOutlined />,
+    path: '/releases',
+    label: '上线管理',
+    icon: <CloudUploadOutlined />,
     permissionCode: 'menu:approvals',
+    children: [
+      {
+        path: '/releases/pending',
+        label: '待审核',
+        permissionCode: 'menu:approvals',
+      },
+      {
+        path: '/releases/pending-publish',
+        label: '待上线',
+        permissionCode: 'menu:approvals',
+      },
+      {
+        path: '/releases/my',
+        label: '我的申请',
+        permissionCode: 'menu:approvals',
+      },
+      {
+        path: '/releases/all',
+        label: '全部记录',
+        permissionCode: 'menu:approvals',
+      },
+    ],
   },
   {
     path: '/console',

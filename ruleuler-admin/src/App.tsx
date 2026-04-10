@@ -25,7 +25,7 @@ const ExecutionLogPage = React.lazy(() => import('@/pages/monitoring/ExecutionLo
 const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/ExecutionDetailPage'));
 const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
 
-const ApprovalListPage = React.lazy(() => import('@/pages/approval/ApprovalListPage'));
+const ReleaseListPage = React.lazy(() => import('@/pages/release/ReleaseListPage'));
 
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
@@ -97,10 +97,38 @@ const App: React.FC = () => (
           }
         />
         <Route
-          path="approvals"
+          path="releases"
+          element={<Navigate to="/releases/pending" replace />}
+        />
+        <Route
+          path="releases/pending"
           element={
             <AuthorizedRoute permissionCode="menu:approvals">
-              <Suspense fallback={<div>Loading...</div>}><ApprovalListPage /></Suspense>
+              <Suspense fallback={<div>Loading...</div>}><ReleaseListPage mode="pending" /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="releases/pending-publish"
+          element={
+            <AuthorizedRoute permissionCode="menu:approvals">
+              <Suspense fallback={<div>Loading...</div>}><ReleaseListPage mode="pending-publish" /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="releases/my"
+          element={
+            <AuthorizedRoute permissionCode="menu:approvals">
+              <Suspense fallback={<div>Loading...</div>}><ReleaseListPage mode="my" /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="releases/all"
+          element={
+            <AuthorizedRoute permissionCode="menu:approvals">
+              <Suspense fallback={<div>Loading...</div>}><ReleaseListPage mode="all" /></Suspense>
             </AuthorizedRoute>
           }
         />

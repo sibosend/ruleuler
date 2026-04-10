@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.sql.PreparedStatement;
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -26,8 +27,10 @@ public class ApprovalDao {
             .approver(rs.getString("approver"))
             .comment(rs.getString("comment"))
             .failReason(rs.getString("fail_reason"))
+            .publisher(rs.getString("publisher"))
             .submittedAt(rs.getLong("submitted_at"))
             .approvedAt(rs.getObject("approved_at") != null ? rs.getLong("approved_at") : null)
+            .publishedAt(rs.getObject("published_at") != null ? rs.getLong("published_at") : null)
             .build();
 
     private static final RowMapper<ApprovalDiffItem> DIFF_MAPPER = (rs, rowNum) -> ApprovalDiffItem.builder()
@@ -108,6 +111,11 @@ public class ApprovalDao {
                 failReason, id);
     }
 
+    public void updatePublished(Long id, String publisher, long publishedAt) {
+        jdbc.update("UPDATE ruleuler_publish_approval SET status='PUBLISHED',publisher=?,published_at=?,fail_reason=NULL WHERE id=?",
+                publisher, publishedAt, id);
+    }
+
     // ---- Diff Items ----
 
     public void batchInsertDiffItems(List<ApprovalDiffItem> items) {
@@ -154,10 +162,23 @@ public class ApprovalDao {
 
     private Object[] buildFilterParams(StringBuilder sql, String project, String packageId,
                                         String status, String submitter) {
-        List<Object> params = new java.util.ArrayList<>();
+        List<Object> params = new ArrayList<>();
         if (project != null && !project.isEmpty()) { sql.append(" AND project=?"); params.add(project); }
         if (packageId != null && !packageId.isEmpty()) { sql.append(" AND package_id=?"); params.add(packageId); }
-        if (status != null && !status.isEmpty()) { sql.append(" AND status=?"); params.add(status); }
+        if (status != null && !status.isEmpty()) {
+            if (status.contains(",")) {
+                String[] parts = status.split(",");
+                sql.append(" AND status IN (");
+                for (int i = 0; i < parts.length; i++) {
+                    sql.append(i > 0 ? ",?" : "?");
+                    params.add(parts[i].trim());
+                }
+                sql.append(")");
+            } else {
+                sql.append(" AND status=?");
+                params.add(status);
+            }
+        }
         if (submitter != null && !submitter.isEmpty()) { sql.append(" AND submitter=?"); params.add(submitter); }
         return params.toArray();
     }

@@ -59,4 +59,11 @@ public class ApprovalController {
         String comment = body != null ? body.get("comment") : null;
         return ApiResult.ok(approvalService.reject(id, user.getUsername(), comment));
     }
+
+    @PutMapping("/{id}/publish")
+    @RequirePermission("pack:publish:submit")
+    public ApiResult publish(@PathVariable Long id) {
+        String publisher = AuthContext.get().getUsername();
+        return ApiResult.ok(approvalService.publish(id, publisher));
+    }
 }

@@ -16,13 +16,15 @@ export interface ApprovalVO {
   project: string;
   packageId: string;
   packageName: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISH_FAILED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISH_FAILED' | 'PUBLISHED';
   submitter: string;
   comment: string | null;
   failReason: string | null;
+  publisher: string | null;
   submittedAt: number;
   approver: string | null;
   approvedAt: number | null;
+  publishedAt: number | null;
   diffs?: ApprovalDiffItem[];
 }
 
@@ -36,9 +38,10 @@ export function submitApproval(data: { project: string; packageId: string }) {
 }
 
 export function listApprovals(params: {
-  project: string;
+  project?: string;
   packageId?: string;
   status?: string;
+  submitter?: string;
   page?: number;
   pageSize?: number;
 }) {
@@ -55,6 +58,10 @@ export function approveApproval(id: number, comment?: string) {
 
 export function rejectApproval(id: number, comment?: string) {
   return request.put(`/api/approvals/${id}/reject`, { comment });
+}
+
+export function publishApproval(id: number) {
+  return request.put(`/api/approvals/${id}/publish`);
 }
 
 export function listPackages(project: string) {

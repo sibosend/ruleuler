@@ -111,21 +111,37 @@ public class ApprovalService {
         long now = System.currentTimeMillis();
         approvalDao.updateStatus(approvalId, ApprovalStatus.APPROVED, approver, comment, now);
 
-        // 执行发布
+        a.setStatus(ApprovalStatus.APPROVED);
+        a.setApprover(approver);
+        a.setComment(comment);
+        a.setApprovedAt(now);
+        return buildApprovalVo(a, approvalDao.findDiffItemsByApprovalId(approvalId));
+    }
+
+    // ---- publish ----
+
+    @Transactional
+    public Map<String, Object> publish(Long approvalId, String publisher) {
+        Approval a = approvalDao.findById(approvalId);
+        if (a == null) throw new IllegalArgumentException("审批单不存在");
+        if (a.getStatus() != ApprovalStatus.APPROVED && a.getStatus() != ApprovalStatus.PUBLISH_FAILED)
+            throw new IllegalArgumentException("审批单状态不允许此操作");
+
         try {
             String pushInfo = executePublish(a.getProject(), a.getPackageId());
-            log.info("发布完成: approvalId={}, info={}", approvalId, pushInfo);
+            log.info("上线完成: approvalId={}, info={}", approvalId, pushInfo);
 
-            // 创建发布快照
             createPublishSnapshot(a.getProject(), a.getPackageId(), approvalId);
 
-            a.setStatus(ApprovalStatus.APPROVED);
-            a.setApprover(approver);
-            a.setComment(comment);
-            a.setApprovedAt(now);
+            long now = System.currentTimeMillis();
+            approvalDao.updatePublished(approvalId, publisher, now);
+
+            a.setStatus(ApprovalStatus.PUBLISHED);
+            a.setPublisher(publisher);
+            a.setPublishedAt(now);
             return buildApprovalVo(a, approvalDao.findDiffItemsByApprovalId(approvalId));
         } catch (Exception e) {
-            log.error("发布失败: approvalId={}, error={}", approvalId, e.getMessage(), e);
+            log.error("上线失败: approvalId={}, error={}", approvalId, e.getMessage(), e);
             approvalDao.updatePublishFailed(approvalId, e.getMessage());
             a.setStatus(ApprovalStatus.PUBLISH_FAILED);
             a.setFailReason(e.getMessage());
@@ -305,6 +321,8 @@ public class ApprovalService {
         vo.put("submittedAt", a.getSubmittedAt());
         vo.put("approver", a.getApprover());
         vo.put("approvedAt", a.getApprovedAt());
+        vo.put("publisher", a.getPublisher());
+        vo.put("publishedAt", a.getPublishedAt());
         if (diffs != null) vo.put("diffs", diffs);
         return vo;
     }

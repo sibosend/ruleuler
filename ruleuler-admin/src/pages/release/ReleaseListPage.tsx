@@ -1,21 +1,30 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button, Table, Tag, Space, Select, Drawer, Modal, Input,
-  message, Descriptions,
+  message, Descriptions, Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
+  publishApproval,
   type ApprovalVO, type ApprovalDiffItem,
 } from '@/api/approval';
 import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuthStore } from '@/stores/authStore';
+
+type ReleaseMode = 'pending' | 'pending-publish' | 'my' | 'all';
+
+interface Props {
+  mode: ReleaseMode;
+}
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
-  PENDING: { color: 'blue', label: '待审批' },
-  APPROVED: { color: 'green', label: '已通过' },
+  PENDING: { color: 'blue', label: '待审核' },
+  APPROVED: { color: 'cyan', label: '待上线' },
   REJECTED: { color: 'red', label: '已拒绝' },
-  PUBLISH_FAILED: { color: 'orange', label: '发布失败' },
+  PUBLISH_FAILED: { color: 'orange', label: '上线失败' },
+  PUBLISHED: { color: 'green', label: '已上线' },
 };
 
 const CHANGE_TYPE_MAP: Record<string, { color: string; label: string }> = {
@@ -24,7 +33,9 @@ const CHANGE_TYPE_MAP: Record<string, { color: string; label: string }> = {
   DELETED: { color: 'red', label: '删除' },
 };
 
-const ApprovalListPage: React.FC = () => {
+const PAGE_SIZE = 20;
+
+const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const [projects, setProjects] = useState<string[]>([]);
   const [project, setProject] = useState<string | null>(null);
   const [data, setData] = useState<ApprovalVO[]>([]);
@@ -39,9 +50,22 @@ const ApprovalListPage: React.FC = () => {
   const [comment, setComment] = useState('');
 
   const canApprove = usePermission('pack:publish:approve');
+  const canSubmit = usePermission('pack:publish:submit');
+  const currentUser = useAuthStore((s) => s.user?.username);
   const projectsFetched = useRef(false);
 
-  // 加载项目列表
+  // 固定状态筛选
+  const fixedStatus = useMemo(() => {
+    switch (mode) {
+      case 'pending': return 'PENDING';
+      case 'pending-publish': return 'APPROVED,PUBLISH_FAILED';
+      default: return undefined;
+    }
+  }, [mode]);
+
+  // 固定提交人筛选
+  const fixedSubmitter = useMemo(() => (mode === 'my' ? currentUser : undefined), [mode, currentUser]);
+
   useEffect(() => {
     if (projectsFetched.current) return;
     projectsFetched.current = true;
@@ -51,28 +75,23 @@ const ApprovalListPage: React.FC = () => {
     });
   }, []);
 
-  // 加载审批列表
-  const fetchData = useCallback(async (p = page, proj = project, s = statusFilter) => {
-    if (!proj) return;
+  const fetchData = useCallback(async (p = page, proj = project, s = fixedStatus ?? statusFilter, sub = fixedSubmitter) => {
+    if (!proj && mode !== 'my') return;
     setLoading(true);
     try {
-      const res = await listApprovals({ project: proj, status: s, page: p, pageSize: 20 });
+      const res = await listApprovals({ project: proj ?? undefined, status: s, submitter: sub, page: p, pageSize: PAGE_SIZE });
       setData(res.data?.data?.items ?? res.data?.items ?? []);
       setTotal(res.data?.data?.total ?? res.data?.total ?? 0);
     } finally {
       setLoading(false);
     }
-  }, [project, page, statusFilter]);
+  }, [project, page, fixedStatus, statusFilter, fixedSubmitter, mode]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // 切换项目时重置
   const handleProjectChange = (v: string) => {
     setProject(v);
     setPage(1);
-    setStatusFilter(undefined);
   };
 
   useEffect(() => {
@@ -95,6 +114,14 @@ const ApprovalListPage: React.FC = () => {
     } catch { /* request.ts 已处理 */ }
   };
 
+  const handlePublish = async (id: number) => {
+    try {
+      await publishApproval(id);
+      message.success('上线成功');
+      fetchData();
+    } catch { /* request.ts 已处理 */ }
+  };
+
   const openDetail = async (record: ApprovalVO) => {
     try {
       const res = await getApprovalDetail(record.id);
@@ -103,25 +130,60 @@ const ApprovalListPage: React.FC = () => {
     } catch { /* request.ts 已处理 */ }
   };
 
-  const columns: ColumnsType<ApprovalVO> = [
-    { title: 'ID', dataIndex: 'id', width: 60 },
-    { title: '知识包', dataIndex: 'packageName', ellipsis: true },
-    { title: '状态', dataIndex: 'status', width: 100,
-      render: (s: string) => { const m = STATUS_MAP[s]; return m ? <Tag color={m.color}>{m.label}</Tag> : s; },
-    },
-    { title: '提交人', dataIndex: 'submitter', width: 100 },
-    { title: '提交时间', dataIndex: 'submittedAt', width: 170,
-      render: (t: number) => t ? new Date(t).toLocaleString() : '-',
-    },
-    { title: '审批人', dataIndex: 'approver', width: 100, render: (v: string) => v ?? '-' },
-    { title: '审批时间', dataIndex: 'approvedAt', width: 170,
-      render: (t: number) => t ? new Date(t).toLocaleString() : '-',
-    },
-    { title: '操作', width: 200, fixed: 'right',
+  // 列定义
+  const columns: ColumnsType<ApprovalVO> = useMemo(() => {
+    const base: ColumnsType<ApprovalVO> = [
+      { title: 'ID', dataIndex: 'id', width: 60 },
+      { title: '知识包', dataIndex: 'packageName', ellipsis: true },
+      {
+        title: '状态', dataIndex: 'status', width: 100,
+        render: (s: string) => { const m = STATUS_MAP[s]; return m ? <Tag color={m.color}>{m.label}</Tag> : s; },
+      },
+      { title: '提交人', dataIndex: 'submitter', width: 90 },
+      {
+        title: '提交时间', dataIndex: 'submittedAt', width: 170,
+        render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+      },
+    ];
+
+    // 审批列：pending / all / my 都显示
+    if (mode !== 'pending-publish') {
+      base.push(
+        { title: '审批人', dataIndex: 'approver', width: 90, render: (v: string) => v ?? '-' },
+        {
+          title: '审批时间', dataIndex: 'approvedAt', width: 170,
+          render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+        },
+      );
+    }
+
+    // 上线列：pending-publish / all / my 都显示
+    if (mode !== 'pending') {
+      base.push(
+        { title: '上线人', dataIndex: 'publisher', width: 90, render: (v: string) => v ?? '-' },
+        {
+          title: '上线时间', dataIndex: 'publishedAt', width: 170,
+          render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+        },
+      );
+    }
+
+    // 失败原因
+    if (mode === 'pending-publish' || mode === 'all') {
+      base.push({
+        title: '失败原因', dataIndex: 'failReason', width: 200, ellipsis: true,
+        render: (v: string) => v ? <span style={{ color: '#ff4d4f' }}>{v}</span> : '-',
+      });
+    }
+
+    // 操作列
+    base.push({
+      title: '操作', width: 200, fixed: 'right',
       render: (_: any, record: ApprovalVO) => (
         <Space size="small">
           <Button size="small" onClick={() => openDetail(record)}>查看</Button>
-          {canApprove && record.status === 'PENDING' && (
+          {/* 待审核：审批操作 */}
+          {canApprove && record.status === 'PENDING' && (mode === 'pending' || mode === 'all') && (
             <>
               <Button size="small" type="primary"
                 onClick={() => { setCommentModal({ open: true, type: 'approve', id: record.id }); setComment(''); }}>
@@ -133,18 +195,37 @@ const ApprovalListPage: React.FC = () => {
               </Button>
             </>
           )}
+          {/* 待上线：上线操作 */}
+          {canSubmit && (record.status === 'APPROVED' || record.status === 'PUBLISH_FAILED')
+            && (mode === 'pending-publish' || mode === 'all') && (
+            <Popconfirm
+              title={record.status === 'PUBLISH_FAILED' ? '确认重新上线？' : '确认上线？'}
+              onConfirm={() => handlePublish(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button size="small" type="primary">
+                {record.status === 'PUBLISH_FAILED' ? '重新上线' : '上线'}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
-    },
-  ];
+    });
 
-  // diff 按组件类型分组
+    return base;
+  }, [mode, canApprove, canSubmit]);
+
+  // diff 分组
   const groupedDiffs = diffDrawer.diffs.reduce<Record<string, ApprovalDiffItem[]>>((acc, d) => {
     const type = d.componentType || '未知';
     if (!acc[type]) acc[type] = [];
     acc[type].push(d);
     return acc;
   }, {});
+
+  // 筛选器
+  const showStatusFilter = mode === 'my' || mode === 'all';
 
   return (
     <div style={{ padding: 24 }}>
@@ -160,17 +241,19 @@ const ApprovalListPage: React.FC = () => {
             <Select.Option key={p} value={p}>{p}</Select.Option>
           ))}
         </Select>
-        <Select
-          placeholder="状态筛选"
-          allowClear
-          style={{ width: 140 }}
-          value={statusFilter}
-          onChange={(v) => { setStatusFilter(v); setPage(1); }}
-        >
-          {Object.entries(STATUS_MAP).map(([k, v]) => (
-            <Select.Option key={k} value={k}>{v.label}</Select.Option>
-          ))}
-        </Select>
+        {showStatusFilter && (
+          <Select
+            placeholder="状态筛选"
+            allowClear
+            style={{ width: 140 }}
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+          >
+            {Object.entries(STATUS_MAP).map(([k, v]) => (
+              <Select.Option key={k} value={k}>{v.label}</Select.Option>
+            ))}
+          </Select>
+        )}
       </Space>
 
       <Table<ApprovalVO>
@@ -178,8 +261,8 @@ const ApprovalListPage: React.FC = () => {
         columns={columns}
         dataSource={data}
         loading={loading}
-        pagination={{ current: page, total, pageSize: 20, onChange: setPage, showTotal: (t) => `共 ${t} 条` }}
-        scroll={{ x: 1000 }}
+        pagination={{ current: page, total, pageSize: PAGE_SIZE, onChange: setPage, showTotal: (t) => `共 ${t} 条` }}
+        scroll={{ x: 1200 }}
         size="middle"
       />
 
@@ -220,6 +303,22 @@ const ApprovalListPage: React.FC = () => {
               <Descriptions.Item label="提交时间">
                 {diffDrawer.approval.submittedAt ? new Date(diffDrawer.approval.submittedAt).toLocaleString() : '-'}
               </Descriptions.Item>
+              {diffDrawer.approval.approver && (
+                <Descriptions.Item label="审批人">{diffDrawer.approval.approver}</Descriptions.Item>
+              )}
+              {diffDrawer.approval.approvedAt && (
+                <Descriptions.Item label="审批时间">
+                  {new Date(diffDrawer.approval.approvedAt).toLocaleString()}
+                </Descriptions.Item>
+              )}
+              {diffDrawer.approval.publisher && (
+                <Descriptions.Item label="上线人">{diffDrawer.approval.publisher}</Descriptions.Item>
+              )}
+              {diffDrawer.approval.publishedAt && (
+                <Descriptions.Item label="上线时间">
+                  {new Date(diffDrawer.approval.publishedAt).toLocaleString()}
+                </Descriptions.Item>
+              )}
               {diffDrawer.approval.comment && (
                 <Descriptions.Item label="审批意见" span={2}>{diffDrawer.approval.comment}</Descriptions.Item>
               )}
@@ -263,4 +362,4 @@ const ApprovalListPage: React.FC = () => {
   );
 };
 
-export default ApprovalListPage;
+export default ReleaseListPage;

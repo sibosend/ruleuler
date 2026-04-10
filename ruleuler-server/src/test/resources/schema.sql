@@ -103,8 +103,10 @@ CREATE TABLE ruleuler_publish_approval (
     approver VARCHAR(100),
     comment VARCHAR(500),
     fail_reason CLOB,
+    publisher VARCHAR(100),
     submitted_at BIGINT NOT NULL,
-    approved_at BIGINT
+    approved_at BIGINT,
+    published_at BIGINT
 );
 
 CREATE INDEX idx_pa_project_pkg ON ruleuler_publish_approval (project, package_id);
