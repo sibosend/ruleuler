@@ -7,6 +7,10 @@ import com.bstek.urule.console.repository.model.ResourcePackage;
 import com.bstek.urule.runtime.KnowledgePackage;
 import com.bstek.urule.runtime.KnowledgePackageWrapper;
 import com.bstek.urule.runtime.cache.CacheUtils;
+import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestCasePack;
+import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestExecutor;
+import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestResultDao;
+import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestRun;
 import com.caritasem.ruleuler.server.approval.model.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -34,19 +38,25 @@ public class ApprovalService {
     private final ApprovalDao approvalDao;
     private final DiffCalculator diffCalculator;
     private final RepositoryService repositoryService;
+    private final TestExecutor testExecutor;
+    private final TestResultDao testResultDao;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
-                           @Qualifier("urule.repositoryService") RepositoryService repositoryService) {
+                           @Qualifier("urule.repositoryService") RepositoryService repositoryService,
+                           @Qualifier("urule.testExecutor") TestExecutor testExecutor,
+                           @Qualifier("urule.testResultDao") TestResultDao testResultDao) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
+        this.testExecutor = testExecutor;
+        this.testResultDao = testResultDao;
     }
 
     // ---- submit ----
 
     @Transactional
-    public Map<String, Object> submit(String project, String packageId, String submitter) {
+    public Map<String, Object> submit(String project, String packageId, String submitter, String description) {
         // 1. 检查 pending 唯一性
         if (approvalDao.existsPending(project, packageId)) {
             throw new IllegalArgumentException("该知识包已有待审批的发布申请");
@@ -66,14 +76,19 @@ public class ApprovalService {
         // 4. 内容级 diff
         List<ApprovalDiffItem> diffs = diffCalculator.calculateContentDiff(currentMap, prevMap);
 
-        // 5. 持久化审批单
+        // 5. 判断是否有用例包，决定初始状态
+        boolean hasTestPack = hasTestPacks(project, packageId);
+        ApprovalStatus initialStatus = hasTestPack ? ApprovalStatus.TESTING : ApprovalStatus.PENDING;
+
+        // 6. 持久化审批单
         long now = System.currentTimeMillis();
         Approval approval = Approval.builder()
                 .project(project)
                 .packageId(packageId)
                 .packageName(pkg.getName())
-                .status(ApprovalStatus.PENDING)
+                .status(initialStatus)
                 .submitter(submitter)
+                .description(description)
                 .submittedAt(now)
                 .build();
         Long approvalId = approvalDao.insertApproval(approval);
@@ -85,11 +100,55 @@ public class ApprovalService {
             approvalDao.batchInsertDiffItems(diffs);
         }
 
-        // 6. 提交时创建快照（内容级）
+        // 7. 提交时创建快照（内容级）
         createContentSnapshot(project, packageId, approvalId, currentMap);
+
+        // 8. 异步执行自动测试
+        if (hasTestPack) {
+            runAutoTestAsync(project, packageId, approvalId);
+        }
 
         approval.setId(approvalId);
         return buildApprovalVo(approval, diffs);
+    }
+
+    private boolean hasTestPacks(String project, String packageId) {
+        try {
+            List<TestCasePack> packs = testResultDao.findPacksByPackage(project, packageId);
+            return packs != null && !packs.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 异步执行自动测试，完成后更新审批单状态为 PENDING。
+     * 测试失败不阻塞审批流程，只记录结果。
+     */
+    private void runAutoTestAsync(String project, String packageId, Long approvalId) {
+        new Thread(() -> {
+            Long testRunId = null;
+            try {
+                List<TestCasePack> packs = testResultDao.findPacksByPackage(project, packageId);
+                if (packs != null && !packs.isEmpty()) {
+                    TestCasePack latestPack = packs.get(packs.size() - 1);
+                    log.info("审批#{} 异步自动测试开始: packId={}", approvalId, latestPack.getId());
+                    TestRun run = testExecutor.execute(latestPack.getId(), null);
+                    testRunId = run.getId();
+                    log.info("审批#{} 异步自动测试完成: runId={}, passed={}, failed={}",
+                            approvalId, run.getId(), run.getPassedCases(), run.getFailedCases());
+                }
+            } catch (Exception e) {
+                log.warn("审批#{} 异步自动测试执行失败: {}", approvalId, e.getMessage(), e);
+            } finally {
+                // 无论测试成功失败，都流转到 PENDING
+                try {
+                    approvalDao.updateTestResult(approvalId, testRunId, ApprovalStatus.PENDING);
+                } catch (Exception e) {
+                    log.error("审批#{} 更新测试结果失败", approvalId, e);
+                }
+            }
+        }, "approval-test-" + approvalId).start();
     }
 
     // ---- approve ----
@@ -316,7 +375,29 @@ public class ApprovalService {
         vo.put("approvedAt", a.getApprovedAt());
         vo.put("publisher", a.getPublisher());
         vo.put("publishedAt", a.getPublishedAt());
+        vo.put("testRunId", a.getTestRunId());
+        vo.put("description", a.getDescription());
         if (diffs != null) vo.put("diffs", diffs);
+
+        // 测试结果摘要
+        if (a.getTestRunId() != null) {
+            try {
+                TestRun run = testResultDao.findRunById(a.getTestRunId());
+                if (run != null) {
+                    Map<String, Object> testSummary = new LinkedHashMap<>();
+                    testSummary.put("runId", run.getId());
+                    testSummary.put("status", run.getStatus());
+                    testSummary.put("totalCases", run.getTotalCases());
+                    testSummary.put("passedCases", run.getPassedCases());
+                    testSummary.put("failedCases", run.getFailedCases());
+                    testSummary.put("startedAt", run.getStartedAt());
+                    testSummary.put("finishedAt", run.getFinishedAt());
+                    vo.put("testSummary", testSummary);
+                }
+            } catch (Exception e) {
+                log.warn("加载测试结果摘要失败: runId={}", a.getTestRunId(), e);
+            }
+        }
         return vo;
     }
 }

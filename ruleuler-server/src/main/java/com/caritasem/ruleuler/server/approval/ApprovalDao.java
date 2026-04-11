@@ -31,6 +31,8 @@ public class ApprovalDao {
             .submittedAt(rs.getLong("submitted_at"))
             .approvedAt(rs.getObject("approved_at") != null ? rs.getLong("approved_at") : null)
             .publishedAt(rs.getObject("published_at") != null ? rs.getLong("published_at") : null)
+            .testRunId(rs.getObject("test_run_id") != null ? rs.getLong("test_run_id") : null)
+            .description(rs.getString("description"))
             .build();
 
     private static final RowMapper<ApprovalDiffItem> DIFF_MAPPER = (rs, rowNum) -> ApprovalDiffItem.builder()
@@ -60,8 +62,8 @@ public class ApprovalDao {
         GeneratedKeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(conn -> {
             PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at) " +
-                    "VALUES (?,?,?,?,?,?,?)", new String[]{"id"});
+                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at,test_run_id,description) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?)", new String[]{"id"});
             ps.setString(1, a.getProject());
             ps.setString(2, a.getPackageId());
             ps.setString(3, a.getPackageName());
@@ -69,6 +71,8 @@ public class ApprovalDao {
             ps.setString(5, a.getSubmitter());
             ps.setString(6, a.getComment());
             ps.setLong(7, a.getSubmittedAt());
+            ps.setObject(8, a.getTestRunId());
+            ps.setString(9, a.getDescription());
             return ps;
         }, kh);
         return kh.getKey().longValue();
@@ -81,7 +85,7 @@ public class ApprovalDao {
 
     public boolean existsPending(String project, String packageId) {
         Integer cnt = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM ruleuler_publish_approval WHERE project=? AND package_id=? AND status='PENDING'",
+                "SELECT COUNT(*) FROM ruleuler_publish_approval WHERE project=? AND package_id=? AND status IN ('PENDING','TESTING')",
                 Integer.class, project, packageId);
         return cnt != null && cnt > 0;
     }
@@ -117,16 +121,24 @@ public class ApprovalDao {
                 publisher, publishedAt, id);
     }
 
+    public void updateTestResult(Long id, Long testRunId, ApprovalStatus status) {
+        jdbc.update("UPDATE ruleuler_publish_approval SET test_run_id=?,status=? WHERE id=?",
+                testRunId, status.name(), id);
+    }
+
     // ---- Diff Items ----
 
     public void batchInsertDiffItems(List<ApprovalDiffItem> items) {
+        String sql = "INSERT INTO ruleuler_publish_approval_diff " +
+                "(approval_id,component_path,component_name,component_type,change_type,prev_version,curr_version,details) " +
+                "VALUES (?,?,?,?,?,?,?,?)";
         for (ApprovalDiffItem d : items) {
-            jdbc.update(
-                    "INSERT INTO ruleuler_publish_approval_diff (approval_id,component_path,component_name,component_type,change_type,prev_version,curr_version,details) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?)",
+            Object[] args = {
                     d.getApprovalId(), d.getComponentPath(), d.getComponentName(),
-                    d.getComponentType(), d.getChangeType(), d.getPrevVersion(), d.getCurrVersion(),
-                    d.getDetails());
+                    d.getComponentType(), d.getChangeType(), d.getPrevVersion(),
+                    d.getCurrVersion(), d.getDetails()
+            };
+            jdbc.update(sql, args);
         }
     }
 

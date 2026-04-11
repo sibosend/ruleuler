@@ -8,7 +8,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
   publishApproval,
-  type ApprovalVO, type ApprovalDiffItem, type RuleDiffDetail,
+  type ApprovalVO, type ApprovalDiffItem, type RuleDiffDetail, type FieldDiff,
 } from '@/api/approval';
 import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
@@ -22,6 +22,7 @@ interface Props {
 }
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
+  TESTING: { color: 'processing', label: '测试中' },
   PENDING: { color: 'blue', label: '待审核' },
   APPROVED: { color: 'cyan', label: '待上线' },
   REJECTED: { color: 'red', label: '已拒绝' },
@@ -332,6 +333,9 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                   {new Date(diffDrawer.approval.publishedAt).toLocaleString()}
                 </Descriptions.Item>
               )}
+              {diffDrawer.approval.description && (
+                <Descriptions.Item label="变更说明" span={2}>{diffDrawer.approval.description}</Descriptions.Item>
+              )}
               {diffDrawer.approval.comment && (
                 <Descriptions.Item label="审批意见" span={2}>{diffDrawer.approval.comment}</Descriptions.Item>
               )}
@@ -341,6 +345,42 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                 </Descriptions.Item>
               )}
             </Descriptions>
+
+            {/* 测试结果摘要 */}
+            {diffDrawer.approval.status === 'TESTING' ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+                <strong>自动测试</strong><span style={{ marginLeft: 12 }}>执行中，完成后自动进入待审核...</span>
+              </div>
+            ) : diffDrawer.approval.testSummary ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 4,
+                background: diffDrawer.approval.testSummary.failedCases > 0 ? '#fff2f0' : '#f6ffed',
+                border: `1px solid ${diffDrawer.approval.testSummary.failedCases > 0 ? '#ffccc7' : '#b7eb8f'}` }}>
+                <strong>自动测试</strong>
+                <span style={{ marginLeft: 12 }}>
+                  共 {diffDrawer.approval.testSummary.totalCases} 条，
+                  <span style={{ color: '#389e0d' }}>通过 {diffDrawer.approval.testSummary.passedCases}</span>
+                  {diffDrawer.approval.testSummary.failedCases > 0 && (
+                    <span style={{ color: '#cf1322', marginLeft: 8 }}>失败 {diffDrawer.approval.testSummary.failedCases}</span>
+                  )}
+                </span>
+                <Button size="small" type="link"
+                  onClick={() => window.open(`/admin/autotest/report/${diffDrawer.approval!.testSummary!.runId}`, '_blank')}>
+                  查看报告
+                </Button>
+              </div>
+            ) : diffDrawer.approval.testRunId ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4 }}>
+                <strong>自动测试</strong>
+                <Button size="small" type="link"
+                  onClick={() => window.open(`/admin/autotest/report/${diffDrawer.approval!.testRunId}`, '_blank')}>
+                  查看报告
+                </Button>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: 4 }}>
+                <strong>自动测试</strong><span style={{ marginLeft: 12, color: '#999' }}>无用例包，未执行测试</span>
+              </div>
+            )}
 
             {Object.entries(groupedDiffs).map(([type, items]) => (
               <div key={type} style={{ marginBottom: 16 }}>
@@ -359,12 +399,38 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                         return (
                           <div style={{ padding: '4px 0' }}>
                             {rules.map((rd, i) => (
-                              <div key={i} style={{ padding: '2px 8px', fontSize: 13 }}>
-                                <Tag color={rd.change === 'ADDED' ? 'green' : rd.change === 'DELETED' ? 'red' : 'blue'}
-                                  style={{ marginRight: 8 }}>
-                                  {rd.change === 'ADDED' ? '新增' : rd.change === 'DELETED' ? '删除' : '修改'}
-                                </Tag>
-                                <span style={{ fontFamily: 'monospace' }}>{rd.rule}</span>
+                              <div key={i} style={{ padding: '4px 8px', fontSize: 13, borderBottom: i < rules.length - 1 ? '1px solid #f0f0f0' : undefined }}>
+                                <div style={{ marginBottom: 4 }}>
+                                  <Tag color={rd.change === 'ADDED' ? 'green' : rd.change === 'DELETED' ? 'red' : 'blue'}
+                                    style={{ marginRight: 8 }}>
+                                    {rd.change === 'ADDED' ? '新增' : rd.change === 'DELETED' ? '删除' : '修改'}
+                                  </Tag>
+                                  <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{rd.rule}</span>
+                                </div>
+                                {rd.fields && rd.fields.length > 0 && (
+                                  <table style={{ marginLeft: 24, fontSize: 12, borderCollapse: 'collapse' }}>
+                                    <thead>
+                                      <tr style={{ color: '#999' }}>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>字段</td>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>变更前</td>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>变更后</td>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {rd.fields.map((f: FieldDiff, j: number) => (
+                                        <tr key={j}>
+                                          <td style={{ padding: '2px 12px 2px 0', fontFamily: 'monospace' }}>{f.field}</td>
+                                          <td style={{ padding: '2px 12px 2px 0', color: '#cf1322', background: f.prev ? '#fff1f0' : undefined }}>
+                                            {f.prev ?? '-'}
+                                          </td>
+                                          <td style={{ padding: '2px 12px 2px 0', color: '#389e0d', background: f.curr ? '#f6ffed' : undefined }}>
+                                            {f.curr ?? '-'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
                               </div>
                             ))}
                             {rules.length === 0 && <span style={{ color: '#999' }}>无具体变动</span>}

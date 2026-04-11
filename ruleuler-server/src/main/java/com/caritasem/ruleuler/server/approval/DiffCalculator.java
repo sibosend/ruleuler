@@ -258,10 +258,126 @@ public class DiffCalculator {
             if (Objects.equals(prev, curr)) continue;
 
             String change = (prev == null) ? "ADDED" : (curr == null) ? "DELETED" : "MODIFIED";
-            parts.add(String.format("{\"rule\":\"%s\",\"change\":\"%s\"}",
-                    escapeJson(key), change));
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"rule\":\"").append(escapeJson(key))
+              .append("\",\"change\":\"").append(change).append("\"");
+
+            if ("MODIFIED".equals(change)) {
+                // 提取具体字段级差异
+                String fieldDiffs = extractFieldDiffs(prev, curr);
+                if (fieldDiffs != null) {
+                    sb.append(",\"fields\":").append(fieldDiffs);
+                }
+            }
+            sb.append("}");
+            parts.add(sb.toString());
         }
         return "[" + String.join(",", parts) + "]";
+    }
+
+    /**
+     * 对比两段 XML，提取具体字段级差异。
+     * 返回 JSON 数组如 [{"field":"arrival_time >=","prev":"6.8","curr":"6.9"}]
+     */
+    private String extractFieldDiffs(String prevXml, String currXml) {
+        try {
+            // 从两段 XML 中提取所有 "有意义的值"
+            Map<String, String> prevFields = extractSemanticFields(prevXml);
+            Map<String, String> currFields = extractSemanticFields(currXml);
+
+            List<String> diffs = new ArrayList<>();
+            Set<String> allKeys = new LinkedHashSet<>();
+            allKeys.addAll(prevFields.keySet());
+            allKeys.addAll(currFields.keySet());
+
+            for (String field : allKeys) {
+                String pv = prevFields.get(field);
+                String cv = currFields.get(field);
+                if (Objects.equals(pv, cv)) continue;
+
+                StringBuilder d = new StringBuilder();
+                d.append("{\"field\":\"").append(escapeJson(field)).append("\"");
+                if (pv != null) d.append(",\"prev\":\"").append(escapeJson(pv)).append("\"");
+                if (cv != null) d.append(",\"curr\":\"").append(escapeJson(cv)).append("\"");
+                d.append("}");
+                diffs.add(d.toString());
+            }
+            return diffs.isEmpty() ? null : "[" + String.join(",", diffs) + "]";
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从 XML 片段中提取语义化的 field→value 映射。
+     * 识别条件(atom)和赋值(var-assign)等结构。
+     */
+    private Map<String, String> extractSemanticFields(String xml) throws Exception {
+        Map<String, String> fields = new LinkedHashMap<>();
+        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+        Element root = doc.getDocumentElement();
+
+        // 条件: <atom op="..."><left var-label="..."/><value content="..."/></atom>
+        NodeList atoms = root.getElementsByTagName("atom");
+        for (int i = 0; i < atoms.getLength(); i++) {
+            Element atom = (Element) atoms.item(i);
+            String op = atom.getAttribute("op");
+            String varLabel = "";
+            String value = "";
+            NodeList children = atom.getChildNodes();
+            for (int j = 0; j < children.getLength(); j++) {
+                if (children.item(j) instanceof Element child) {
+                    if ("left".equals(child.getTagName())) {
+                        varLabel = child.getAttribute("var-label");
+                        if (varLabel.isEmpty()) varLabel = child.getAttribute("var");
+                    } else if ("value".equals(child.getTagName())) {
+                        value = child.getAttribute("content");
+                    }
+                }
+            }
+            String opSymbol = switch (op) {
+                case "Equals" -> "==";
+                case "GreaterThen" -> ">";
+                case "GreaterThenEquals" -> ">=";
+                case "LessThen" -> "<";
+                case "LessThenEquals" -> "<=";
+                case "NotEquals" -> "!=";
+                default -> op;
+            };
+            String fieldKey = varLabel + " " + opSymbol;
+            fields.put(fieldKey, value);
+        }
+
+        // 赋值: <var-assign var-label="..."><value content="..."/></var-assign>
+        NodeList assigns = root.getElementsByTagName("var-assign");
+        for (int i = 0; i < assigns.getLength(); i++) {
+            Element assign = (Element) assigns.item(i);
+            String varLabel = assign.getAttribute("var-label");
+            if (varLabel.isEmpty()) varLabel = assign.getAttribute("var");
+            NodeList children = assign.getChildNodes();
+            for (int j = 0; j < children.getLength(); j++) {
+                if (children.item(j) instanceof Element child && "value".equals(child.getTagName())) {
+                    fields.put(varLabel + " =", child.getAttribute("content"));
+                }
+            }
+        }
+
+        // 决策表 cell: <cell row="..." col="..."><value content="..."/></cell>
+        NodeList cells = root.getElementsByTagName("cell");
+        for (int i = 0; i < cells.getLength(); i++) {
+            Element cell = (Element) cells.item(i);
+            String row = cell.getAttribute("row");
+            String col = cell.getAttribute("col");
+            NodeList children = cell.getChildNodes();
+            for (int j = 0; j < children.getLength(); j++) {
+                if (children.item(j) instanceof Element child && "value".equals(child.getTagName())) {
+                    fields.put("R" + row + "C" + col, child.getAttribute("content"));
+                }
+            }
+        }
+
+        return fields;
     }
 
     private static String escapeJson(String s) {

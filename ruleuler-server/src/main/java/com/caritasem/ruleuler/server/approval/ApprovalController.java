@@ -20,11 +20,12 @@ public class ApprovalController {
     public ApiResult submit(@RequestBody Map<String, String> body) {
         String project = body.get("project");
         String packageId = body.get("packageId");
+        String description = body.get("description");
         if (project == null || packageId == null) {
             return ApiResult.error(400, "project 和 packageId 不能为空");
         }
         AuthContext.UserInfo user = AuthContext.get();
-        return ApiResult.ok(approvalService.submit(project, packageId, user.getUsername()));
+        return ApiResult.ok(approvalService.submit(project, packageId, user.getUsername(), description));
     }
 
     @GetMapping

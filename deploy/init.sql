@@ -433,6 +433,8 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
   `fail_reason` text DEFAULT NULL COMMENT '发布失败原因',
   `submitted_at` bigint NOT NULL COMMENT '提交时间（毫秒时间戳）',
   `approved_at` bigint DEFAULT NULL COMMENT '审批时间（毫秒时间戳）',
+  `test_run_id` bigint DEFAULT NULL COMMENT '关联自动测试运行 ID',
+  `description` varchar(1000) DEFAULT NULL COMMENT '变更说明',
   PRIMARY KEY (`id`),
   KEY `idx_project_pkg` (`project`, `package_id`),
   KEY `idx_status` (`status`),
@@ -448,6 +450,7 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval_diff` (
   `change_type` varchar(20) NOT NULL COMMENT 'ADDED/MODIFIED/DELETED',
   `prev_version` varchar(50) DEFAULT NULL COMMENT '上次发布版本号',
   `curr_version` varchar(50) DEFAULT NULL COMMENT '本次版本引用',
+  `details` text DEFAULT NULL COMMENT '规则级变动详情 JSON',
   PRIMARY KEY (`id`),
   KEY `idx_approval_id` (`approval_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

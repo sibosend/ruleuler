@@ -106,7 +106,9 @@ CREATE TABLE ruleuler_publish_approval (
     publisher VARCHAR(100),
     submitted_at BIGINT NOT NULL,
     approved_at BIGINT,
-    published_at BIGINT
+    published_at BIGINT,
+    test_run_id BIGINT,
+    description VARCHAR(1000)
 );
 
 CREATE INDEX idx_pa_project_pkg ON ruleuler_publish_approval (project, package_id);

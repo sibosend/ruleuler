@@ -1,8 +1,15 @@
 import request from './request';
 
+export interface FieldDiff {
+  field: string;
+  prev?: string;
+  curr?: string;
+}
+
 export interface RuleDiffDetail {
   rule: string;
   change: 'ADDED' | 'MODIFIED' | 'DELETED';
+  fields?: FieldDiff[];
 }
 
 export interface ApprovalDiffItem {
@@ -17,20 +24,33 @@ export interface ApprovalDiffItem {
   details: string | null; // JSON: RuleDiffDetail[]
 }
 
+export interface TestSummary {
+  runId: number;
+  status: string;
+  totalCases: number;
+  passedCases: number;
+  failedCases: number;
+  startedAt: number;
+  finishedAt: number | null;
+}
+
 export interface ApprovalVO {
   id: number;
   project: string;
   packageId: string;
   packageName: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISH_FAILED' | 'PUBLISHED';
+  status: 'TESTING' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISH_FAILED' | 'PUBLISHED';
   submitter: string;
   comment: string | null;
+  description: string | null;
   failReason: string | null;
   publisher: string | null;
   submittedAt: number;
   approver: string | null;
   approvedAt: number | null;
   publishedAt: number | null;
+  testRunId: number | null;
+  testSummary?: TestSummary;
   diffs?: ApprovalDiffItem[];
 }
 
@@ -39,7 +59,7 @@ export interface ApprovalListResult {
   total: number;
 }
 
-export function submitApproval(data: { project: string; packageId: string }) {
+export function submitApproval(data: { project: string; packageId: string; description: string }) {
   return request.post('/api/approvals', data);
 }
 
