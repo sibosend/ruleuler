@@ -2,13 +2,14 @@
 -- RulEuler 完整数据库初始化脚本
 -- 数据库: ruleuler_data
 -- 包含: JCR 存储表 + DB 存储表 + RBAC 权限表 + 自动测试表
+--        + 变量监控表 + 监控告警配置表 + 发布审批表
+-- 生成方式: mysqldump --no-data + 初始数据补充
 -- ============================================================
 
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
 CREATE DATABASE IF NOT EXISTS `ruleuler_data` DEFAULT CHARACTER SET utf8mb4;
--- USE `ruleuler_data`;  -- 由调用方指定数据库
 
 -- ============================================================
 -- 1. JCR Jackrabbit 存储表（jcr 模式使用）
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS `REPO_VER_REFS` (
 CREATE TABLE IF NOT EXISTS `ruleuler_project_storage` (
   `project_name` varchar(255) NOT NULL,
   `storage_type` varchar(10) NOT NULL COMMENT 'jcr | db',
-  `created_at` bigint NOT NULL COMMENT '毫秒时间戳',
+  `created_at` bigint NOT NULL COMMENT '创建时间，毫秒时间戳',
   PRIMARY KEY (`project_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -241,7 +242,12 @@ INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `
 (14, 'api:PUT:/api/rbac/roles',             '编辑角色',       'api', NULL, 22),
 (15, 'api:DELETE:/api/rbac/roles',          '删除角色',       'api', NULL, 23),
 (16, 'api:PUT:/api/rbac/roles/permissions', '分配角色权限',   'api', NULL, 24),
-(17, 'api:GET:/api/rbac/roles/permissions', '查看权限列表',   'api', NULL, 30);
+(17, 'api:GET:/api/rbac/roles/permissions', '查看权限列表',   'api', NULL, 30),
+(20, 'menu:monitoring',                     '变量监控',       'menu', NULL, 5),
+(21, 'api:GET:/api/monitoring/*',           '监控数据查询',   'api', NULL, 40),
+(30, 'menu:approvals',                      '审批管理',       'menu', NULL, 6),
+(31, 'pack:publish:submit',                 '提交发布审批',   'api',  NULL, 50),
+(32, 'pack:publish:approve',                '审批发布',       'api',  NULL, 51);
 
 INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`)
 SELECT 1, `id` FROM `rbac_permission`;
@@ -343,78 +349,64 @@ CREATE TABLE IF NOT EXISTS `ruleuler_test_segment` (
   KEY `idx_run` (`run_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
 -- ============================================================
 -- 5. 变量监控表
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `ruleuler_variable_daily_stats` (
-    `id`              BIGINT NOT NULL AUTO_INCREMENT,
-    `project`         VARCHAR(255) NOT NULL,
-    `package_id`      VARCHAR(255) NOT NULL,
-    `var_category`    VARCHAR(255) NOT NULL,
-    `var_name`        VARCHAR(255) NOT NULL,
-    `var_type`        VARCHAR(50)  NOT NULL,
-    `io_type`         VARCHAR(10)  NOT NULL COMMENT 'input / output',
-    `stat_date`       DATE         NOT NULL,
-    -- 通用指标
-    `sample_count`    INT          NOT NULL DEFAULT 0,
-    `missing_rate`    DOUBLE       DEFAULT NULL,
-    -- 数值型指标
-    `mean`            DOUBLE       DEFAULT NULL,
-    `std`             DOUBLE       DEFAULT NULL,
-    `min_val`         DOUBLE       DEFAULT NULL,
-    `p25`             DOUBLE       DEFAULT NULL,
-    `p50`             DOUBLE       DEFAULT NULL,
-    `p75`             DOUBLE       DEFAULT NULL,
-    `max_val`         DOUBLE       DEFAULT NULL,
-    `skewness`        DOUBLE       DEFAULT NULL,
-    `outlier_count`   INT          DEFAULT NULL,
-    `outlier_rate`    DOUBLE       DEFAULT NULL,
-    -- 类别型指标
-    `distinct_count`  INT          DEFAULT NULL,
-    `top_value`       VARCHAR(500) DEFAULT NULL,
-    `top_freq_ratio`  DOUBLE       DEFAULT NULL,
-    -- 告警
-    `alert_flags`     VARCHAR(255) DEFAULT NULL COMMENT '逗号分隔的告警类型',
-    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_var_date` (`project`(80), `package_id`(80), `var_category`(80), `var_name`(80), `io_type`, `stat_date`),
-    KEY `idx_stat_date` (`stat_date`),
-    KEY `idx_project_pkg` (`project`(80), `package_id`(80))
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project` varchar(255) NOT NULL,
+  `package_id` varchar(255) NOT NULL,
+  `var_category` varchar(255) NOT NULL,
+  `var_name` varchar(255) NOT NULL,
+  `var_type` varchar(50) NOT NULL,
+  `io_type` varchar(10) NOT NULL COMMENT 'input / output',
+  `stat_date` date NOT NULL,
+  `sample_count` int NOT NULL DEFAULT 0,
+  `missing_rate` double DEFAULT NULL,
+  `mean` double DEFAULT NULL,
+  `std` double DEFAULT NULL,
+  `min_val` double DEFAULT NULL,
+  `p25` double DEFAULT NULL,
+  `p50` double DEFAULT NULL,
+  `p75` double DEFAULT NULL,
+  `max_val` double DEFAULT NULL,
+  `skewness` double DEFAULT NULL,
+  `outlier_count` int DEFAULT NULL,
+  `outlier_rate` double DEFAULT NULL,
+  `distinct_count` int DEFAULT NULL,
+  `top_value` varchar(500) DEFAULT NULL,
+  `top_freq_ratio` double DEFAULT NULL,
+  `alert_flags` varchar(255) DEFAULT NULL COMMENT '逗号分隔的告警类型',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_var_date` (`project`(80),`package_id`(80),`var_category`(80),`var_name`(80),`io_type`,`stat_date`),
+  KEY `idx_stat_date` (`stat_date`),
+  KEY `idx_project_pkg` (`project`(80),`package_id`(80))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 监控菜单权限
-INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `parent_id`, `sort_order`) VALUES
-(20, 'menu:monitoring', '变量监控', 'menu', NULL, 5),
-(21, 'api:GET:/api/monitoring/*', '监控数据查询', 'api', NULL, 40);
-
--- 分配给 admin 角色
-INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`) VALUES (1, 20), (1, 21);
 
 -- ============================================================
 -- 6. 监控告警配置表
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `ruleuler_monitoring_alert_config` (
-    `id`                        INT NOT NULL DEFAULT 1,
-    `missing_rate_max`          DOUBLE NOT NULL DEFAULT 0.05,
-    `missing_rate_spike_delta`  DOUBLE NOT NULL DEFAULT 0.1,
-    `outlier_rate_max`          DOUBLE NOT NULL DEFAULT 0.03,
-    `skewness_abs_max`          DOUBLE NOT NULL DEFAULT 2.0,
-    `psi_warning`               DOUBLE NOT NULL DEFAULT 0.1,
-    `psi_alert`                 DOUBLE NOT NULL DEFAULT 0.2,
-    `enum_drift_threshold`      DOUBLE NOT NULL DEFAULT 0.15,
-    `updated_at`                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    CONSTRAINT `chk_single_row` CHECK (`id` = 1)
+  `id` int NOT NULL DEFAULT 1,
+  `missing_rate_max` double NOT NULL DEFAULT 0.05,
+  `missing_rate_spike_delta` double NOT NULL DEFAULT 0.1,
+  `outlier_rate_max` double NOT NULL DEFAULT 0.03,
+  `skewness_abs_max` double NOT NULL DEFAULT 2.0,
+  `psi_warning` double NOT NULL DEFAULT 0.1,
+  `psi_alert` double NOT NULL DEFAULT 0.2,
+  `enum_drift_threshold` double NOT NULL DEFAULT 0.15,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `chk_single_row` CHECK (`id` = 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 默认配置
 INSERT IGNORE INTO `ruleuler_monitoring_alert_config`
-    (`id`, `missing_rate_max`, `missing_rate_spike_delta`, `outlier_rate_max`,
-     `skewness_abs_max`, `psi_warning`, `psi_alert`, `enum_drift_threshold`)
+  (`id`, `missing_rate_max`, `missing_rate_spike_delta`, `outlier_rate_max`,
+   `skewness_abs_max`, `psi_warning`, `psi_alert`, `enum_drift_threshold`)
 VALUES (1, 0.05, 0.1, 0.03, 2.0, 0.1, 0.2, 0.15);
 
 -- ============================================================
@@ -426,7 +418,7 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
   `project` varchar(255) NOT NULL,
   `package_id` varchar(255) NOT NULL COMMENT '知识包 ID',
   `package_name` varchar(255) DEFAULT NULL COMMENT '知识包名称',
-  `status` varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED/PUBLISH_FAILED',
+  `status` varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT 'TESTING/PENDING/APPROVED/REJECTED/PUBLISH_FAILED/PUBLISHED',
   `submitter` varchar(100) NOT NULL COMMENT '提交人',
   `approver` varchar(100) DEFAULT NULL COMMENT '审批人',
   `comment` varchar(500) DEFAULT NULL COMMENT '审批意见',
@@ -435,8 +427,10 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
   `approved_at` bigint DEFAULT NULL COMMENT '审批时间（毫秒时间戳）',
   `test_run_id` bigint DEFAULT NULL COMMENT '关联自动测试运行 ID',
   `description` varchar(1000) DEFAULT NULL COMMENT '变更说明',
+  `publisher` varchar(100) DEFAULT NULL,
+  `published_at` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_project_pkg` (`project`, `package_id`),
+  KEY `idx_project_pkg` (`project`,`package_id`),
   KEY `idx_status` (`status`),
   KEY `idx_submitter` (`submitter`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -460,16 +454,8 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_snapshot` (
   `project` varchar(255) NOT NULL,
   `package_id` varchar(255) NOT NULL,
   `approval_id` bigint DEFAULT NULL COMMENT '关联审批单 ID',
-  `snapshot_data` json NOT NULL COMMENT '{path: version_name} 映射',
+  `snapshot_data` json NOT NULL COMMENT '{path: xmlContent} 映射',
   `created_at` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_project_pkg` (`project`, `package_id`)
+  KEY `idx_project_pkg` (`project`,`package_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 发布审批权限
-INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `parent_id`, `sort_order`) VALUES
-(30, 'menu:approvals',       '审批管理',     'menu', NULL, 6),
-(31, 'pack:publish:submit',  '提交发布审批', 'api',  NULL, 50),
-(32, 'pack:publish:approve', '审批发布',     'api',  NULL, 51);
-
-INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`) VALUES (1, 30), (1, 31), (1, 32);

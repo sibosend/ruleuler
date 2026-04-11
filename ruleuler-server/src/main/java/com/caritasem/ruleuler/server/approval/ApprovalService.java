@@ -1,12 +1,17 @@
 package com.caritasem.ruleuler.server.approval;
 
 import com.bstek.urule.Configure;
+import com.bstek.urule.builder.KnowledgeBase;
+import com.bstek.urule.builder.KnowledgeBuilder;
+import com.bstek.urule.builder.ResourceBase;
+import com.bstek.urule.builder.resource.Resource;
 import com.bstek.urule.console.repository.ClientConfig;
 import com.bstek.urule.console.repository.RepositoryService;
 import com.bstek.urule.console.repository.model.ResourcePackage;
 import com.bstek.urule.runtime.KnowledgePackage;
 import com.bstek.urule.runtime.KnowledgePackageWrapper;
 import com.bstek.urule.runtime.cache.CacheUtils;
+import com.bstek.urule.runtime.service.KnowledgePackageService;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestCasePack;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestExecutor;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestResultDao;
@@ -40,17 +45,23 @@ public class ApprovalService {
     private final RepositoryService repositoryService;
     private final TestExecutor testExecutor;
     private final TestResultDao testResultDao;
+    private final KnowledgePackageService knowledgePackageService;
+    private final KnowledgeBuilder knowledgeBuilder;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
                            @Qualifier("urule.repositoryService") RepositoryService repositoryService,
                            @Qualifier("urule.testExecutor") TestExecutor testExecutor,
-                           @Qualifier("urule.testResultDao") TestResultDao testResultDao) {
+                           @Qualifier("urule.testResultDao") TestResultDao testResultDao,
+                           @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
+                           @Qualifier("urule.knowledgeBuilder") KnowledgeBuilder knowledgeBuilder) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
         this.testExecutor = testExecutor;
         this.testResultDao = testResultDao;
+        this.knowledgePackageService = knowledgePackageService;
+        this.knowledgeBuilder = knowledgeBuilder;
     }
 
     // ---- submit ----
@@ -183,7 +194,10 @@ public class ApprovalService {
             throw new IllegalArgumentException("审批单状态不允许此操作");
 
         try {
-            String pushInfo = executePublish(a.getProject(), a.getPackageId());
+            // 加载该审批单对应的快照内容（提交时的版本）
+            PublishSnapshot snapshot = approvalDao.findSnapshotByApprovalId(approvalId);
+            Map<String, String> snapshotContent = parseSnapshotData(snapshot);
+            String pushInfo = executePublish(a.getProject(), a.getPackageId(), snapshotContent);
             log.info("上线完成: approvalId={}, info={}", approvalId, pushInfo);
 
             createPublishSnapshot(a.getProject(), a.getPackageId(), approvalId);
@@ -323,18 +337,26 @@ public class ApprovalService {
     }
 
     /**
-     * 直接调用底层组件执行发布，复用 PackageServletHandler 的核心逻辑。
+     * 执行发布：用审批时的快照内容 build 知识包，推送到客户端。
+     * 快照内容为空时（兼容旧数据）降级为 build 当前最新内容。
      */
-    private String executePublish(String project, String packageId) throws Exception {
+    private String executePublish(String project, String packageId, Map<String, String> snapshotContent) throws Exception {
         String fullPackageId = project + "/" + packageId;
         if (fullPackageId.startsWith("/")) {
             fullPackageId = fullPackageId.substring(1);
         }
 
-        KnowledgePackage kp = CacheUtils.getKnowledgeCache().getKnowledge(fullPackageId);
-        if (kp == null) {
-            throw new RuntimeException("知识包缓存为空，请先在编辑器中编译知识包");
+        KnowledgePackage kp;
+        if (snapshotContent != null && !snapshotContent.isEmpty()) {
+            // 用快照内容 build，确保上线的是审批通过的版本
+            kp = buildFromSnapshot(snapshotContent);
+            log.info("使用快照内容 build 知识包: {}, 共 {} 个资源", fullPackageId, snapshotContent.size());
+        } else {
+            // 兼容旧数据：快照为空时 build 当前最新
+            log.warn("快照为空，降级为 build 当前最新内容: {}", fullPackageId);
+            kp = knowledgePackageService.buildKnowledgePackage(fullPackageId);
         }
+        CacheUtils.getKnowledgeCache().putKnowledge(fullPackageId, kp);
 
         // 序列化（用 Jackson 1.x 与 PackageServletHandler 一致）
         org.codehaus.jackson.map.ObjectMapper mapper1 = new org.codehaus.jackson.map.ObjectMapper();
@@ -357,6 +379,28 @@ public class ApprovalService {
               .append("<br>");
         }
         return sb.toString();
+    }
+
+    /**
+     * 用快照内容（path → xmlContent）直接 build KnowledgePackage，不走 repositoryService。
+     * ResourceBase.resources 是 private，用反射注入。
+     */
+    @SuppressWarnings("unchecked")
+    private KnowledgePackage buildFromSnapshot(Map<String, String> snapshotContent) throws Exception {
+        ResourceBase resourceBase = knowledgeBuilder.newResourceBase();
+        java.lang.reflect.Field resourcesField = ResourceBase.class.getDeclaredField("resources");
+        resourcesField.setAccessible(true);
+        List<Resource> resources = (List<Resource>) resourcesField.get(resourceBase);
+        for (Map.Entry<String, String> entry : snapshotContent.entrySet()) {
+            String path = entry.getKey();
+            String xml = entry.getValue();
+            if (xml == null || xml.isBlank()) continue;
+            // path 需要带 dbr: 前缀，Resource 构造是 (content, path)
+            String resourcePath = path.startsWith("dbr:") ? path : "dbr:" + path;
+            resources.add(new Resource(xml, resourcePath));
+        }
+        KnowledgeBase kb = knowledgeBuilder.buildKnowledgeBase(resourceBase);
+        return kb.getKnowledgePackage();
     }
 
     private boolean pushToClient(String packageId, String content, String client) {
