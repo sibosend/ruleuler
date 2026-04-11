@@ -388,8 +388,9 @@ public class DiffCalculator {
 
     private static String elementToString(Element el) throws Exception {
         StringWriter sw = new StringWriter();
-        TransformerFactory.newInstance().newTransformer()
-                .transform(new DOMSource(el), new StreamResult(sw));
+        javax.xml.transform.Transformer t = TransformerFactory.newInstance().newTransformer();
+        t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+        t.transform(new DOMSource(el), new StreamResult(sw));
         return sw.toString().trim();
     }
 
