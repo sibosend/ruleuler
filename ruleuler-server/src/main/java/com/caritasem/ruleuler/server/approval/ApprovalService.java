@@ -3,7 +3,6 @@ package com.caritasem.ruleuler.server.approval;
 import com.bstek.urule.Configure;
 import com.bstek.urule.console.repository.ClientConfig;
 import com.bstek.urule.console.repository.RepositoryService;
-import com.bstek.urule.console.repository.model.ResourceItem;
 import com.bstek.urule.console.repository.model.ResourcePackage;
 import com.bstek.urule.runtime.KnowledgePackage;
 import com.bstek.urule.runtime.KnowledgePackageWrapper;
@@ -59,21 +58,15 @@ public class ApprovalService {
             throw new IllegalArgumentException("知识包不存在");
         }
 
-        // 3. 计算快照和 diff
+        // 3. 加载当前项目全量资源内容 & 上次快照
+        Map<String, String> currentMap = diffCalculator.loadProjectContentMap(project);
         PublishSnapshot lastSnapshot = approvalDao.findLatestSnapshot(project, packageId);
-        Map<String, String> lastMap = parseSnapshotData(lastSnapshot);
+        Map<String, String> prevMap = parseSnapshotData(lastSnapshot);
 
-        List<ResourceItem> items = pkg.getResourceItems() != null ? pkg.getResourceItems() : List.of();
-        List<ApprovalDiffItem> diffs = diffCalculator.calculate(items, lastMap);
+        // 4. 内容级 diff
+        List<ApprovalDiffItem> diffs = diffCalculator.calculateContentDiff(currentMap, prevMap);
 
-        // 4. 构建当前快照数据
-        Map<String, String> currentSnapshotMap = new LinkedHashMap<>();
-        for (ResourceItem item : items) {
-            String resolved = diffCalculator.resolveVersion(item.getPath(), item.getVersion());
-            currentSnapshotMap.put(item.getPath(), resolved);
-        }
-
-        // 5. 持久化
+        // 5. 持久化审批单
         long now = System.currentTimeMillis();
         Approval approval = Approval.builder()
                 .project(project)
@@ -91,6 +84,9 @@ public class ApprovalService {
         if (!diffs.isEmpty()) {
             approvalDao.batchInsertDiffItems(diffs);
         }
+
+        // 6. 提交时创建快照（内容级）
+        createContentSnapshot(project, packageId, approvalId, currentMap);
 
         approval.setId(approvalId);
         return buildApprovalVo(approval, diffs);
@@ -217,16 +213,13 @@ public class ApprovalService {
     }
 
     private void createPublishSnapshot(String project, String packageId, Long approvalId) {
+        Map<String, String> currentMap = diffCalculator.loadProjectContentMap(project);
+        createContentSnapshot(project, packageId, approvalId, currentMap);
+    }
+
+    private void createContentSnapshot(String project, String packageId, Long approvalId, Map<String, String> contentMap) {
         try {
-            ResourcePackage pkg = loadPackage(project, packageId);
-            List<ResourceItem> items = pkg != null && pkg.getResourceItems() != null
-                    ? pkg.getResourceItems() : List.of();
-            Map<String, String> snapshotMap = new LinkedHashMap<>();
-            for (ResourceItem item : items) {
-                String resolved = diffCalculator.resolveVersion(item.getPath(), item.getVersion());
-                snapshotMap.put(item.getPath(), resolved);
-            }
-            String json = objectMapper.writeValueAsString(snapshotMap);
+            String json = objectMapper.writeValueAsString(contentMap);
             approvalDao.insertSnapshot(PublishSnapshot.builder()
                     .project(project)
                     .packageId(packageId)
@@ -235,7 +228,7 @@ public class ApprovalService {
                     .createdAt(System.currentTimeMillis())
                     .build());
         } catch (Exception e) {
-            throw new RuntimeException("创建发布快照失败: " + e.getMessage(), e);
+            throw new RuntimeException("创建快照失败: " + e.getMessage(), e);
         }
     }
 

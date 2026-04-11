@@ -1,5 +1,10 @@
 import request from './request';
 
+export interface RuleDiffDetail {
+  rule: string;
+  change: 'ADDED' | 'MODIFIED' | 'DELETED';
+}
+
 export interface ApprovalDiffItem {
   id: number;
   approvalId: number;
@@ -9,6 +14,7 @@ export interface ApprovalDiffItem {
   changeType: 'ADDED' | 'MODIFIED' | 'DELETED';
   prevVersion: string | null;
   currVersion: string | null;
+  details: string | null; // JSON: RuleDiffDetail[]
 }
 
 export interface ApprovalVO {

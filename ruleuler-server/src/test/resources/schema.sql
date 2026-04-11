@@ -121,7 +121,8 @@ CREATE TABLE ruleuler_publish_approval_diff (
     component_type VARCHAR(50) NOT NULL,
     change_type VARCHAR(20) NOT NULL,
     prev_version VARCHAR(50),
-    curr_version VARCHAR(50)
+    curr_version VARCHAR(50),
+    details TEXT
 );
 
 CREATE INDEX idx_pad_approval ON ruleuler_publish_approval_diff (approval_id);

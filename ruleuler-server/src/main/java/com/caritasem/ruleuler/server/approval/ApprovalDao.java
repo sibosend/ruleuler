@@ -42,6 +42,7 @@ public class ApprovalDao {
             .changeType(rs.getString("change_type"))
             .prevVersion(rs.getString("prev_version"))
             .currVersion(rs.getString("curr_version"))
+            .details(rs.getString("details"))
             .build();
 
     private static final RowMapper<PublishSnapshot> SNAPSHOT_MAPPER = (rs, rowNum) -> PublishSnapshot.builder()
@@ -121,10 +122,11 @@ public class ApprovalDao {
     public void batchInsertDiffItems(List<ApprovalDiffItem> items) {
         for (ApprovalDiffItem d : items) {
             jdbc.update(
-                    "INSERT INTO ruleuler_publish_approval_diff (approval_id,component_path,component_name,component_type,change_type,prev_version,curr_version) " +
-                    "VALUES (?,?,?,?,?,?,?)",
+                    "INSERT INTO ruleuler_publish_approval_diff (approval_id,component_path,component_name,component_type,change_type,prev_version,curr_version,details) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
                     d.getApprovalId(), d.getComponentPath(), d.getComponentName(),
-                    d.getComponentType(), d.getChangeType(), d.getPrevVersion(), d.getCurrVersion());
+                    d.getComponentType(), d.getChangeType(), d.getPrevVersion(), d.getCurrVersion(),
+                    d.getDetails());
         }
     }
 

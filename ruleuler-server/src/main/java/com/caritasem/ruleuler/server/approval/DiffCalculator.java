@@ -1,15 +1,23 @@
 package com.caritasem.ruleuler.server.approval;
 
-import com.bstek.urule.console.repository.model.ResourceItem;
 import com.caritasem.ruleuler.server.approval.model.ApprovalDiffItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.w3c.dom.*;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
 import java.util.*;
 
 /**
- * 将当前知识包的 ResourceItem 列表与上次发布快照对比，生成组件级变更摘要。
+ * 基于内容（XML）的 diff 计算：对比项目资源当前内容与上次快照内容，
+ * 生成组件级变更摘要，并解析到具体规则行级变动。
  */
 @Component
 @RequiredArgsConstructor
@@ -35,104 +43,238 @@ public class DiffCalculator {
     }
 
     /**
-     * 计算当前 ResourceItem 列表相对于上次发布快照的变更。
-     *
-     * @param currentItems   当前知识包的决策组件列表
-     * @param lastSnapshot   上次发布快照 {path → version_name}，null 表示首次发布
-     * @return 变更列表（不含无变更项）
+     * 加载项目下所有决策资源的当前内容。
+     * 返回 dbPath → xmlContent
      */
-    public List<ApprovalDiffItem> calculate(List<ResourceItem> currentItems,
-                                             Map<String, String> lastSnapshot) {
+    public Map<String, String> loadProjectContentMap(String project) {
+        Map<String, String> map = new LinkedHashMap<>();
+        jdbc.query(
+                "SELECT path, content FROM ruleuler_rule_file WHERE path LIKE ? AND is_dir = 0",
+                rs -> {
+                    String path = rs.getString("path");
+                    if (!"未知".equals(resolveComponentType(path))) {
+                        map.put(path, rs.getString("content") != null ? rs.getString("content") : "");
+                    }
+                },
+                "/" + project + "/%");
+        return map;
+    }
+
+    /**
+     * 基于内容对比计算变更。
+     *
+     * @param currentMap  当前资源内容 {dbPath → xmlContent}
+     * @param prevMap     上次快照内容 {dbPath → xmlContent}，null 表示首次提交
+     * @return 变更列表
+     */
+    public List<ApprovalDiffItem> calculateContentDiff(Map<String, String> currentMap,
+                                                       Map<String, String> prevMap) {
         List<ApprovalDiffItem> diffs = new ArrayList<>();
 
-        // 快照为 null = 首次发布，全部标记 ADDED
-        if (lastSnapshot == null || lastSnapshot.isEmpty()) {
-            for (ResourceItem item : currentItems) {
-                String resolved = resolveVersion(item.getPath(), item.getVersion());
-                diffs.add(ApprovalDiffItem.builder()
-                        .componentPath(item.getPath())
-                        .componentName(item.getName())
-                        .componentType(resolveComponentType(item.getPath()))
-                        .changeType("ADDED")
-                        .prevVersion(null)
-                        .currVersion(resolved)
-                        .build());
+        if (prevMap == null || prevMap.isEmpty()) {
+            // 首次提交，全部 ADDED
+            for (Map.Entry<String, String> e : currentMap.entrySet()) {
+                diffs.add(buildItem(e.getKey(), "ADDED", null, e.getValue()));
             }
             return diffs;
         }
 
-        Set<String> snapshotPaths = new HashSet<>(lastSnapshot.keySet());
+        Set<String> prevPaths = new HashSet<>(prevMap.keySet());
 
-        for (ResourceItem item : currentItems) {
-            String resolved = resolveVersion(item.getPath(), item.getVersion());
-            String prevVersion = lastSnapshot.get(item.getPath());
+        for (Map.Entry<String, String> e : currentMap.entrySet()) {
+            String path = e.getKey();
+            String curr = e.getValue();
+            String prev = prevMap.get(path);
 
-            if (prevVersion == null) {
-                // 快照中没有 = 新增
-                diffs.add(ApprovalDiffItem.builder()
-                        .componentPath(item.getPath())
-                        .componentName(item.getName())
-                        .componentType(resolveComponentType(item.getPath()))
-                        .changeType("ADDED")
-                        .prevVersion(null)
-                        .currVersion(resolved)
-                        .build());
+            if (prev == null) {
+                diffs.add(buildItem(path, "ADDED", null, curr));
             } else {
-                snapshotPaths.remove(item.getPath());
-                if (!prevVersion.equals(resolved)) {
-                    // 版本不同 = 修改
-                    diffs.add(ApprovalDiffItem.builder()
-                            .componentPath(item.getPath())
-                            .componentName(item.getName())
-                            .componentType(resolveComponentType(item.getPath()))
-                            .changeType("MODIFIED")
-                            .prevVersion(prevVersion)
-                            .currVersion(resolved)
-                            .build());
+                prevPaths.remove(path);
+                if (!Objects.equals(prev, curr)) {
+                    String details = computeRuleDiff(path, prev, curr);
+                    diffs.add(buildItem(path, "MODIFIED", prev, curr).toBuilder()
+                            .details(details).build());
                 }
-                // 版本相同 = 无变更，不出现在 diff 中
             }
         }
 
-        // 快照中有但当前没有 = 已删除
-        for (String path : snapshotPaths) {
-            String name = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
-            diffs.add(ApprovalDiffItem.builder()
-                    .componentPath(path)
-                    .componentName(name)
-                    .componentType(resolveComponentType(path))
-                    .changeType("DELETED")
-                    .prevVersion(lastSnapshot.get(path))
-                    .currVersion(null)
-                    .build());
+        for (String path : prevPaths) {
+            diffs.add(buildItem(path, "DELETED", prevMap.get(path), null));
         }
 
         return diffs;
     }
 
+    private ApprovalDiffItem buildItem(String dbPath, String changeType, String prevContent, String currContent) {
+        String name = dbPath.contains("/") ? dbPath.substring(dbPath.lastIndexOf('/') + 1) : dbPath;
+        return ApprovalDiffItem.builder()
+                .componentPath("dbr:" + dbPath)
+                .componentName(name)
+                .componentType(resolveComponentType(dbPath))
+                .changeType(changeType)
+                .prevVersion(prevContent != null ? Integer.toHexString(prevContent.hashCode()) : null)
+                .currVersion(currContent != null ? Integer.toHexString(currContent.hashCode()) : null)
+                .build();
+    }
+
     /**
-     * 解析 LATEST 为实际版本号。非 LATEST 直接返回。
-     * LATEST 查 ruleuler_rule_file_version 表最大版本；无版本记录返回 "V0"。
+     * 解析 XML 内容，提取规则级行级变动。
+     * 返回 JSON 数组，如 [{"rule":"行3","change":"MODIFIED","prev":"...","curr":"..."}]
      */
-    public String resolveVersion(String path, String versionRef) {
-        if (versionRef == null || !"LATEST".equalsIgnoreCase(versionRef)) {
-            return versionRef;
-        }
+    String computeRuleDiff(String path, String prevXml, String currXml) {
         try {
-            String versionName = jdbc.queryForObject(
-                    "SELECT v.version_name FROM ruleuler_rule_file f " +
-                    "JOIN ruleuler_rule_file_version v ON f.id = v.file_id " +
-                    "WHERE f.path = ? ORDER BY v.version DESC LIMIT 1",
-                    String.class, path);
-            return versionName != null ? versionName : "V0";
+            Map<String, String> prevRules = extractRules(path, prevXml);
+            Map<String, String> currRules = extractRules(path, currXml);
+            return buildRuleDiffJson(prevRules, currRules);
         } catch (Exception e) {
-            return "V0";
+            // XML 解析失败，返回整体变更摘要
+            return "[{\"rule\":\"整体\",\"change\":\"MODIFIED\"}]";
         }
     }
 
     /**
-     * 根据文件后缀识别组件类型。
+     * 从 XML 中提取规则级元素。
+     * 按资源类型采用不同策略：
+     * - 决策表/脚本决策表：按 cell 的 row 属性分组
+     * - 规则集：按 rule 的 name 属性
+     * - REA规则：按 rea-item 的 name 属性
+     * - 决策流：按 node 的 name 属性
+     * - 决策树：按 node 的 var/label
+     * - 其他：按顶层子元素 tag+索引
      */
+    Map<String, String> extractRules(String path, String xml) throws Exception {
+        if (xml == null || xml.isBlank()) return Collections.emptyMap();
+
+        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+        Element root = doc.getDocumentElement();
+        String lower = path.toLowerCase();
+
+        if (lower.endsWith(".dt.xml") || lower.endsWith(".dts.xml")) {
+            return extractByRow(root);
+        }
+        if (lower.endsWith(".rs.xml")) {
+            return extractByAttr(root, "rule", "name");
+        }
+        if (lower.endsWith(".rea.xml")) {
+            return extractByAttr(root, "rea-item", "name");
+        }
+        if (lower.endsWith(".rl.xml")) {
+            return extractByAttr(root, "node", "name");
+        }
+        if (lower.endsWith(".dtree.xml")) {
+            return extractDecisionTreeRules(root);
+        }
+        // 变量库、参数库、评分卡等：按顶层子元素
+        return extractByTopChildren(root);
+    }
+
+    /** 决策表：按 row 分组所有 cell */
+    private Map<String, String> extractByRow(Element root) throws Exception {
+        Map<String, String> rules = new LinkedHashMap<>();
+        // 收集所有 cell，按 row 分组
+        Map<String, List<Element>> rowCells = new TreeMap<>((a, b) -> {
+            try { return Integer.compare(Integer.parseInt(a), Integer.parseInt(b)); }
+            catch (NumberFormatException e) { return a.compareTo(b); }
+        });
+
+        NodeList cells = root.getElementsByTagName("cell");
+        for (int i = 0; i < cells.getLength(); i++) {
+            Element cell = (Element) cells.item(i);
+            String row = cell.getAttribute("row");
+            rowCells.computeIfAbsent(row, k -> new ArrayList<>()).add(cell);
+        }
+
+        for (Map.Entry<String, List<Element>> e : rowCells.entrySet()) {
+            StringBuilder sb = new StringBuilder();
+            for (Element cell : e.getValue()) {
+                sb.append(elementToString(cell)).append("\n");
+            }
+            rules.put("行" + e.getKey(), sb.toString().trim());
+        }
+        return rules;
+    }
+
+    /** 按子元素 tag 的某个属性分组 */
+    private Map<String, String> extractByAttr(Element root, String tagName, String attrName) throws Exception {
+        Map<String, String> rules = new LinkedHashMap<>();
+        NodeList nodes = root.getElementsByTagName(tagName);
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element el = (Element) nodes.item(i);
+            String name = el.getAttribute(attrName);
+            if (name == null || name.isEmpty()) name = tagName + "#" + i;
+            rules.put(name, elementToString(el));
+        }
+        if (rules.isEmpty()) {
+            // 如果没有找到对应 tag，按顶层子元素兜底
+            return extractByTopChildren(root);
+        }
+        return rules;
+    }
+
+    /** 决策树：node 按 var 属性或顺序 */
+    private Map<String, String> extractDecisionTreeRules(Element root) throws Exception {
+        Map<String, String> rules = new LinkedHashMap<>();
+        NodeList nodes = root.getElementsByTagName("node");
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element el = (Element) nodes.item(i);
+            String var = el.getAttribute("var");
+            String label = el.getAttribute("var-label");
+            String key = (label != null && !label.isEmpty()) ? label
+                    : (var != null && !var.isEmpty()) ? var : "节点" + i;
+            rules.put(key, elementToString(el));
+        }
+        return rules;
+    }
+
+    /** 兜底：按顶层子元素 tag+索引 */
+    private Map<String, String> extractByTopChildren(Element root) throws Exception {
+        Map<String, String> rules = new LinkedHashMap<>();
+        NodeList children = root.getChildNodes();
+        int idx = 0;
+        for (int i = 0; i < children.getLength(); i++) {
+            Node n = children.item(i);
+            if (n instanceof Element el) {
+                String tag = el.getTagName();
+                // 尝试用 name 属性
+                String name = el.getAttribute("name");
+                String key = (name != null && !name.isEmpty()) ? name : tag + "#" + idx;
+                rules.put(key, elementToString(el));
+                idx++;
+            }
+        }
+        return rules;
+    }
+
+    private String buildRuleDiffJson(Map<String, String> prevRules, Map<String, String> currRules) {
+        List<String> parts = new ArrayList<>();
+        Set<String> allKeys = new LinkedHashSet<>();
+        allKeys.addAll(prevRules.keySet());
+        allKeys.addAll(currRules.keySet());
+
+        for (String key : allKeys) {
+            String prev = prevRules.get(key);
+            String curr = currRules.get(key);
+            if (Objects.equals(prev, curr)) continue;
+
+            String change = (prev == null) ? "ADDED" : (curr == null) ? "DELETED" : "MODIFIED";
+            parts.add(String.format("{\"rule\":\"%s\",\"change\":\"%s\"}",
+                    escapeJson(key), change));
+        }
+        return "[" + String.join(",", parts) + "]";
+    }
+
+    private static String escapeJson(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String elementToString(Element el) throws Exception {
+        StringWriter sw = new StringWriter();
+        TransformerFactory.newInstance().newTransformer()
+                .transform(new DOMSource(el), new StreamResult(sw));
+        return sw.toString().trim();
+    }
+
     public static String resolveComponentType(String path) {
         if (path == null) return "未知";
         String lower = path.toLowerCase();

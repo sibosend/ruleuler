@@ -8,7 +8,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
   publishApproval,
-  type ApprovalVO, type ApprovalDiffItem,
+  type ApprovalVO, type ApprovalDiffItem, type RuleDiffDetail,
 } from '@/api/approval';
 import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
@@ -350,6 +350,29 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                   rowKey="id"
                   pagination={false}
                   dataSource={items}
+                  expandable={{
+                    rowExpandable: (r) => !!r.details,
+                    expandedRowRender: (r) => {
+                      if (!r.details) return null;
+                      try {
+                        const rules: RuleDiffDetail[] = JSON.parse(r.details);
+                        return (
+                          <div style={{ padding: '4px 0' }}>
+                            {rules.map((rd, i) => (
+                              <div key={i} style={{ padding: '2px 8px', fontSize: 13 }}>
+                                <Tag color={rd.change === 'ADDED' ? 'green' : rd.change === 'DELETED' ? 'red' : 'blue'}
+                                  style={{ marginRight: 8 }}>
+                                  {rd.change === 'ADDED' ? '新增' : rd.change === 'DELETED' ? '删除' : '修改'}
+                                </Tag>
+                                <span style={{ fontFamily: 'monospace' }}>{rd.rule}</span>
+                              </div>
+                            ))}
+                            {rules.length === 0 && <span style={{ color: '#999' }}>无具体变动</span>}
+                          </div>
+                        );
+                      } catch { return <span style={{ color: '#999' }}>解析失败</span>; }
+                    },
+                  }}
                   columns={[
                     { title: '组件', dataIndex: 'componentName', ellipsis: true },
                     { title: '变更', dataIndex: 'changeType', width: 70,
@@ -358,8 +381,23 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                         return m ? <Tag color={m.color}>{m.label}</Tag> : t;
                       },
                     },
-                    { title: '原版本', dataIndex: 'prevVersion', width: 80, render: (v: string) => v ?? '-' },
-                    { title: '新版本', dataIndex: 'currVersion', width: 80, render: (v: string) => v ?? '-' },
+                    {
+                      title: '规则变动', width: 200,
+                      render: (_: any, r: ApprovalDiffItem) => {
+                        if (!r.details) return '-';
+                        try {
+                          const rules: RuleDiffDetail[] = JSON.parse(r.details);
+                          const added = rules.filter(x => x.change === 'ADDED').length;
+                          const mod = rules.filter(x => x.change === 'MODIFIED').length;
+                          const del = rules.filter(x => x.change === 'DELETED').length;
+                          const parts: string[] = [];
+                          if (added) parts.push(`${added}新增`);
+                          if (mod) parts.push(`${mod}修改`);
+                          if (del) parts.push(`${del}删除`);
+                          return parts.length > 0 ? <span style={{ fontSize: 13 }}>{parts.join('、')}</span> : '-';
+                        } catch { return '-'; }
+                      },
+                    },
                   ]}
                 />
               </div>
