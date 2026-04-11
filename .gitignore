@@ -60,4 +60,3 @@ CLAUDE.md
 # mkdocs build output
 site/
 .claude/
-.github/
