@@ -113,14 +113,21 @@ class PackageEditor extends Component{
                                         return;
                                     }
                                     const p = project.replace(/^\//,'');
-                                    fetch('/api/approvals', {
-                                        method: 'POST',
-                                        headers: {'Content-Type':'application/json'},
-                                        body: JSON.stringify({project: p, packageId: this.currentPackage.id})
-                                    }).then(function(res){
-                                        if(res.ok){ bootbox.alert('提交审批成功！'); }
-                                        else{ res.json().then(function(d){ bootbox.alert('提交失败：'+(d.message||res.status)); }); }
-                                    }).catch(function(e){ bootbox.alert('提交失败：'+e.message); });
+                                    bootbox.prompt({
+                                        title: '变更说明（选填）',
+                                        inputType: 'textarea',
+                                        callback: function(description){
+                                            if(description === null) return; // 取消
+                                            fetch('/api/approvals', {
+                                                method: 'POST',
+                                                headers: {'Content-Type':'application/json'},
+                                                body: JSON.stringify({project: p, packageId: this.currentPackage.id, description: description||undefined})
+                                            }).then(function(res){
+                                                if(res.ok){ bootbox.alert('提交审批成功！'); }
+                                                else{ res.json().then(function(d){ bootbox.alert('提交失败：'+(d.message||res.status)); }); }
+                                            }).catch(function(e){ bootbox.alert('提交失败：'+e.message); });
+                                        }.bind(this)
+                                    });
                                 }}><i className="glyphicon glyphicon-send"></i> 提交审批</button>
                             </div>
                             <div className="btn-group btn-group-sm" style={{margin:'2px'}}>

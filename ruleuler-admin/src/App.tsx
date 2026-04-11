@@ -97,6 +97,12 @@ const App: React.FC = () => (
           }
         />
         <Route
+          path="autotest/report/:runId"
+          element={
+            <Suspense fallback={<div>Loading...</div>}><TestReportPage /></Suspense>
+          }
+        />
+        <Route
           path="releases"
           element={<Navigate to="/releases/pending" replace />}
         />
