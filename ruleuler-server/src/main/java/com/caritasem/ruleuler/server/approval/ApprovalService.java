@@ -1,9 +1,11 @@
 package com.caritasem.ruleuler.server.approval;
 
 import com.bstek.urule.Configure;
+import com.bstek.urule.builder.KnowledgeBase;
 import com.bstek.urule.builder.KnowledgeBuilder;
+import com.bstek.urule.builder.ResourceBase;
+import com.bstek.urule.builder.resource.Resource;
 import com.bstek.urule.console.repository.ClientConfig;
-import com.bstek.urule.console.repository.DatabaseResourceProvider;
 import com.bstek.urule.console.repository.RepositoryService;
 import com.bstek.urule.console.repository.model.ResourcePackage;
 import com.bstek.urule.runtime.KnowledgePackage;
@@ -44,19 +46,22 @@ public class ApprovalService {
     private final TestExecutor testExecutor;
     private final TestResultDao testResultDao;
     private final KnowledgePackageService knowledgePackageService;
+    private final KnowledgeBuilder knowledgeBuilder;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
                            @Qualifier("urule.repositoryService") RepositoryService repositoryService,
                            @Qualifier("urule.testExecutor") TestExecutor testExecutor,
                            @Qualifier("urule.testResultDao") TestResultDao testResultDao,
-                           @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService) {
+                           @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
+                           @Qualifier("urule.knowledgeBuilder") KnowledgeBuilder knowledgeBuilder) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
         this.testExecutor = testExecutor;
         this.testResultDao = testResultDao;
         this.knowledgePackageService = knowledgePackageService;
+        this.knowledgeBuilder = knowledgeBuilder;
     }
 
     // ---- submit ----
@@ -195,8 +200,7 @@ public class ApprovalService {
             String pushInfo = executePublish(a.getProject(), a.getPackageId(), snapshotContent);
             log.info("上线完成: approvalId={}, info={}", approvalId, pushInfo);
 
-            // 上线后以提交时的快照内容作为下次 diff 的基准（不重新读数据库，避免包含未审批的修改）
-            createContentSnapshot(a.getProject(), a.getPackageId(), null, snapshotContent);
+            createPublishSnapshot(a.getProject(), a.getPackageId(), approvalId);
 
             long now = System.currentTimeMillis();
             approvalDao.updatePublished(approvalId, publisher, now);
@@ -345,7 +349,7 @@ public class ApprovalService {
         KnowledgePackage kp;
         if (snapshotContent != null && !snapshotContent.isEmpty()) {
             // 用快照内容 build，确保上线的是审批通过的版本
-            kp = buildFromSnapshot(snapshotContent, fullPackageId);
+            kp = buildFromSnapshot(snapshotContent);
             log.info("使用快照内容 build 知识包: {}, 共 {} 个资源", fullPackageId, snapshotContent.size());
         } else {
             // 兼容旧数据：快照为空时 build 当前最新
@@ -378,17 +382,25 @@ public class ApprovalService {
     }
 
     /**
-     * 用快照内容 build KnowledgePackage。
-     * 通过 ThreadLocal 覆盖 DatabaseResourceProvider 的读取，
-     * 确保决策流内部引用的子资源也从快照取内容，而非数据库最新。
+     * 用快照内容（path → xmlContent）直接 build KnowledgePackage，不走 repositoryService。
+     * ResourceBase.resources 是 private，用反射注入。
      */
-    private KnowledgePackage buildFromSnapshot(Map<String, String> snapshotContent, String fullPackageId) throws Exception {
-        DatabaseResourceProvider.setSnapshotOverride(snapshotContent);
-        try {
-            return knowledgePackageService.buildKnowledgePackage(fullPackageId);
-        } finally {
-            DatabaseResourceProvider.clearSnapshotOverride();
+    @SuppressWarnings("unchecked")
+    private KnowledgePackage buildFromSnapshot(Map<String, String> snapshotContent) throws Exception {
+        ResourceBase resourceBase = knowledgeBuilder.newResourceBase();
+        java.lang.reflect.Field resourcesField = ResourceBase.class.getDeclaredField("resources");
+        resourcesField.setAccessible(true);
+        List<Resource> resources = (List<Resource>) resourcesField.get(resourceBase);
+        for (Map.Entry<String, String> entry : snapshotContent.entrySet()) {
+            String path = entry.getKey();
+            String xml = entry.getValue();
+            if (xml == null || xml.isBlank()) continue;
+            // path 需要带 dbr: 前缀，Resource 构造是 (content, path)
+            String resourcePath = path.startsWith("dbr:") ? path : "dbr:" + path;
+            resources.add(new Resource(xml, resourcePath));
         }
+        KnowledgeBase kb = knowledgeBuilder.buildKnowledgeBase(resourceBase);
+        return kb.getKnowledgePackage();
     }
 
     private boolean pushToClient(String packageId, String content, String client) {
