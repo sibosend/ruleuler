@@ -111,7 +111,10 @@ public class ApprovalService {
             approvalDao.batchInsertDiffItems(diffs);
         }
 
-        // 7. 提交时创建快照（内容级）
+        // 7. 锁定版本：把决策流中 LATEST 替换为具体版本号
+        diffCalculator.pinLatestVersions(currentMap);
+
+        // 8. 提交时创建快照（内容级，版本已锁定）
         createContentSnapshot(project, packageId, approvalId, currentMap);
 
         // 8. 异步执行自动测试
@@ -200,7 +203,8 @@ public class ApprovalService {
             String pushInfo = executePublish(a.getProject(), a.getPackageId(), snapshotContent);
             log.info("上线完成: approvalId={}, info={}", approvalId, pushInfo);
 
-            createPublishSnapshot(a.getProject(), a.getPackageId(), approvalId);
+            // 上线后以快照内容（版本已锁定）作为下次 diff 的基准
+            createContentSnapshot(a.getProject(), a.getPackageId(), null, snapshotContent);
 
             long now = System.currentTimeMillis();
             approvalDao.updatePublished(approvalId, publisher, now);

@@ -404,4 +404,54 @@ public class DiffCalculator {
         }
         return "未知";
     }
+
+    /**
+     * 锁定版本：遍历 contentMap，把决策流 XML 中引用的 version="LATEST" 替换为该资源的最新版本号。
+     * 非决策流文件不处理。修改是 in-place 的。
+     */
+    public void pinLatestVersions(Map<String, String> contentMap) {
+        // 1. 查所有资源的最新版本号：path → versionName
+        Map<String, String> latestVersions = new LinkedHashMap<>();
+        jdbc.query(
+                "SELECT f.path, v.version_name FROM ruleuler_rule_file f " +
+                "JOIN ruleuler_rule_file_version v ON f.id = v.file_id " +
+                "WHERE v.version = (SELECT MAX(v2.version) FROM ruleuler_rule_file_version v2 WHERE v2.file_id = f.id)",
+                rs -> {
+                    latestVersions.put(rs.getString("path"), rs.getString("version_name"));
+                });
+
+        // 2. 遍历决策流文件，替换 version="LATEST"
+        for (Map.Entry<String, String> entry : contentMap.entrySet()) {
+            String path = entry.getKey();
+            if (!path.toLowerCase().endsWith(".rl.xml")) continue;
+            String xml = entry.getValue();
+            if (xml == null || !xml.contains("LATEST")) continue;
+
+            String pinned = pinVersionsInFlowXml(xml, latestVersions);
+            entry.setValue(pinned);
+        }
+    }
+
+    /**
+     * 把决策流 XML 中 file="dbr:/xxx" version="LATEST" 替换为具体版本号。
+     */
+    private String pinVersionsInFlowXml(String xml, Map<String, String> latestVersions) {
+        // 匹配 file="dbr:/path" version="LATEST"
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "file=\"dbr:([^\"]+)\"\\s+version=\"LATEST\"");
+        java.util.regex.Matcher matcher = pattern.matcher(xml);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            String filePath = matcher.group(1);
+            String ver = latestVersions.get(filePath);
+            if (ver != null) {
+                matcher.appendReplacement(sb, "file=\"dbr:" +
+                        java.util.regex.Matcher.quoteReplacement(filePath) +
+                        "\" version=\"" + ver + "\"");
+            }
+            // ver 为 null 说明该资源没有版本记录，保持 LATEST
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
 }

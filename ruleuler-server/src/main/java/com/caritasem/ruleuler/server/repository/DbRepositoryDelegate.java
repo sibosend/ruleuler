@@ -42,6 +42,7 @@ import com.bstek.urule.console.repository.model.Type;
 import com.bstek.urule.console.repository.model.VersionFile;
 import com.bstek.urule.console.repository.permission.PermissionService;
 import com.bstek.urule.console.servlet.permission.UserPermission;
+import com.caritasem.ruleuler.server.approval.DiffCalculator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -215,8 +216,11 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
             throw new RuleException("文件已被其他用户修改，请刷新后重试");
         }
 
-        // 创建版本
-        if (newVersion) {
+        // 创建版本：决策组件每次保存自动创建版本（配置文件除外）
+        boolean isDecisionComponent = !path.contains(RES_PACKAGE_FILE)
+                && !path.contains(CLIENT_CONFIG_FILE)
+                && !"未知".equals(DiffCalculator.resolveComponentType(path));
+        if (newVersion || isDecisionComponent) {
             Long fileId = jdbcTemplate.queryForObject(
                     "SELECT id FROM ruleuler_rule_file WHERE path=?", Long.class, path);
 
