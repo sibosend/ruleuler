@@ -49,7 +49,7 @@ const AdminLayout: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const permissions = user?.permissions ?? [];
   const logout = useAuthStore((s) => s.logout);
-  const { tabs, activeKey, addTab, removeTab, setActiveKey } = useTabStore();
+  const { tabs, activeKey, addTab, removeTab, setActiveKey, triggerRefresh } = useTabStore();
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -86,11 +86,17 @@ const AdminLayout: React.FC = () => {
   }, [location.pathname]);
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === location.pathname) {
+      triggerRefresh(key);
+    }
     navigate(key);
   };
 
   const handleTabChange = (key: string) => {
     setActiveKey(key);
+    if (key === location.pathname) {
+      triggerRefresh(key);
+    }
     navigate(key);
   };
 

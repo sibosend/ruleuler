@@ -9,14 +9,18 @@ export interface TabItem {
 interface TabState {
   tabs: TabItem[];
   activeKey: string;
+  /** path → timestamp，点击同一菜单/tab 时递增，用于触发页面刷新 */
+  refreshMap: Record<string, number>;
   addTab: (tab: TabItem) => void;
   removeTab: (key: string) => string; // 返回新的 activeKey
   setActiveKey: (key: string) => void;
+  triggerRefresh: (path: string) => void;
 }
 
 export const useTabStore = create<TabState>((set, get) => ({
   tabs: [{ key: '/', label: '仪表盘', closable: false }],
   activeKey: '/',
+  refreshMap: {},
 
   addTab: (tab) => {
     const { tabs } = get();
@@ -36,7 +40,6 @@ export const useTabStore = create<TabState>((set, get) => ({
     let newActive = activeKey;
 
     if (activeKey === key) {
-      // 优先后一个 tab，不存在则前一个，无 tab 时返回 '/'
       if (idx < newTabs.length) {
         newActive = newTabs[idx]!.key;
       } else if (newTabs.length > 0) {
@@ -51,4 +54,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   setActiveKey: (key) => set({ activeKey: key }),
+
+  triggerRefresh: (path) =>
+    set((s) => ({ refreshMap: { ...s.refreshMap, [path]: Date.now() } })),
 }));

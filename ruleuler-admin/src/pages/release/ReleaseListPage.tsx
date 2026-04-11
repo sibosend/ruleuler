@@ -4,6 +4,7 @@ import {
   message, Descriptions, Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
   publishApproval,
@@ -12,6 +13,7 @@ import {
 import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/stores/authStore';
+import { useTabStore } from '@/stores/tabStore';
 
 type ReleaseMode = 'pending' | 'pending-publish' | 'my' | 'all';
 
@@ -52,6 +54,9 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const canApprove = usePermission('pack:publish:approve');
   const canSubmit = usePermission('pack:publish:submit');
   const currentUser = useAuthStore((s) => s.user?.username);
+  const location = useLocation();
+  const refreshTime = useTabStore((s) => s.refreshMap[location.pathname]);
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectsFetched = useRef(false);
 
   // 固定状态筛选
@@ -66,12 +71,23 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   // 固定提交人筛选
   const fixedSubmitter = useMemo(() => (mode === 'my' ? currentUser : undefined), [mode, currentUser]);
 
+  // 加载项目列表 + 自动选中（URL参数优先，否则默认第一个）
   useEffect(() => {
     if (projectsFetched.current) return;
     projectsFetched.current = true;
     loadProjects().then((res) => {
       const list: { name: string }[] = res.data?.data ?? res.data ?? [];
-      setProjects(list.map((p: any) => p.name ?? p));
+      const names = list.map((p: any) => p.name ?? p);
+      setProjects(names);
+      const urlProject = searchParams.get('project');
+      const initial = (urlProject && names.includes(urlProject)) ? urlProject
+        : names.length > 0 ? names[0] : null;
+      if (initial) {
+        setProject(initial);
+        if (initial !== urlProject) {
+          setSearchParams({ project: initial }, { replace: true });
+        }
+      }
     });
   }, []);
 
@@ -87,16 +103,13 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     }
   }, [project, page, fixedStatus, statusFilter, fixedSubmitter, mode]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData, refreshTime]);
 
   const handleProjectChange = (v: string) => {
     setProject(v);
     setPage(1);
+    setSearchParams({ project: v }, { replace: true });
   };
-
-  useEffect(() => {
-    if (project) fetchData(1, project);
-  }, [project]);
 
   const handleApprove = async () => {
     if (!commentModal) return;
