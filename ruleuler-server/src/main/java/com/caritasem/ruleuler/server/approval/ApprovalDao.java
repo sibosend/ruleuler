@@ -174,7 +174,7 @@ public class ApprovalDao {
 
     public PublishSnapshot findSnapshotByApprovalId(Long approvalId) {
         List<PublishSnapshot> list = jdbc.query(
-                "SELECT * FROM ruleuler_publish_snapshot WHERE approval_id=? LIMIT 1",
+                "SELECT * FROM ruleuler_publish_snapshot WHERE approval_id=? ORDER BY created_at ASC LIMIT 1",
                 SNAPSHOT_MAPPER, approvalId);
         return list.isEmpty() ? null : list.get(0);
     }
