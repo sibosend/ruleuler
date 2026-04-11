@@ -172,6 +172,25 @@ public class ApprovalDao {
         return list.isEmpty() ? null : list.get(0);
     }
 
+    public PublishSnapshot findSnapshotByApprovalId(Long approvalId) {
+        List<PublishSnapshot> list = jdbc.query(
+                "SELECT * FROM ruleuler_publish_snapshot WHERE approval_id=? LIMIT 1",
+                SNAPSHOT_MAPPER, approvalId);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    /** 找 approvalId 对应快照之前的最新快照（用于重算 diff） */
+    public PublishSnapshot findPrevSnapshot(String project, String packageId, Long approvalId) {
+        List<PublishSnapshot> list = jdbc.query(
+                "SELECT * FROM ruleuler_publish_snapshot WHERE project=? AND package_id=? AND (approval_id IS NULL OR approval_id < ?) ORDER BY created_at DESC LIMIT 1",
+                SNAPSHOT_MAPPER, project, packageId, approvalId);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    public void deleteDiffItemsByApprovalId(Long approvalId) {
+        jdbc.update("DELETE FROM ruleuler_publish_approval_diff WHERE approval_id=?", approvalId);
+    }
+
     // ---- helpers ----
 
     private Object[] buildFilterParams(StringBuilder sql, String project, String packageId,

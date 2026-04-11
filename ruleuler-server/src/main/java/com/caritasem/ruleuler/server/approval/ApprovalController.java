@@ -67,4 +67,10 @@ public class ApprovalController {
         String publisher = AuthContext.get().getUsername();
         return ApiResult.ok(approvalService.publish(id, publisher));
     }
+
+    @PostMapping("/{id}/recalc-diff")
+    @RequirePermission("pack:publish:submit")
+    public ApiResult recalcDiff(@PathVariable Long id) {
+        return ApiResult.ok(approvalService.recalcDiff(id));
+    }
 }

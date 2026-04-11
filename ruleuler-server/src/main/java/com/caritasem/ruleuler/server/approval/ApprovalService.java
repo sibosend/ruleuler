@@ -247,6 +247,37 @@ public class ApprovalService {
         return buildApprovalVo(a, diffs);
     }
 
+    @Transactional
+    public Map<String, Object> recalcDiff(Long approvalId) {
+        Approval a = approvalDao.findById(approvalId);
+        if (a == null) throw new IllegalArgumentException("审批单不存在");
+
+        // 找该审批单对应的快照（提交时创建的）
+        PublishSnapshot snapshot = approvalDao.findSnapshotByApprovalId(approvalId);
+        Map<String, String> prevMap = parseSnapshotData(snapshot);
+
+        // 找该快照的前一个快照作为 prev（即提交时的 prevMap）
+        // 实际上 snapshot 存的是提交时的当前内容，prev 是上一次的快照
+        // 需要找 approval_id < approvalId 的最新快照
+        PublishSnapshot prevSnapshot = approvalDao.findPrevSnapshot(a.getProject(), a.getPackageId(), approvalId);
+        Map<String, String> prevContentMap = parseSnapshotData(prevSnapshot);
+
+        // 用当前快照内容作为 currentMap，前一快照作为 prevMap 重新计算
+        List<ApprovalDiffItem> diffs = diffCalculator.calculateContentDiff(
+                prevMap != null ? prevMap : new LinkedHashMap<>(),
+                prevContentMap);
+
+        // 删旧的，插新的
+        approvalDao.deleteDiffItemsByApprovalId(approvalId);
+        for (ApprovalDiffItem d : diffs) {
+            d.setApprovalId(approvalId);
+        }
+        if (!diffs.isEmpty()) {
+            approvalDao.batchInsertDiffItems(diffs);
+        }
+        return buildApprovalVo(a, diffs);
+    }
+
     // ---- private helpers ----
 
     private ResourcePackage loadPackage(String project, String packageId) {

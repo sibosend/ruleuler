@@ -10,6 +10,12 @@ const Login: React.FC = () => {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = React.useState(false);
 
+  // iframe 内打开登录页时，让顶层窗口跳转
+  if (window.top && window.top !== window) {
+    window.top.location.href = '/admin/login';
+    return null;
+  }
+
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {

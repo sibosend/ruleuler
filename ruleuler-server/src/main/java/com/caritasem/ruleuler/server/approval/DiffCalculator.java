@@ -186,11 +186,12 @@ public class DiffCalculator {
         }
 
         for (Map.Entry<String, List<Element>> e : rowCells.entrySet()) {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder("<row>");
             for (Element cell : e.getValue()) {
                 sb.append(elementToString(cell)).append("\n");
             }
-            rules.put("行" + e.getKey(), sb.toString().trim());
+            sb.append("</row>");
+            rules.put("行" + e.getKey(), sb.toString());
         }
         return rules;
     }
@@ -363,17 +364,18 @@ public class DiffCalculator {
             }
         }
 
-        // 决策表 cell: <cell row="..." col="..."><value content="..."/></cell>
+        // 决策表 cell: <cell row="..." col="...">...<value content="..."/>...</cell>
+        // value 可能嵌套在 joint/condition 里，用 getElementsByTagName 递归查找
         NodeList cells = root.getElementsByTagName("cell");
         for (int i = 0; i < cells.getLength(); i++) {
             Element cell = (Element) cells.item(i);
             String row = cell.getAttribute("row");
             String col = cell.getAttribute("col");
-            NodeList children = cell.getChildNodes();
-            for (int j = 0; j < children.getLength(); j++) {
-                if (children.item(j) instanceof Element child && "value".equals(child.getTagName())) {
-                    fields.put("R" + row + "C" + col, child.getAttribute("content"));
-                }
+            if (row.isEmpty() || col.isEmpty()) continue;
+            NodeList values = cell.getElementsByTagName("value");
+            if (values.getLength() > 0) {
+                Element valueEl = (Element) values.item(0);
+                fields.put("R" + row + "C" + col, valueEl.getAttribute("content"));
             }
         }
 
