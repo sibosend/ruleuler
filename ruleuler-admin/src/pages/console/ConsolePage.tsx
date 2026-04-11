@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Result, Button, Empty, message } from 'antd';
+import { Result, Button, Empty } from 'antd';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ProjectOutlined } from '@ant-design/icons';
 import { useTabStore } from '@/stores/tabStore';
@@ -11,8 +11,6 @@ import {
   buildEditorSrc,
 } from './fileTypeMap';
 import type { RepositoryFile } from '@/api/consoleApi';
-import { submitApproval } from '@/api/approval';
-import { usePermission } from '@/hooks/usePermission';
 
 // iframe 内的老编辑器通过 window.parent.componentEvent 访问事件总线，
 // 在 ruleuler-admin 中注入一个兼容 stub，将 tree_node_click 转为 CustomEvent 供 React 监听
@@ -56,51 +54,6 @@ const ConsolePage: React.FC = () => {
   const tabs = useTabStore((s) => s.tabs);
   const activeKey = useTabStore((s) => s.activeKey);
   const addTab = useTabStore((s) => s.addTab);
-
-  const canSubmit = usePermission('pack:publish:submit');
-
-  // 提交审批（用 ref 保持最新引用，供 iframe 注入的 click handler 调用）
-  const doSubmitApprovalForPackage = useCallback(async (packageId: string) => {
-    if (!project || !packageId) return;
-    try {
-      await submitApproval({ project, packageId });
-      message.success('提交审批成功');
-    } catch { /* request.ts 处理 */ }
-  }, [project]);
-  const submitRef = useRef(doSubmitApprovalForPackage);
-  submitRef.current = doSubmitApprovalForPackage;
-
-  // iframe 加载后注入：将"发布当前知识包"按钮替换为"提交审批"
-  const handlePackageIframeReady = useCallback((doc: Document) => {
-    const btn = doc.querySelector('.btn.btn-warning');
-    if (!btn) return;
-
-    if (!canSubmit) {
-      (btn as HTMLElement).style.display = 'none';
-      return;
-    }
-
-    // 克隆按钮，去掉 React 绑定的事件
-    const newBtn = btn.cloneNode(true) as HTMLElement;
-    newBtn.innerHTML = '<i class="glyphicon glyphicon-send"></i> 提交审批';
-    btn.parentNode!.replaceChild(newBtn, btn);
-
-    newBtn.addEventListener('click', () => {
-      // 从 master grid（第一个 table）找选中行（带 bg-warning 的 tr.content-tr）
-      const tables = doc.querySelectorAll('table.table-bordered');
-      const masterTable = tables[0];
-      const selectedRow = masterTable?.querySelector('tr.content-tr.bg-warning');
-      if (!selectedRow) {
-        const win = doc.defaultView as any;
-        if (win?.bootbox) win.bootbox.alert('请先选择一个知识包！');
-        return;
-      }
-      const cells = selectedRow.querySelectorAll('td');
-      const packageId = cells[0]?.querySelector('div')?.textContent?.trim();
-      if (!packageId) return;
-      submitRef.current(packageId);
-    });
-  }, [canSubmit]);
 
   // ─── 拖拽分栏宽度 ──────────────────────────────────────────────
   const [treeWidth, setTreeWidth] = useState(DEFAULT_TREE_WIDTH);
@@ -273,7 +226,7 @@ const ConsolePage: React.FC = () => {
               const src = `/urule/packageeditor?file=${encodeURIComponent(parsed.project)}`;
               return (
                 <div key={tab.key} style={{ width: '100%', minHeight: '100%', display: isActive ? 'block' : 'none' }}>
-                  <EditorIframe editorSrc={src} onIframeReady={handlePackageIframeReady} />
+                  <EditorIframe editorSrc={src} />
                 </div>
               );
             }

@@ -107,30 +107,23 @@ class PackageEditor extends Component{
                                 }}><i className="glyphicon glyphicon-floppy-disk"></i> 保存</button>
                             </div>
                             <div className="btn-group btn-group-sm" style={{margin:'2px'}}>
-                                <button className="btn btn-warning" type="button" onClick={()=>{
-                                    if(this.currentPackage && this.currentPackage.resourceItems && this.currentPackage.resourceItems.length>0){
-                                        let files='',i=0;
-                                        for(let item of this.currentPackage.resourceItems){
-                                            if(!item.path){
-                                                bootbox.alert('当前知识包有未定义具体文件的项目，不能进行此操作！');
-                                                return;
-                                            }
-                                            let path=item.path;
-                                            if(item.version!=='LATEST'){
-                                                path+=":"+item.version;
-                                            }
-                                            if(i>0){
-                                                files+=';';
-                                            }
-                                            files+=path;
-                                            i++;
-                                        }
-                                        action.refreshKnowledgeCache(project,this.currentPackage.id,files);
-                                    }else{
+                                <button className="btn btn-info" type="button" onClick={()=>{
+                                    if(!this.currentPackage){
                                         bootbox.alert('请先选择一个知识包！');
+                                        return;
                                     }
-
-                                }}><i className="glyphicon glyphicon-cloud-upload"></i> 发布当前知识包</button>
+                                    const p = project.replace(/^\//,'');
+                                    fetch('/api/approvals', {
+                                        method: 'POST',
+                                        headers: {'Content-Type':'application/json'},
+                                        body: JSON.stringify({project: p, packageId: this.currentPackage.id})
+                                    }).then(function(res){
+                                        if(res.ok){ bootbox.alert('提交审批成功！'); }
+                                        else{ res.json().then(function(d){ bootbox.alert('提交失败：'+(d.message||res.status)); }); }
+                                    }).catch(function(e){ bootbox.alert('提交失败：'+e.message); });
+                                }}><i className="glyphicon glyphicon-send"></i> 提交审批</button>
+                            </div>
+                            <div className="btn-group btn-group-sm" style={{margin:'2px'}}>
                                 <button className="btn btn-danger" type="button" onClick={()=>{
                                     if(this.currentPackage){
                                         const ce=window.parent.componentEvent;
