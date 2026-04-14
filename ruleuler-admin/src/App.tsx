@@ -13,6 +13,7 @@ import ClientConfigPage from '@/pages/projects/ClientConfigPage';
 import ConsolePage from '@/pages/console/ConsolePage';
 import UserList from '@/pages/system/UserList';
 import RoleList from '@/pages/system/RoleList';
+import AuditLogPage from '@/pages/system/AuditLogPage';
 import NotFound from '@/pages/NotFound';
 
 const PackListPage = React.lazy(() => import('@/pages/autotest/PackListPage'));
@@ -221,6 +222,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:system:roles">
               <RoleList />
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="system/audit"
+          element={
+            <AuthorizedRoute permissionCode="menu:system:audit">
+              <AuditLogPage />
             </AuthorizedRoute>
           }
         />

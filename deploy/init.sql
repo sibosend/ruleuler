@@ -247,7 +247,8 @@ INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `
 (21, 'api:GET:/api/monitoring/*',           '监控数据查询',   'api', NULL, 40),
 (30, 'menu:approvals',                      '审批管理',       'menu', NULL, 6),
 (31, 'pack:publish:submit',                 '提交发布审批',   'api',  NULL, 50),
-(32, 'pack:publish:approve',                '审批发布',       'api',  NULL, 51);
+(32, 'pack:publish:approve',                '审批发布',       'api',  NULL, 51),
+(33, 'menu:system:audit',                   '审计日志',       'menu', 4,    3);
 
 INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`)
 SELECT 1, `id` FROM `rbac_permission`;

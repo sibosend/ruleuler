@@ -1,8 +1,10 @@
 package com.caritasem.ruleuler.server.auth.controller;
 
 import com.caritasem.ruleuler.server.auth.ApiResult;
+import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.auth.RequirePermission;
 import com.caritasem.ruleuler.server.auth.service.UserService;
+import com.caritasem.ruleuler.server.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +17,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final AuditLogService auditLogService;
 
     @GetMapping
     @RequirePermission("api:GET:/api/rbac/users")
@@ -29,6 +32,8 @@ public class UserController {
         String username = body.get("username");
         String password = body.get("password");
         Long id = userService.createUser(username, password);
+        auditLogService.log("USER_CREATE", "USER", id, null, null,
+                AuthContext.get().getUsername(), Map.of("username", username), null);
         return ApiResult.ok(Map.of("id", id));
     }
 
@@ -39,6 +44,8 @@ public class UserController {
         String password = (String) body.get("password");
         Integer status = body.get("status") != null ? ((Number) body.get("status")).intValue() : null;
         userService.updateUser(id, username, password, status);
+        auditLogService.log("USER_UPDATE", "USER", id, null, null,
+                AuthContext.get().getUsername(), Map.of("username", username), null);
         return ApiResult.ok(null);
     }
 
@@ -46,6 +53,8 @@ public class UserController {
     @RequirePermission("api:DELETE:/api/rbac/users")
     public ApiResult deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
+        auditLogService.log("USER_DELETE", "USER", id, null, null,
+                AuthContext.get().getUsername(), null, null);
         return ApiResult.ok(null);
     }
 
@@ -58,6 +67,8 @@ public class UserController {
                 ? roleIdNumbers.stream().map(Number::longValue).toList()
                 : List.of();
         userService.assignRoles(id, roleIds);
+        auditLogService.log("ROLE_ASSIGN", "USER", id, null, null,
+                AuthContext.get().getUsername(), Map.of("roleIds", roleIds), null);
         return ApiResult.ok(null);
     }
 }

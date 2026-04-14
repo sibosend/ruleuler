@@ -8,6 +8,7 @@ import com.bstek.urule.runtime.KnowledgeSession;
 import com.bstek.urule.runtime.KnowledgeSessionFactory;
 import com.bstek.urule.runtime.service.KnowledgeService;
 import com.caritasem.ruleuler.dto.RespDTO;
+import com.caritasem.ruleuler.monitoring.TraceContext;
 import com.caritasem.ruleuler.monitoring.VarEventProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +93,13 @@ public class RuleController {
                 session.insert(entity);
             }
 
-            session.startProcess(process);
+            TraceContext.set(new TraceContext.TraceInfo(executionId, project, knowledgePackageId, process));
+            try {
+                session.startProcess(process);
+                session.writeLogFile();
+            } finally {
+                TraceContext.clear();
+            }
 
             // 合并参数输出和变量输出（只返回规则引擎写入的字段，排除原样输入）
             Map<String, Object> result = new LinkedHashMap<>();

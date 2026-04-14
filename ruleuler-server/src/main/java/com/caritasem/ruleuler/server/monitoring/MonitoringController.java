@@ -206,6 +206,21 @@ public class MonitoringController {
         return ApiResult.ok(rows);
     }
 
+    /**
+     * 单次执行的规则追踪路径（ClickHouse）。
+     */
+    @GetMapping("/executions/{id}/trace")
+    public ApiResult executionTrace(@PathVariable String id) {
+        String sql = """
+                SELECT seq, msg_type, msg_text, parsed_name, pass_fail, created_at
+                FROM execution_trace_log FINAL
+                WHERE execution_id = ?
+                ORDER BY seq
+                """;
+        List<Map<String, Object>> rows = queryClickHouse(sql, id);
+        return ApiResult.ok(rows);
+    }
+
     @GetMapping("/alert-config")
     public ApiResult getAlertConfig() {
         return ApiResult.ok(alertConfigService.getCachedConfig());

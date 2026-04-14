@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Table, Descriptions, Tag, Button, Spin, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { fetchExecutionDetail } from '../../api/monitoring';
+import { fetchExecutionDetail, fetchExecutionTrace } from '../../api/monitoring';
 
 interface VarDetail {
   var_category: string;
@@ -12,6 +12,15 @@ interface VarDetail {
   val_num: number | null;
   val_str: string | null;
   io_type: string;
+}
+
+interface TraceRow {
+  seq: number;
+  msg_type: string;
+  msg_text: string;
+  parsed_name: string | null;
+  pass_fail: 'PASS' | 'FAIL' | null;
+  created_at: string;
 }
 
 interface ExecutionInfo {
@@ -46,10 +55,57 @@ const columns: ColumnsType<VarDetail> = [
   },
 ];
 
+const MSG_TYPE_COLORS: Record<string, string> = {
+  Condition: 'blue',
+  RuleMatch: 'green',
+  VarAssign: 'orange',
+  ScoreCard: 'cyan',
+  RuleFlow: 'purple',
+  ExecuteBeanMethod: 'magenta',
+  ExecuteFunction: 'geekblue',
+  ConsoleOutput: 'default',
+};
+
+const traceColumns: ColumnsType<TraceRow> = [
+  { title: '#', dataIndex: 'seq', key: 'seq', width: 50 },
+  {
+    title: '类型',
+    dataIndex: 'msg_type',
+    key: 'msg_type',
+    width: 130,
+    render: (v: string) => <Tag color={MSG_TYPE_COLORS[v] || 'default'}>{v}</Tag>,
+  },
+  {
+    title: '名称',
+    dataIndex: 'parsed_name',
+    key: 'parsed_name',
+    width: 200,
+    render: (v: string | null) => v ?? '-',
+  },
+  {
+    title: '结果',
+    dataIndex: 'pass_fail',
+    key: 'pass_fail',
+    width: 80,
+    render: (v: string | null) => {
+      if (v === 'PASS') return <Tag color="green">通过</Tag>;
+      if (v === 'FAIL') return <Tag color="red">未通过</Tag>;
+      return '-';
+    },
+  },
+  {
+    title: '详情',
+    dataIndex: 'msg_text',
+    key: 'msg_text',
+    ellipsis: true,
+  },
+];
+
 const ExecutionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<ExecutionInfo | null>(null);
+  const [traceData, setTraceData] = useState<TraceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const fetched = useRef(false);
 
@@ -72,6 +128,10 @@ const ExecutionDetailPage: React.FC = () => {
           status: rows.some((r: Record<string, unknown>) => r.var_name === '') ? 'failed' : 'success',
           variables: rows as unknown as VarDetail[],
         });
+        // 并行加载追踪数据
+        fetchExecutionTrace(first.execution_id as string)
+          .then((trace) => setTraceData(Array.isArray(trace) ? trace : []))
+          .catch(() => {/* 追踪数据加载失败不影响主流程 */});
       })
       .catch(() => message.error('加载执行详情失败'))
       .finally(() => setLoading(false));
@@ -126,6 +186,19 @@ const ExecutionDetailPage: React.FC = () => {
         size="small"
         pagination={false}
       />
+
+      {traceData.length > 0 && (
+        <>
+          <h4 style={{ marginBottom: 8, marginTop: 24 }}>规则执行追踪 ({traceData.length})</h4>
+          <Table
+            columns={traceColumns}
+            dataSource={traceData}
+            rowKey="seq"
+            size="small"
+            pagination={false}
+          />
+        </>
+      )}
     </div>
   );
 };

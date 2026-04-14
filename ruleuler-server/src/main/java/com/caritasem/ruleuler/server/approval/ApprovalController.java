@@ -3,6 +3,7 @@ package com.caritasem.ruleuler.server.approval;
 import com.caritasem.ruleuler.server.auth.ApiResult;
 import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.auth.RequirePermission;
+import com.caritasem.ruleuler.server.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 public class ApprovalController {
 
     private final ApprovalService approvalService;
+    private final AuditLogService auditLogService;
 
     @PostMapping
     @RequirePermission("pack:publish:submit")
@@ -25,7 +27,10 @@ public class ApprovalController {
             return ApiResult.error(400, "project 和 packageId 不能为空");
         }
         AuthContext.UserInfo user = AuthContext.get();
-        return ApiResult.ok(approvalService.submit(project, packageId, user.getUsername(), description));
+        Object result = approvalService.submit(project, packageId, user.getUsername(), description);
+        auditLogService.log("PUBLISH_SUBMIT", "APPROVAL", null, null, project, user.getUsername(),
+                Map.of("packageId", packageId, "description", description != null ? description : ""), null);
+        return ApiResult.ok(result);
     }
 
     @GetMapping
@@ -49,7 +54,10 @@ public class ApprovalController {
                               @RequestBody(required = false) Map<String, String> body) {
         AuthContext.UserInfo user = AuthContext.get();
         String comment = body != null ? body.get("comment") : null;
-        return ApiResult.ok(approvalService.approve(id, user.getUsername(), comment));
+        Object result = approvalService.approve(id, user.getUsername(), comment);
+        auditLogService.log("APPROVE", "APPROVAL", id, null, null, user.getUsername(),
+                Map.of("approvalId", id, "comment", comment != null ? comment : ""), null);
+        return ApiResult.ok(result);
     }
 
     @PutMapping("/{id}/reject")
@@ -58,14 +66,20 @@ public class ApprovalController {
                              @RequestBody(required = false) Map<String, String> body) {
         AuthContext.UserInfo user = AuthContext.get();
         String comment = body != null ? body.get("comment") : null;
-        return ApiResult.ok(approvalService.reject(id, user.getUsername(), comment));
+        Object result = approvalService.reject(id, user.getUsername(), comment);
+        auditLogService.log("REJECT", "APPROVAL", id, null, null, user.getUsername(),
+                Map.of("approvalId", id, "comment", comment != null ? comment : ""), null);
+        return ApiResult.ok(result);
     }
 
     @PutMapping("/{id}/publish")
     @RequirePermission("pack:publish:submit")
     public ApiResult publish(@PathVariable Long id) {
         String publisher = AuthContext.get().getUsername();
-        return ApiResult.ok(approvalService.publish(id, publisher));
+        Object result = approvalService.publish(id, publisher);
+        auditLogService.log("PUBLISH", "APPROVAL", id, null, null, publisher,
+                Map.of("approvalId", id), null);
+        return ApiResult.ok(result);
     }
 
     @PostMapping("/{id}/recalc-diff")

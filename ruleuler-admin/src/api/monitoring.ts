@@ -56,6 +56,12 @@ export async function fetchExecutionDetail(id: string) {
   return res.data.data;
 }
 
+// 执行追踪路径
+export async function fetchExecutionTrace(id: string) {
+  const res = await request.get(`/api/monitoring/executions/${id}/trace`);
+  return res.data.data;
+}
+
 // 实时大盘
 export async function fetchRealtimeDashboard(params: {
   project: string;

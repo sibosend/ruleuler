@@ -1,8 +1,10 @@
 package com.caritasem.ruleuler.server.auth.controller;
 
 import com.caritasem.ruleuler.server.auth.ApiResult;
+import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.auth.RequirePermission;
 import com.caritasem.ruleuler.server.auth.service.RoleService;
+import com.caritasem.ruleuler.server.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +17,7 @@ import java.util.Map;
 public class RoleController {
 
     private final RoleService roleService;
+    private final AuditLogService auditLogService;
 
     @GetMapping
     @RequirePermission("api:GET:/api/rbac/roles")
@@ -28,6 +31,8 @@ public class RoleController {
         String name = body.get("name");
         String description = body.get("description");
         Long id = roleService.createRole(name, description);
+        auditLogService.log("ROLE_CREATE", "ROLE", id, null, null,
+                AuthContext.get().getUsername(), Map.of("name", name), null);
         return ApiResult.ok(Map.of("id", id));
     }
 
@@ -37,6 +42,8 @@ public class RoleController {
         String name = body.get("name");
         String description = body.get("description");
         roleService.updateRole(id, name, description);
+        auditLogService.log("ROLE_UPDATE", "ROLE", id, null, null,
+                AuthContext.get().getUsername(), Map.of("name", name), null);
         return ApiResult.ok(null);
     }
 
@@ -44,6 +51,8 @@ public class RoleController {
     @RequirePermission("api:DELETE:/api/rbac/roles")
     public ApiResult deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);
+        auditLogService.log("ROLE_DELETE", "ROLE", id, null, null,
+                AuthContext.get().getUsername(), null, null);
         return ApiResult.ok(null);
     }
 
@@ -56,6 +65,8 @@ public class RoleController {
                 ? permIdNumbers.stream().map(Number::longValue).toList()
                 : List.of();
         roleService.assignPermissions(id, permissionIds);
+        auditLogService.log("PERM_ASSIGN", "ROLE", id, null, null,
+                AuthContext.get().getUsername(), Map.of("permissionIds", permissionIds), null);
         return ApiResult.ok(null);
     }
 

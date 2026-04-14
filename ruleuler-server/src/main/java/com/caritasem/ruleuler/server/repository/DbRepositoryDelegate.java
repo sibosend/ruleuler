@@ -42,7 +42,9 @@ import com.bstek.urule.console.repository.model.Type;
 import com.bstek.urule.console.repository.model.VersionFile;
 import com.bstek.urule.console.repository.permission.PermissionService;
 import com.bstek.urule.console.servlet.permission.UserPermission;
+import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.approval.DiffCalculator;
+import com.caritasem.ruleuler.server.audit.AuditLogService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -60,6 +62,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
     private JdbcTemplate jdbcTemplate;
     private RepositoryInteceptor repositoryInteceptor;
     private PermissionService permissionService;
+    private AuditLogService auditLogService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
@@ -79,6 +82,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
                 : interceptors.iterator().next();
         this.permissionService = ctx.getBean(PermissionService.class);
         this.jdbcTemplate = ctx.getBean(JdbcTemplate.class);
+        this.auditLogService = ctx.getBean(AuditLogService.class);
     }
 
     // ==================== 8.2 createProject ====================
@@ -140,6 +144,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         jdbcTemplate.update(
                 "INSERT INTO ruleuler_rule_file(project,path,name,is_dir,content,create_user,update_user,company_id,created_at,updated_at) VALUES(?,?,?,0,?,?,?,?,?,?)",
                 project, path, name, content, user.getUsername(), user.getUsername(), user.getCompanyId(), now, now);
+        auditLogService.log("CREATE", "FILE", null, path, project, user.getUsername(), Map.of("name", name), null);
     }
 
     @Override
@@ -162,6 +167,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         jdbcTemplate.update(
                 "INSERT INTO ruleuler_rule_file(project,path,name,is_dir,content,create_user,update_user,company_id,created_at,updated_at) VALUES(?,?,?,1,NULL,?,?,?,?,?)",
                 project, path, name, user.getUsername(), user.getUsername(), user.getCompanyId(), now, now);
+        auditLogService.log("CREATE", "DIR", null, path, project, user.getUsername(), Map.of("name", name), null);
     }
 
     // ==================== 8.4 saveFile ====================
@@ -235,6 +241,8 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
                     fileId, nextVersion, versionName, content,
                     StringUtils.isNotBlank(versionComment) ? versionComment : null,
                     user.getUsername(), now);
+            auditLogService.log("UPDATE", "FILE", fileId, path, extractProject(path), user.getUsername(),
+                    Map.of("version", nextVersion, "versionName", versionName), null);
         }
     }
 
@@ -325,6 +333,9 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         jdbcTemplate.update("DELETE FROM ruleuler_rule_file_version WHERE file_id=?", fileId);
         // 删除当前文件
         jdbcTemplate.update("DELETE FROM ruleuler_rule_file WHERE id=?", fileId);
+
+        auditLogService.log("DELETE", isDir ? "DIR" : "FILE", fileId, path, extractProject(path),
+                user.getUsername(), Map.of("isDir", isDir), null);
     }
 
     // ==================== 8.7 lockPath / unlockPath ====================
@@ -348,6 +359,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
             }
             throw new NodeLockException("【" + path + "】已被" + lockUser + "锁定，您不能进行再次锁定!");
         }
+        auditLogService.log("LOCK", "FILE", null, path, extractProject(path), user.getUsername(), null, null);
     }
 
     @Override
@@ -375,6 +387,7 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         if (affected == 0) {
             throw new NodeLockException("解锁失败，请重试");
         }
+        auditLogService.log("UNLOCK", "FILE", null, path, extractProject(path), user.getUsername(), null, null);
     }
 
     // ==================== 8.8 loadProjects / loadRepository / getDirectories / loadProjectResourcePackages ====================
@@ -782,6 +795,9 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         jdbcTemplate.update(
                 "UPDATE ruleuler_rule_file SET path=CONCAT(?, SUBSTRING(path, ?)), project=? WHERE path LIKE ?",
                 newPath, path.length() + 1, newProject, path + "/%");
+
+        auditLogService.log("RENAME", "FILE", null, newPath, newProject, getOperator(),
+                Map.of("oldPath", path, "newPath", newPath), null);
     }
 
     @Override
@@ -985,6 +1001,11 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
         if (val instanceof Boolean) return (Boolean) val;
         if (val instanceof Number) return ((Number) val).intValue() == 1;
         throw new IllegalArgumentException("Unexpected is_dir type: " + (val == null ? "null" : val.getClass().getName()));
+    }
+
+    private static String getOperator() {
+        AuthContext.UserInfo user = AuthContext.get();
+        return user != null ? user.getUsername() : "system";
     }
 
     private Type resolveFileType(String name) {

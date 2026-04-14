@@ -8,6 +8,7 @@ import {
   UserOutlined,
   SafetyOutlined,
   CloudUploadOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons';
 
 /** 路由配置项 */
@@ -165,6 +166,12 @@ export const routeConfigs: RouteConfig[] = [
         label: '角色管理',
         icon: <SafetyOutlined />,
         permissionCode: 'menu:system:roles',
+      },
+      {
+        path: '/system/audit',
+        label: '审计日志',
+        icon: <FileSearchOutlined />,
+        permissionCode: 'menu:system:audit',
       },
     ],
   },

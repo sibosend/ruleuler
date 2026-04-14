@@ -50,4 +50,21 @@ public class MonitoringConfig {
     public VarLogFlusher varLogFlusher() throws SQLException {
         return new VarLogFlusher(varLogQueue(), clickHouseDataSource(), batchSize, flushIntervalMs);
     }
+
+    // ---- 执行追踪 ----
+
+    @Bean
+    public BlockingQueue<TraceLogRow> traceLogQueue() {
+        return new LinkedBlockingQueue<>(queueCapacity);
+    }
+
+    @Bean
+    public TraceDebugWriter traceDebugWriter() {
+        return new TraceDebugWriter(traceLogQueue());
+    }
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public TraceLogFlusher traceLogFlusher() throws SQLException {
+        return new TraceLogFlusher(traceLogQueue(), clickHouseDataSource(), batchSize, flushIntervalMs);
+    }
 }
