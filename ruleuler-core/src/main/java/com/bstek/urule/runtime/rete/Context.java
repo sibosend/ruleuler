@@ -37,4 +37,5 @@ public interface Context {
 	Object parseExpression(String expression);
 	List<MessageItem> getDebugMessageItems();
 	void debugMsg(String msg,MsgType type,boolean debug);
+	void executeTrace(String msg,MsgType type);
 }

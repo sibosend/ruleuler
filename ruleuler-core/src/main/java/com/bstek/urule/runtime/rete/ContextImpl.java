@@ -68,12 +68,6 @@ public class ContextImpl implements Context {
 	
 	@Override
 	public void debugMsg(String msg, MsgType type, boolean enableDebug) {
-		boolean traceType = type == MsgType.Condition || type == MsgType.RuleMatch || type == MsgType.VarAssign;
-		if (traceType) {
-			// 执行追踪：始终收集，不受 debug 开关控制
-			debugMessageItems.add(new MessageItem(msg, type));
-			return;
-		}
 		if(!Utils.isDebug() || !enableDebug){
 			return;
 		}
@@ -83,6 +77,11 @@ public class ContextImpl implements Context {
 		}
 		MessageItem item=new MessageItem(msg,type);
 		debugMessageItems.add(item);
+	}
+
+	@Override
+	public void executeTrace(String msg, MsgType type) {
+		debugMessageItems.add(new MessageItem(msg, type));
 	}
 	
 	@Override

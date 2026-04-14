@@ -87,8 +87,9 @@ public class VariableAssignAction extends AbstractAction {
 			label=variableCategory+"."+(variableLabel==null ? variableName : variableLabel);
 		}
 		Utils.setObjectProperty(targetFact, propertyName, obj);
+		String msg="###变量赋值："+label+"="+obj;
+		context.executeTrace(msg, MsgType.VarAssign);
 		if(debug && Utils.isDebug()){
-			String msg="###变量赋值："+label+"="+obj;
 			context.debugMsg(msg, MsgType.VarAssign, debug);
 		}
 		return null;

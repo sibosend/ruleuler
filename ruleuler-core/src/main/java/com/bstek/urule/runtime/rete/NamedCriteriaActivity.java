@@ -65,14 +65,15 @@ public class NamedCriteriaActivity  extends AbstractActivity{
 	}
 	
 	private void doDebug(EvaluateResponse response,Context context){
-		if(!debug || !Utils.isDebug()){
-			return;
-		}
 		String id=criteria.getId();
 		StringBuffer sb=new StringBuffer();
 		sb.append("^^^命名条件："+id);
 		String result=response.getResult() ? "满足" : "不满足";
 		sb.append(" =>"+result);
+		context.executeTrace(sb.toString(), MsgType.Condition);
+		if(!debug || !Utils.isDebug()){
+			return;
+		}
 		System.out.println(sb.toString());
 		context.debugMsg(sb.toString(), MsgType.Condition, debug);
 	}

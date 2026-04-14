@@ -68,9 +68,6 @@ public class CriteriaActivity  extends AbstractActivity {
 	}
 	
 	private void doDebug(EvaluateResponse response,Context context){
-		if(!debug || !Utils.isDebug()){
-			return;
-		}
 		String id=criteria.getId();
 		StringBuffer sb=new StringBuffer();
 		sb.append("^^^条件："+id);
@@ -78,6 +75,10 @@ public class CriteriaActivity  extends AbstractActivity {
 		sb.append(" =>"+result);
 		sb.append(", 左值："+(response.getLeftResult()==null ? "null" : response.getLeftResult()));
 		sb.append(", 右值："+(response.getRightResult()==null ? "null" : response.getRightResult()));
+		context.executeTrace(sb.toString(), MsgType.Condition);
+		if(!debug || !Utils.isDebug()){
+			return;
+		}
 		context.debugMsg(sb.toString(), MsgType.Condition, debug);
 	}
 	

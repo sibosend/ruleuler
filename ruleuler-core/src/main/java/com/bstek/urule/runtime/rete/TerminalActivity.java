@@ -42,8 +42,9 @@ public class TerminalActivity extends AbstractActivity {
 		result.add(tracker);
 		KnowledgeSession session = (KnowledgeSession)context.getWorkingMemory();
 		session.fireEvent(new ActivationCreatedEventImpl(ac,session));
+		String msg="√√√规则【"+rule.getName()+"】成功匹配";
+		context.executeTrace(msg, MsgType.RuleMatch);
 		if(rule.getDebug()!=null){
-			String msg="√√√规则【"+rule.getName()+"】成功匹配";
 			context.debugMsg(msg, MsgType.RuleMatch, rule.getDebug());
 		}
 		return result;

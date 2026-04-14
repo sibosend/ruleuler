@@ -36,7 +36,8 @@ def send_request(client_url: str, payload: dict) -> dict:
 
 def ch_query(ch_url: str, sql: str) -> list:
     """查询 ClickHouse，返回 JSONEachRow 解析结果"""
-    url = f"{ch_url}/?query={urllib.parse.quote(sql)}"
+    fmt_sql = sql.rstrip().rstrip(';') + ' FORMAT JSONEachRow'
+    url = f"{ch_url}/?query={urllib.parse.quote(fmt_sql)}"
     req = urllib.request.Request(url, data=b"", method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
         text = resp.read().decode().strip()
