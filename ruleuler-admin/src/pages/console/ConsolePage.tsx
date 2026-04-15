@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Result, Button, Empty } from 'antd';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ProjectOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, ProjectOutlined } from '@ant-design/icons';
 import { useTabStore } from '@/stores/tabStore';
 import ResourceTree from './ResourceTree';
 import EditorIframe from './EditorIframe';
+import DependencyDrawer from './DependencyDrawer';
 import {
   buildEditorRoute,
   parseEditorRoute,
@@ -58,6 +59,10 @@ const ConsolePage: React.FC = () => {
   // ─── 拖拽分栏宽度 ──────────────────────────────────────────────
   const [treeWidth, setTreeWidth] = useState(DEFAULT_TREE_WIDTH);
   const dragging = useRef(false);
+
+  // ─── 依赖分析 Drawer ──────────────────────────────────────────
+  const [depDrawerOpen, setDepDrawerOpen] = useState(false);
+  const [depDrawerPath, setDepDrawerPath] = useState<string | null>(null);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -203,7 +208,34 @@ const ConsolePage: React.FC = () => {
       />
 
       {/* 右侧编辑器区域 */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* 编辑器工具栏 */}
+        {editorTabs.length > 0 && activeFilePath && (() => {
+          const activeTab = editorTabs.find((t) => t.key === activeKey);
+          if (!activeTab) return null;
+          const parsed = parseEditorRoute(activeTab.key);
+          if (!parsed || parsed.filePath === '__package__') return null;
+          return (
+            <div style={{
+              height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '0 12px', borderBottom: '1px solid #f0f0f0', background: '#fafafa',
+            }}>
+              <span style={{ fontSize: 13, color: '#595959' }}>{activeTab.label}</span>
+              <Button
+                size="small"
+                icon={<ApartmentOutlined />}
+                onClick={() => {
+                  const fp = parsed.filePath.startsWith('/') ? parsed.filePath : `/${parsed.filePath}`;
+                  setDepDrawerPath(fp);
+                  setDepDrawerOpen(true);
+                }}
+              >
+                依赖分析
+              </Button>
+            </div>
+          );
+        })()}
+        <div style={{ flex: 1, overflow: 'auto' }}>
         {editorTabs.length === 0 ? (
           <div
             style={{
@@ -248,7 +280,21 @@ const ConsolePage: React.FC = () => {
             );
           })
         )}
+        </div>
       </div>
+
+      {/* 依赖分析 Drawer */}
+      <DependencyDrawer
+        open={depDrawerOpen}
+        filePath={depDrawerPath}
+        onClose={() => setDepDrawerOpen(false)}
+        onNavigate={(path) => {
+          const fileName = path.split('/').pop() ?? path;
+          const route = buildEditorRoute(project!, path);
+          addTab({ key: route, label: fileName, closable: true });
+          navigate(route);
+        }}
+      />
     </div>
   );
 };

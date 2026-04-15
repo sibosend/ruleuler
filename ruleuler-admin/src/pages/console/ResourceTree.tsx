@@ -34,6 +34,7 @@ import {
 import * as consoleApi from '@/api/consoleApi';
 import type { RepositoryFile } from '@/api/consoleApi';
 import { FILE_TYPE_EDITOR_MAP } from './fileTypeMap';
+import DependencyDrawer from './DependencyDrawer';
 
 // ─── Props ───────────────────────────────────────────────────────────
 
@@ -214,6 +215,10 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
 
   // 搜索
   const [searchValue, setSearchValue] = useState('');
+
+  // 依赖分析 Drawer
+  const [dependencyOpen, setDependencyOpen] = useState(false);
+  const [dependencyPath, setDependencyPath] = useState<string | null>(null);
 
   // 剪切/复制缓存
   const clipboardRef = useRef<{ file: RepositoryFile; mode: 'copy' | 'cut' } | null>(null);
@@ -472,6 +477,8 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     return [
       { key: 'viewSource', label: '查看源码' },
       { key: 'viewVersions', label: '查看版本信息' },
+      { key: 'dependency', label: '依赖分析' },
+      { type: 'divider' },
       { key: 'delete', label: '删除文件', danger: true },
       { key: 'rename', label: '修改文件名' },
       { key: 'copy', label: '复制文件' },
@@ -678,6 +685,12 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
             }).catch(() => message.error('获取版本信息失败'));
           }
           break;
+        case 'dependency':
+          if (contextNode) {
+            setDependencyPath(contextNode.fullPath);
+            setDependencyOpen(true);
+          }
+          break;
         case 'paste': {
           const clip = clipboardRef.current;
           if (!clip) {
@@ -882,6 +895,14 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
           </div>
         )}
       </Modal>
+
+      {/* 依赖分析 Drawer */}
+      <DependencyDrawer
+        open={dependencyOpen}
+        filePath={dependencyPath}
+        onClose={() => setDependencyOpen(false)}
+        onNavigate={(path) => onFileSelect({ fullPath: path, name: path.split('/').pop() ?? path, type: 'all' } as RepositoryFile)}
+      />
     </Spin>
   );
 };
