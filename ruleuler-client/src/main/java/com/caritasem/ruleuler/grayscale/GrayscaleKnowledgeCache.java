@@ -151,10 +151,7 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
             return (hash % 100) < rule.percentage();
         } else if ("CONDITION".equals(rule.strategy()) && rule.conditionExpr() != null) {
             try {
-                List<ConditionEvaluator.ConditionItem> conditions = objectMapper.readValue(
-                        rule.conditionExpr(),
-                        new TypeReference<List<ConditionEvaluator.ConditionItem>>() {});
-                return ConditionEvaluator.evaluate(conditions, ctx.attributes());
+                return ConditionEvaluator.evaluate(rule.conditionExpr(), ctx.attributes());
             } catch (Exception e) {
                 log.warn("条件求值失败: {}", e.getMessage());
                 return false;

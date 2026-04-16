@@ -61,9 +61,10 @@ const GrayscaleRulePage: React.FC = () => {
       render: (s: string) => STRATEGY_MAP[s] ?? s,
     },
     {
-      title: '配置', width: 200,
+      title: '配置', width: 200, ellipsis: true,
       render: (_: any, r: GrayscaleRuleVO) =>
-        r.strategy === 'PERCENTAGE' ? `${r.percentage}%` : r.conditionExpr ?? '-',
+        r.strategy === 'PERCENTAGE' ? `${r.percentage}%`
+          : <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{r.conditionExpr ?? '-'}</span>,
     },
     {
       title: '状态', dataIndex: 'status', width: 90,

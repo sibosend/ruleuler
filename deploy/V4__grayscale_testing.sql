@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS ruleuler_grayscale_rule (
   snapshot_id bigint NOT NULL COMMENT '灰度版本快照',
   strategy varchar(20) NOT NULL COMMENT 'PERCENTAGE / CONDITION',
   percentage int DEFAULT NULL,
-  condition_expr text DEFAULT NULL COMMENT '条件表达式，复用 REA Op 枚举: [{"left":"customer.level","op":"Equals","right":"VIP"}]',
+  condition_expr text DEFAULT NULL COMMENT 'REA 条件表达式，如: FlightInfo.level == "VIP" AND FlightInfo.score > 5',
   status varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/ROLLED_OUT/ROLLED_BACK',
   description varchar(500) DEFAULT NULL,
   created_by varchar(100) NOT NULL,

@@ -12,6 +12,9 @@ import {
 } from '@/api/approval';
 import { createGrayscaleRule } from '@/api/grayscale';
 import { loadProjects } from '@/api/project';
+import { loadProjectLibs, loadXml, type ProjectLibs } from '@/pages/rea/api/reaApi';
+import type { LibraryData } from '@/pages/rea/lib/expressionParser';
+import ReaConditionInput from '@/pages/rea/components/ReaConditionInput';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/stores/authStore';
 import { useTabStore } from '@/stores/tabStore';
@@ -57,6 +60,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const [gsPercentage, setGsPercentage] = useState(10);
   const [gsCondition, setGsCondition] = useState('');
   const [gsDescription, setGsDescription] = useState('');
+  const [gsLibraries, setGsLibraries] = useState<LibraryData>({ variables: [], parameters: [] });
 
   const canApprove = usePermission('pack:publish:approve');
   const canSubmit = usePermission('pack:publish:submit');
@@ -162,6 +166,28 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     } catch { /* request.ts 已处理 */ }
   };
 
+  const openGrayscaleModal = async (id: number, projectName: string) => {
+    setGrayscaleModal({ open: true, id });
+    setGsStrategy('PERCENTAGE');
+    setGsPercentage(10);
+    setGsCondition('');
+    setGsDescription('');
+    // 加载审批单所属项目的变量库（灰度弹窗变量提示用）
+    try {
+      const libs: ProjectLibs = await loadProjectLibs(projectName);
+      const allFiles = [...libs.variable, ...libs.parameter];
+      const loaded: LibraryData = { variables: [], parameters: [] };
+      if (allFiles.length > 0) {
+        const xmlData = await loadXml(allFiles.join(';'));
+        for (const item of xmlData as any[]) {
+          if (item.variables) loaded.variables.push(...item.variables);
+          if (item.parameters) loaded.parameters.push(...item.parameters);
+        }
+      }
+      setGsLibraries(loaded);
+    } catch { /* 变量库加载失败不影响弹窗使用 */ }
+  };
+
   const openDetail = async (record: ApprovalVO) => {
     try {
       const res = await getApprovalDetail(record.id);
@@ -251,13 +277,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
               </Popconfirm>
               {record.status === 'APPROVED' && (
                 <Button size="small"
-                  onClick={() => {
-                    setGrayscaleModal({ open: true, id: record.id });
-                    setGsStrategy('PERCENTAGE');
-                    setGsPercentage(10);
-                    setGsCondition('');
-                    setGsDescription('');
-                  }}
+                  onClick={() => openGrayscaleModal(record.id, record.project)}
                 >
                   灰度发布
                 </Button>
@@ -361,13 +381,13 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         {gsStrategy === 'CONDITION' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-              条件表达式 JSON，格式：[&#123;"left":"category.field","op":"Equals","right":"VIP"&#125;]
+              条件表达式（REA 语法），满足条件的请求路由到灰度版本
             </div>
-            <Input.TextArea
-              rows={4}
+            <ReaConditionInput
               value={gsCondition}
-              onChange={(e) => setGsCondition(e.target.value)}
-              placeholder='[{"left":"customer.level","op":"Equals","right":"VIP"}]'
+              onChange={setGsCondition}
+              libraries={gsLibraries}
+              placeholder='例: FlightInfo.level == "VIP" AND FlightInfo.score > 5'
             />
           </div>
         )}
