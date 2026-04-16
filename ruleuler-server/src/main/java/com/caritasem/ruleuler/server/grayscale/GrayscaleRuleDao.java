@@ -73,6 +73,11 @@ public class GrayscaleRuleDao {
                 RULE_MAPPER, project);
     }
 
+    public List<GrayscaleRule> findAllActive() {
+        return jdbc.query("SELECT * FROM ruleuler_grayscale_rule WHERE status='ACTIVE' ORDER BY created_at DESC",
+                RULE_MAPPER);
+    }
+
     public List<GrayscaleRule> listByFilter(String project, String packageId, String status, int offset, int limit) {
         StringBuilder sql = new StringBuilder("SELECT * FROM ruleuler_grayscale_rule WHERE 1=1");
         Object[] params = buildParams(sql, project, packageId, status);

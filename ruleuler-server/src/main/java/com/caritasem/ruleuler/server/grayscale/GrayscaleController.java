@@ -12,6 +12,8 @@ import java.util.Map;
 public class GrayscaleController {
 
     private final GrayscaleService grayscaleService;
+    private final GrayscaleMetricsRecorder metricsRecorder;
+    private final GrayscaleRuleDao grayscaleRuleDao;
 
     @PostMapping("/rules")
     public Map<String, Object> createRule(@RequestBody Map<String, Object> body) {
@@ -57,9 +59,30 @@ public class GrayscaleController {
         return grayscaleService.getMetrics(id, startDate, endDate);
     }
 
-    /** Client 启动恢复用：返回项目所有活跃灰度状态 */
+    /** Client 启动恢复用：返回活跃灰度状态（project 可选，不传则返回全部） */
     @GetMapping("/active-states")
-    public java.util.List<Map<String, Object>> getActiveStates(@RequestParam String project) {
+    public java.util.List<Map<String, Object>> getActiveStates(
+            @RequestParam(required = false) String project) {
         return grayscaleService.getActiveStates(project);
+    }
+
+    /** Client 上报灰度指标 */
+    @PostMapping("/metrics/report")
+    public Map<String, String> reportMetrics(@RequestBody Map<String, Object> body) {
+        String packageId = (String) body.get("packageId");
+        String version = (String) body.get("version");  // BASE or GRAY
+        boolean success = Boolean.parseBoolean(body.get("success").toString());
+        long execMs = Long.parseLong(body.get("execMs").toString());
+
+        // 根据 packageId 找活跃规则
+        String[] parts = packageId.split("/", 2);
+        if (parts.length >= 2) {
+            com.caritasem.ruleuler.server.grayscale.model.GrayscaleRule rule =
+                    grayscaleRuleDao.findActive(parts[0], parts[1]);
+            if (rule != null) {
+                metricsRecorder.record(rule.getId(), version, success, execMs);
+            }
+        }
+        return Map.of("status", "ok");
     }
 }

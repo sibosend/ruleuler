@@ -59,7 +59,12 @@ public class KnowledgeBuilder extends AbstractBuilder{
 	private DSLRuleSetBuilder dslRuleSetBuilder;
 	public static final String BEAN_ID="urule.knowledgeBuilder";
 	public KnowledgeBase buildKnowledgeBase(ResourceBase resourceBase) throws IOException{
-		KnowledgePackageService knowledgePackageService=(KnowledgePackageService)applicationContext.getBean(KnowledgePackageService.BEAN_ID);
+		KnowledgePackageService knowledgePackageService=null;
+		try{
+			knowledgePackageService=(KnowledgePackageService)applicationContext.getBean(KnowledgePackageService.BEAN_ID);
+		}catch(Exception ex){
+			// knowledgePackageService may not be available in client-only contexts
+		}
 		List<Rule> rules=new ArrayList<Rule>();
 		Map<String,Library> libMap=new HashMap<String,Library>();
 		Map<String,FlowDefinition> flowMap=new HashMap<String,FlowDefinition>();

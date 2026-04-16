@@ -70,10 +70,9 @@ public class GrayscaleService {
         if (snapshot == null) throw new IllegalArgumentException("审批单快照不存在");
         Map<String, String> snapshotContent = parseSnapshotData(snapshot);
 
-        // 4. 构建 gray 版 KnowledgePackage
-        KnowledgePackage grayKp;
+        // 4. 构建 gray 版 KnowledgePackage（验证可构建，不用于推送）
         try {
-            grayKp = snapshotBuilder.build(snapshotContent);
+            snapshotBuilder.build(snapshotContent);
         } catch (Exception e) {
             throw new RuntimeException("构建灰度版本失败: " + e.getMessage(), e);
         }
@@ -97,15 +96,14 @@ public class GrayscaleService {
         Long ruleId = grayscaleRuleDao.insert(rule);
         rule.setId(ruleId);
 
-        // 6. 推送 gray 包到 clients（packageId 加 __gray 后缀）
+        // 6. 推送 gray 包到 clients（snapshot JSON，client 本地构建）
         String fullPackageId = normalizePackageId(approval.getProject(), approval.getPackageId());
-        pushPackageToClients(fullPackageId + "__gray", grayKp, approval.getProject());
+        pushSnapshotToClients(fullPackageId + "__gray", "v" + approval.getVersion(), snapshotContent, approval.getProject());
 
         // 7. 推送路由规则 + 版本号到 clients
         Map<String, Object> routingPayload = new LinkedHashMap<>();
         routingPayload.put("packageId", fullPackageId);
         routingPayload.put("version", "v" + approval.getVersion());
-        routingPayload.put("grayVersion", "v" + approval.getVersion());
         routingPayload.put("strategy", strategy.name());
         routingPayload.put("percentage", percentage);
         routingPayload.put("conditionExpr", conditionExpr);
@@ -124,7 +122,7 @@ public class GrayscaleService {
         if (rule.getStatus() != GrayscaleRuleStatus.ACTIVE)
             throw new IllegalArgumentException("灰度规则状态必须为 ACTIVE");
 
-        // 1. 加载快照，构建正式包
+        // 1. 加载快照，构建正式包（本地缓存用）
         PublishSnapshot snapshot = approvalDao.findSnapshotById(rule.getSnapshotId());
         Map<String, String> snapshotContent = parseSnapshotData(snapshot);
         KnowledgePackage kp;
@@ -138,8 +136,10 @@ public class GrayscaleService {
         String fullPackageId = normalizePackageId(rule.getProject(), rule.getPackageId());
         CacheUtils.getKnowledgeCache().putKnowledge(fullPackageId, kp);
 
-        // 3. 推送到 clients（替换 base）
-        pushPackageToClients(fullPackageId, kp, rule.getProject());
+        // 3. 推送到 clients（snapshot JSON + version，client 本地构建）
+        Approval rolloutApproval = approvalDao.findById(rule.getApprovalId());
+        String version = rolloutApproval != null ? "v" + rolloutApproval.getVersion() : "unknown";
+        pushSnapshotToClients(fullPackageId, version, snapshotContent, rule.getProject());
 
         // 4. 推送路由规则停用
         pushRoutingDeleteToClients(fullPackageId, rule.getProject());
@@ -148,8 +148,8 @@ public class GrayscaleService {
         grayscaleRuleDao.updateStatus(ruleId, GrayscaleRuleStatus.ROLLED_OUT);
 
         // 6. 更新审批单为 PUBLISHED
-        Approval approval = approvalDao.findById(rule.getApprovalId());
-        if (approval != null) {
+        Approval pubApproval = approvalDao.findById(rule.getApprovalId());
+        if (pubApproval != null) {
             long now = System.currentTimeMillis();
             approvalDao.updatePublished(rule.getApprovalId(), operator, now);
 
@@ -210,9 +210,11 @@ public class GrayscaleService {
         return Map.of("rule", buildRuleVo(rule), "metrics", metrics);
     }
 
-    /** 返回项目所有活跃灰度状态（供 client 启动恢复用） */
+    /** 返回活跃灰度状态（project 为 null 则返回全部），同时重新推送 gray 包 */
     public List<Map<String, Object>> getActiveStates(String project) {
-        List<GrayscaleRule> rules = grayscaleRuleDao.findActiveByProject(project);
+        List<GrayscaleRule> rules = (project != null && !project.isEmpty())
+                ? grayscaleRuleDao.findActiveByProject(project)
+                : grayscaleRuleDao.findAllActive();
         List<Map<String, Object>> result = new ArrayList<>();
         for (GrayscaleRule rule : rules) {
             Map<String, Object> state = new LinkedHashMap<>();
@@ -222,15 +224,14 @@ public class GrayscaleService {
             state.put("percentage", rule.getPercentage());
             state.put("conditionExpr", rule.getConditionExpr());
 
-            // 序列化 gray 包
+            // 重新构建并推送 gray 包到 clients（走已有 /knowledgepackagereceiver 通道）
             try {
                 PublishSnapshot snapshot = approvalDao.findSnapshotById(rule.getSnapshotId());
                 Map<String, String> snapshotContent = parseSnapshotData(snapshot);
                 KnowledgePackage kp = snapshotBuilder.build(snapshotContent);
-                state.put("grayPackageContent", serializePackage(kp));
+                pushPackageToClients(fullPackageId + "__gray", kp, project);
             } catch (Exception e) {
-                log.error("序列化灰度包失败: ruleId={}", rule.getId(), e);
-                continue;
+                log.error("重新推送灰度包失败: ruleId={}", rule.getId(), e);
             }
 
             // 版本号
@@ -254,6 +255,24 @@ public class GrayscaleService {
             }
         } catch (Exception e) {
             log.error("推送灰度包失败: packageId={}", packageId, e);
+        }
+    }
+
+    /** 推送 snapshot JSON + version 到 client /api/grayscale/package 端点，client 本地构建 */
+    private void pushSnapshotToClients(String packageId, String version, Map<String, String> snapshotContent, String project) {
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("packageId", packageId);
+            payload.put("version", version);
+            payload.put("snapshotContent", snapshotContent);
+            String json = objectMapper.writeValueAsString(payload);
+            List<ClientConfig> clients = repositoryService.loadClientConfigs(project);
+            for (ClientConfig config : clients) {
+                boolean ok = postToClient(config.getClient() + "/api/grayscale/package", json);
+                log.info("推送snapshot {} 到 {}: {}", packageId, config.getName(), ok ? "成功" : "失败");
+            }
+        } catch (Exception e) {
+            log.error("推送snapshot失败: packageId={}", packageId, e);
         }
     }
 

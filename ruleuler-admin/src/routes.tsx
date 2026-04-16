@@ -95,6 +95,11 @@ export const routeConfigs: RouteConfig[] = [
         label: '全部记录',
         permissionCode: 'menu:approvals',
       },
+      {
+        path: '/releases/grayscale',
+        label: '灰度管理',
+        permissionCode: 'pack:grayscale:manage',
+      },
     ],
   },
   {

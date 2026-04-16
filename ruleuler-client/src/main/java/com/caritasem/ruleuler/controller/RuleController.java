@@ -10,6 +10,7 @@ import com.bstek.urule.runtime.service.KnowledgeService;
 import com.caritasem.ruleuler.dto.RespDTO;
 import com.caritasem.ruleuler.grayscale.GrayscaleContext;
 import com.caritasem.ruleuler.grayscale.GrayscaleKnowledgeCache;
+import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
 import com.caritasem.ruleuler.monitoring.TraceContext;
 import com.caritasem.ruleuler.monitoring.VarEventProducer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +37,9 @@ public class RuleController {
 
     @Autowired
     private GrayscaleKnowledgeCache grayscaleCache;
+
+    @Autowired(required = false)
+    private GrayscaleMetricsReporter grayscaleReporter;
 
     private static Logger log = LoggerFactory.getLogger(RuleController.class);
 
@@ -146,6 +150,13 @@ public class RuleController {
                 } catch (Exception ex) {
                     log.warn("监控采集异常", ex);
                 }
+            }
+
+            // 灰度指标上报
+            if (grayscaleReporter != null) {
+                boolean hitGray = grayscaleCache.hasActiveRouting(knowledgePackageId);
+                String ver = hitGray ? "GRAY" : "BASE";
+                grayscaleReporter.report(knowledgePackageId, ver, true, execMs);
             }
 
             // 构建响应（含系统元数据）

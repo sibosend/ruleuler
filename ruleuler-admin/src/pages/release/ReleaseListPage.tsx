@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Button, Table, Tag, Space, Select, Drawer, Modal, Input,
+  Button, Table, Tag, Space, Select, Drawer, Modal, Input, Slider, Radio,
   message, Descriptions, Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -10,6 +10,7 @@ import {
   publishApproval,
   type ApprovalVO, type ApprovalDiffItem, type RuleDiffDetail, type FieldDiff,
 } from '@/api/approval';
+import { createGrayscaleRule } from '@/api/grayscale';
 import { loadProjects } from '@/api/project';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/stores/authStore';
@@ -51,6 +52,11 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   });
   const [commentModal, setCommentModal] = useState<{ open: boolean; type: 'approve' | 'reject'; id: number } | null>(null);
   const [comment, setComment] = useState('');
+  const [grayscaleModal, setGrayscaleModal] = useState<{ open: boolean; id: number } | null>(null);
+  const [gsStrategy, setGsStrategy] = useState<'PERCENTAGE' | 'CONDITION'>('PERCENTAGE');
+  const [gsPercentage, setGsPercentage] = useState(10);
+  const [gsCondition, setGsCondition] = useState('');
+  const [gsDescription, setGsDescription] = useState('');
 
   const canApprove = usePermission('pack:publish:approve');
   const canSubmit = usePermission('pack:publish:submit');
@@ -136,6 +142,26 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     } catch { /* request.ts 已处理 */ }
   };
 
+  const handleGrayscale = async () => {
+    if (!grayscaleModal) return;
+    try {
+      await createGrayscaleRule({
+        approvalId: grayscaleModal.id,
+        strategy: gsStrategy,
+        percentage: gsStrategy === 'PERCENTAGE' ? gsPercentage : undefined,
+        conditionExpr: gsStrategy === 'CONDITION' ? gsCondition : undefined,
+        description: gsDescription || undefined,
+        operator: currentUser || undefined,
+      });
+      message.success('灰度发布已激活');
+      setGrayscaleModal(null);
+      setGsDescription('');
+      setGsCondition('');
+      setGsPercentage(10);
+      fetchData();
+    } catch { /* request.ts 已处理 */ }
+  };
+
   const openDetail = async (record: ApprovalVO) => {
     try {
       const res = await getApprovalDetail(record.id);
@@ -212,16 +238,31 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
           {/* 待上线：上线操作 */}
           {canSubmit && (record.status === 'APPROVED' || record.status === 'PUBLISH_FAILED')
             && (mode === 'pending-publish' || mode === 'all') && (
-            <Popconfirm
-              title={record.status === 'PUBLISH_FAILED' ? '确认重新上线？' : '确认上线？'}
-              onConfirm={() => handlePublish(record.id)}
-              okText="确认"
-              cancelText="取消"
-            >
-              <Button size="small" type="primary">
-                {record.status === 'PUBLISH_FAILED' ? '重新上线' : '上线'}
-              </Button>
-            </Popconfirm>
+            <>
+              <Popconfirm
+                title={record.status === 'PUBLISH_FAILED' ? '确认重新上线？' : '确认上线？'}
+                onConfirm={() => handlePublish(record.id)}
+                okText="确认"
+                cancelText="取消"
+              >
+                <Button size="small" type="primary">
+                  {record.status === 'PUBLISH_FAILED' ? '重新上线' : '上线'}
+                </Button>
+              </Popconfirm>
+              {record.status === 'APPROVED' && (
+                <Button size="small"
+                  onClick={() => {
+                    setGrayscaleModal({ open: true, id: record.id });
+                    setGsStrategy('PERCENTAGE');
+                    setGsPercentage(10);
+                    setGsCondition('');
+                    setGsDescription('');
+                  }}
+                >
+                  灰度发布
+                </Button>
+              )}
+            </>
           )}
         </Space>
       ),
@@ -294,6 +335,49 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
           placeholder="审批意见（选填）"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
+        />
+      </Modal>
+
+      {/* 灰度发布配置弹窗 */}
+      <Modal
+        title="灰度发布配置"
+        open={!!grayscaleModal?.open}
+        onOk={handleGrayscale}
+        onCancel={() => setGrayscaleModal(null)}
+        okText="启动灰度"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Radio.Group value={gsStrategy} onChange={(e) => setGsStrategy(e.target.value)}>
+            <Radio value="PERCENTAGE">流量比例</Radio>
+            <Radio value="CONDITION">条件匹配</Radio>
+          </Radio.Group>
+        </div>
+        {gsStrategy === 'PERCENTAGE' && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 8 }}>灰度流量比例：<strong>{gsPercentage}%</strong></div>
+            <Slider min={1} max={100} value={gsPercentage} onChange={setGsPercentage} />
+          </div>
+        )}
+        {gsStrategy === 'CONDITION' && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+              条件表达式 JSON，格式：[&#123;"left":"category.field","op":"Equals","right":"VIP"&#125;]
+            </div>
+            <Input.TextArea
+              rows={4}
+              value={gsCondition}
+              onChange={(e) => setGsCondition(e.target.value)}
+              placeholder='[{"left":"customer.level","op":"Equals","right":"VIP"}]'
+            />
+          </div>
+        )}
+        <Input.TextArea
+          rows={2}
+          maxLength={500}
+          showCount
+          placeholder="灰度说明（选填）"
+          value={gsDescription}
+          onChange={(e) => setGsDescription(e.target.value)}
         />
       </Modal>
 

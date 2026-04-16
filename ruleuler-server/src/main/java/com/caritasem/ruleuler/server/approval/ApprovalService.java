@@ -368,36 +368,46 @@ public class ApprovalService {
         }
         CacheUtils.getKnowledgeCache().putKnowledge(fullPackageId, kp);
 
-        // 序列化（用 Jackson 1.x 与 PackageServletHandler 一致）
-        org.codehaus.jackson.map.ObjectMapper mapper1 = new org.codehaus.jackson.map.ObjectMapper();
-        mapper1.setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
-        mapper1.configure(SerializationConfig.Feature.WRITE_DATES_AS_TIMESTAMPS, false);
-        mapper1.setDateFormat(new SimpleDateFormat(Configure.getDateFormat()));
-        StringWriter writer = new StringWriter();
-        mapper1.writeValue(writer, new KnowledgePackageWrapper(kp));
-        String content = writer.toString();
-        writer.close();
-
-        // 推送到客户端
+        // 推送 snapshot JSON + version 到 client 新端点（不走 Jackson 1.x 序列化）
         List<ClientConfig> clients = repositoryService.loadClientConfigs(project);
         StringBuilder sb = new StringBuilder();
         sb.append("知识包:").append(fullPackageId).append("<br>");
 
-        for (ClientConfig config : clients) {
-            boolean result = pushToClient(fullPackageId, content, config.getClient());
-            sb.append(result ? "推送 " + config.getName() + " 成功" : "推送 " + config.getName() + " 失败")
-              .append("<br>");
-        }
-
-        // 推送版本号到 client
-        try {
-            String versionPayload = objectMapper.writeValueAsString(
-                    Map.of("packageId", fullPackageId, "version", "v" + version));
-            for (ClientConfig config : clients) {
-                postToClient(config.getClient() + "/api/grayscale/routing", versionPayload);
+        if (snapshotContent != null && !snapshotContent.isEmpty()) {
+            // 新方式：推 snapshot JSON + version，client 本地构建
+            try {
+                Map<String, Object> packagePayload = new java.util.LinkedHashMap<>();
+                packagePayload.put("packageId", fullPackageId);
+                packagePayload.put("version", "v" + version);
+                packagePayload.put("snapshotContent", snapshotContent);
+                String packageJson = objectMapper.writeValueAsString(packagePayload);
+                for (ClientConfig config : clients) {
+                    boolean result = postToClient(config.getClient() + "/api/grayscale/package", packageJson);
+                    sb.append(result ? "推送 " + config.getName() + " 成功" : "推送 " + config.getName() + " 失败")
+                      .append("<br>");
+                }
+            } catch (Exception e) {
+                log.error("推送snapshot到客户端失败: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("推送版本号到客户端失败: {}", e.getMessage());
+        } else {
+            // 旧数据兼容：走原有 /knowledgepackagereceiver
+            try {
+                org.codehaus.jackson.map.ObjectMapper mapper1 = new org.codehaus.jackson.map.ObjectMapper();
+                mapper1.setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
+                mapper1.configure(SerializationConfig.Feature.WRITE_DATES_AS_TIMESTAMPS, false);
+                mapper1.setDateFormat(new SimpleDateFormat(Configure.getDateFormat()));
+                StringWriter writer = new StringWriter();
+                mapper1.writeValue(writer, new KnowledgePackageWrapper(kp));
+                String content = writer.toString();
+                writer.close();
+                for (ClientConfig config : clients) {
+                    boolean result = pushToClient(fullPackageId, content, config.getClient());
+                    sb.append(result ? "推送 " + config.getName() + " 成功" : "推送 " + config.getName() + " 失败")
+                      .append("<br>");
+                }
+            } catch (Exception e) {
+                log.error("兼容推送失败: {}", e.getMessage());
+            }
         }
 
         return sb.toString();

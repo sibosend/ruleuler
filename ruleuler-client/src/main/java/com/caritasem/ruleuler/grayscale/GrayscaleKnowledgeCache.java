@@ -6,8 +6,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,10 +29,31 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
     private static final Logger log = LoggerFactory.getLogger(GrayscaleKnowledgeCache.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${urule.resporityServerUrl:}")
+    private String serverUrl;
+
     private final MemoryKnowledgeCache delegate = new MemoryKnowledgeCache();
     private final ConcurrentHashMap<String, KnowledgePackage> grayCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, GrayscaleRoutingRule> routingRules = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> versionMap = new ConcurrentHashMap<>();
+
+    /** 启动时从 server 恢复所有活跃灰度路由规则 */
+    @PostConstruct
+    public void init() {
+        if (serverUrl == null || serverUrl.isBlank()) {
+            log.info("未配置 server 地址，跳过灰度启动恢复");
+            return;
+        }
+        try {
+            recoverAllRoutingRules();
+        } catch (Exception e) {
+            log.warn("灰度启动恢复失败（非致命）: {}", e.getMessage());
+        }
+    }
+
+    public boolean hasActiveRouting(String packageId) {
+        return routingRules.containsKey(normalize(packageId));
+    }
 
     public record GrayscaleRoutingRule(
             String strategy,   // PERCENTAGE / CONDITION
@@ -98,6 +124,25 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
         versionMap.put(normalize(packageId), version);
     }
 
+    /**
+     * 版本号校验：只有新版本才接受。格式为 "vN"，比较数字部分。
+     */
+    public boolean acceptVersion(String packageId, String newVersion) {
+        String norm = normalize(packageId);
+        String current = versionMap.get(norm);
+        if (current == null) return true;  // 无历史版本，接受
+        return parseVersionNum(newVersion) > parseVersionNum(current);
+    }
+
+    private int parseVersionNum(String v) {
+        if (v == null) return 0;
+        try {
+            return v.startsWith("v") ? Integer.parseInt(v.substring(1)) : Integer.parseInt(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     // ---- 路由逻辑 ----
 
     private boolean shouldRouteToGray(String norm, GrayscaleRoutingRule rule, GrayscaleContext.ContextInfo ctx) {
@@ -118,11 +163,68 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
         return false;
     }
 
-    /** grayCache miss 时从 server 恢复 */
+    /** 启动时从 server 恢复所有活跃灰度路由规则（不含包内容，包由 server 主动推送） */
+    private void recoverAllRoutingRules() throws Exception {
+        // client 启动时尚不知道有哪些 project，用 serverUrl 基路径拉全局活跃状态
+        // 需要配合 server 端调整：增加无 project 参数时返回所有活跃规则
+        String url = serverUrl + "/api/grayscale/active-states";
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(10000);
+        if (conn.getResponseCode() >= 300) {
+            log.warn("拉取灰度活跃状态失败: HTTP {}", conn.getResponseCode());
+            conn.disconnect();
+            return;
+        }
+        String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        conn.disconnect();
+        applyRoutingStates(body);
+    }
+
+    /** grayCache miss 时从 server 恢复：拉路由规则+触发 server 重新推送 gray 包 */
     private KnowledgePackage recoverGrayFromServer(String norm) {
-        // TODO: 调 server GET /api/grayscale/active-states 恢复
-        log.warn("grayCache miss，灰度版本暂不可用: {}", norm);
-        return null;
+        if (serverUrl == null || serverUrl.isBlank()) {
+            log.warn("未配置 server 地址，无法恢复灰度: {}", norm);
+            return null;
+        }
+        try {
+            String url = serverUrl + "/api/grayscale/active-states?project=" + norm.split("/", 2)[0];
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(5000);
+            if (conn.getResponseCode() >= 300) {
+                log.warn("恢复灰度失败: {}", conn.getResponseCode());
+                conn.disconnect();
+                return null;
+            }
+            String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            conn.disconnect();
+            applyRoutingStates(body);
+
+            // gray 包由 server 端 getActiveStates 触发重新推送（走 /knowledgepackagereceiver 或 /api/grayscale/package）
+            return grayCache.get(norm);
+        } catch (Exception e) {
+            log.warn("恢复灰度状态失败: {} - {}", norm, e.getMessage());
+            return null;
+        }
+    }
+
+    /** 解析 server 返回的活跃状态列表，恢复路由规则和版本号到本地 */
+    private void applyRoutingStates(String json) throws Exception {
+        List<Map<String, Object>> states = objectMapper.readValue(json,
+                new TypeReference<List<Map<String, Object>>>() {});
+        for (Map<String, Object> state : states) {
+            String pkgId = (String) state.get("packageId");
+            String normPkg = normalize(pkgId);
+            GrayscaleRoutingRule rule = new GrayscaleRoutingRule(
+                    (String) state.get("strategy"),
+                    state.get("percentage") != null ? Integer.valueOf(state.get("percentage").toString()) : null,
+                    (String) state.get("conditionExpr"));
+            routingRules.put(normPkg, rule);
+            String ver = (String) state.get("version");
+            if (ver != null) versionMap.put(normPkg, ver);
+            log.info("恢复灰度路由: {}, strategy={}", normPkg, rule.strategy());
+        }
     }
 
     private String normalize(String packageId) {

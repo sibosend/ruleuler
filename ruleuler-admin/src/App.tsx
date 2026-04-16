@@ -27,6 +27,7 @@ const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/Executio
 const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
 
 const ReleaseListPage = React.lazy(() => import('@/pages/release/ReleaseListPage'));
+const GrayscaleRulePage = React.lazy(() => import('@/pages/release/GrayscaleRulePage'));
 
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
@@ -136,6 +137,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:approvals">
               <Suspense fallback={<div>Loading...</div>}><ReleaseListPage mode="all" /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="releases/grayscale"
+          element={
+            <AuthorizedRoute permissionCode="pack:grayscale:manage">
+              <Suspense fallback={<div>Loading...</div>}><GrayscaleRulePage /></Suspense>
             </AuthorizedRoute>
           }
         />

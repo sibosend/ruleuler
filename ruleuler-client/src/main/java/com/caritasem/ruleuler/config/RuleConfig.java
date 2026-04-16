@@ -1,5 +1,8 @@
 package com.caritasem.ruleuler.config;
 
+import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
@@ -21,5 +24,12 @@ public class RuleConfig {
         configurer.setIgnoreUnresolvablePlaceholders(true);
         configurer.setOrder(1);
         return configurer;
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "urule.resporityServerUrl")
+    public GrayscaleMetricsReporter grayscaleMetricsReporter(
+            @Value("${urule.resporityServerUrl}") String serverUrl) {
+        return new GrayscaleMetricsReporter(serverUrl);
     }
 }
