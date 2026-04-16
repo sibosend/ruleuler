@@ -1,10 +1,6 @@
 package com.caritasem.ruleuler.server.approval;
 
 import com.bstek.urule.Configure;
-import com.bstek.urule.builder.KnowledgeBase;
-import com.bstek.urule.builder.KnowledgeBuilder;
-import com.bstek.urule.builder.ResourceBase;
-import com.bstek.urule.builder.resource.Resource;
 import com.bstek.urule.console.repository.ClientConfig;
 import com.bstek.urule.console.repository.RepositoryService;
 import com.bstek.urule.console.repository.model.ResourcePackage;
@@ -17,6 +13,7 @@ import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestExecutor;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestResultDao;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestRun;
 import com.caritasem.ruleuler.server.approval.model.*;
+import com.caritasem.ruleuler.server.grayscale.SnapshotKnowledgeBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +43,7 @@ public class ApprovalService {
     private final TestExecutor testExecutor;
     private final TestResultDao testResultDao;
     private final KnowledgePackageService knowledgePackageService;
-    private final KnowledgeBuilder knowledgeBuilder;
+    private final SnapshotKnowledgeBuilder snapshotBuilder;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
@@ -54,14 +51,14 @@ public class ApprovalService {
                            @Qualifier("urule.testExecutor") TestExecutor testExecutor,
                            @Qualifier("urule.testResultDao") TestResultDao testResultDao,
                            @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
-                           @Qualifier("urule.knowledgeBuilder") KnowledgeBuilder knowledgeBuilder) {
+                           SnapshotKnowledgeBuilder snapshotBuilder) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
         this.testExecutor = testExecutor;
         this.testResultDao = testResultDao;
         this.knowledgePackageService = knowledgePackageService;
-        this.knowledgeBuilder = knowledgeBuilder;
+        this.snapshotBuilder = snapshotBuilder;
     }
 
     // ---- submit ----
@@ -91,8 +88,9 @@ public class ApprovalService {
         boolean hasTestPack = hasTestPacks(project, packageId);
         ApprovalStatus initialStatus = hasTestPack ? ApprovalStatus.TESTING : ApprovalStatus.PENDING;
 
-        // 6. 持久化审批单
+        // 6. 持久化审批单（含系统版本号）
         long now = System.currentTimeMillis();
+        int version = approvalDao.nextVersion(project, packageId);
         Approval approval = Approval.builder()
                 .project(project)
                 .packageId(packageId)
@@ -101,6 +99,7 @@ public class ApprovalService {
                 .submitter(submitter)
                 .description(description)
                 .submittedAt(now)
+                .version(version)
                 .build();
         Long approvalId = approvalDao.insertApproval(approval);
 
@@ -196,11 +195,14 @@ public class ApprovalService {
         if (a.getStatus() != ApprovalStatus.APPROVED && a.getStatus() != ApprovalStatus.PUBLISH_FAILED)
             throw new IllegalArgumentException("审批单状态不允许此操作");
 
+        // 检查是否有灰度规则，有则拒绝直接发布
+        // (灰度规则由 GrayscaleService 管理)
+
         try {
             // 加载该审批单对应的快照内容（提交时的版本）
             PublishSnapshot snapshot = approvalDao.findSnapshotByApprovalId(approvalId);
             Map<String, String> snapshotContent = parseSnapshotData(snapshot);
-            String pushInfo = executePublish(a.getProject(), a.getPackageId(), snapshotContent);
+            String pushInfo = executePublish(a.getProject(), a.getPackageId(), snapshotContent, a.getVersion());
             log.info("上线完成: approvalId={}, info={}", approvalId, pushInfo);
 
             // 上线后以快照内容（版本已锁定）作为下次 diff 的基准
@@ -344,7 +346,11 @@ public class ApprovalService {
      * 执行发布：用审批时的快照内容 build 知识包，推送到客户端。
      * 快照内容为空时（兼容旧数据）降级为 build 当前最新内容。
      */
-    private String executePublish(String project, String packageId, Map<String, String> snapshotContent) throws Exception {
+    /**
+     * 执行发布：用审批时的快照内容 build 知识包，推送到客户端。
+     * 快照内容为空时（兼容旧数据）降级为 build 当前最新内容。
+     */
+    private String executePublish(String project, String packageId, Map<String, String> snapshotContent, int version) throws Exception {
         String fullPackageId = project + "/" + packageId;
         if (fullPackageId.startsWith("/")) {
             fullPackageId = fullPackageId.substring(1);
@@ -382,29 +388,26 @@ public class ApprovalService {
             sb.append(result ? "推送 " + config.getName() + " 成功" : "推送 " + config.getName() + " 失败")
               .append("<br>");
         }
+
+        // 推送版本号到 client
+        try {
+            String versionPayload = objectMapper.writeValueAsString(
+                    Map.of("packageId", fullPackageId, "version", "v" + version));
+            for (ClientConfig config : clients) {
+                postToClient(config.getClient() + "/api/grayscale/routing", versionPayload);
+            }
+        } catch (Exception e) {
+            log.warn("推送版本号到客户端失败: {}", e.getMessage());
+        }
+
         return sb.toString();
     }
 
     /**
-     * 用快照内容（path → xmlContent）直接 build KnowledgePackage，不走 repositoryService。
-     * ResourceBase.resources 是 private，用反射注入。
+     * 用快照内容直接 build KnowledgePackage，委托 SnapshotKnowledgeBuilder。
      */
-    @SuppressWarnings("unchecked")
     private KnowledgePackage buildFromSnapshot(Map<String, String> snapshotContent) throws Exception {
-        ResourceBase resourceBase = knowledgeBuilder.newResourceBase();
-        java.lang.reflect.Field resourcesField = ResourceBase.class.getDeclaredField("resources");
-        resourcesField.setAccessible(true);
-        List<Resource> resources = (List<Resource>) resourcesField.get(resourceBase);
-        for (Map.Entry<String, String> entry : snapshotContent.entrySet()) {
-            String path = entry.getKey();
-            String xml = entry.getValue();
-            if (xml == null || xml.isBlank()) continue;
-            // path 需要带 dbr: 前缀，Resource 构造是 (content, path)
-            String resourcePath = path.startsWith("dbr:") ? path : "dbr:" + path;
-            resources.add(new Resource(xml, resourcePath));
-        }
-        KnowledgeBase kb = knowledgeBuilder.buildKnowledgeBase(resourceBase);
-        return kb.getKnowledgePackage();
+        return snapshotBuilder.build(snapshotContent);
     }
 
     private boolean pushToClient(String packageId, String content, String client) {
@@ -439,6 +442,26 @@ public class ApprovalService {
         }
     }
 
+    private boolean postToClient(String urlStr, String jsonBody) {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(urlStr);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+            }
+            return connection.getResponseCode() < 300;
+        } catch (Exception e) {
+            log.warn("POST 到客户端失败: url={}, error={}", urlStr, e.getMessage());
+            return false;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private Map<String, Object> buildApprovalVo(Approval a, List<ApprovalDiffItem> diffs) {
         Map<String, Object> vo = new LinkedHashMap<>();
         vo.put("id", a.getId());
@@ -456,6 +479,7 @@ public class ApprovalService {
         vo.put("publishedAt", a.getPublishedAt());
         vo.put("testRunId", a.getTestRunId());
         vo.put("description", a.getDescription());
+        vo.put("version", a.getVersion());
         if (diffs != null) vo.put("diffs", diffs);
 
         // 测试结果摘要

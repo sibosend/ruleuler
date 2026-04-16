@@ -2,6 +2,8 @@ package com.caritasem.ruleuler.dto;
 
 import lombok.Data;
 
+import java.util.Map;
+
 @Data
 public class RespDTO {
 
@@ -10,6 +12,8 @@ public class RespDTO {
     private String msg;
 
     private Object data;
+
+    private Map<String, Object> meta;  // 系统元数据，与用户规则输出分组
 
     public RespDTO(Object data) {
         this.status = 0;

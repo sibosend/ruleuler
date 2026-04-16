@@ -25,4 +25,5 @@ public class Approval {
     private Long publishedAt;
     private Long testRunId;
     private String description;  // 变更说明
+    private int version;  // 系统版本号
 }

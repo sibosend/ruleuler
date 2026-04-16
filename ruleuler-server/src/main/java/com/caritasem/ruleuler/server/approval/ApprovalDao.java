@@ -33,6 +33,7 @@ public class ApprovalDao {
             .publishedAt(rs.getObject("published_at") != null ? rs.getLong("published_at") : null)
             .testRunId(rs.getObject("test_run_id") != null ? rs.getLong("test_run_id") : null)
             .description(rs.getString("description"))
+            .version(rs.getInt("version"))
             .build();
 
     private static final RowMapper<ApprovalDiffItem> DIFF_MAPPER = (rs, rowNum) -> ApprovalDiffItem.builder()
@@ -62,8 +63,8 @@ public class ApprovalDao {
         GeneratedKeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(conn -> {
             PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at,test_run_id,description) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?)", new String[]{"id"});
+                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at,test_run_id,description,version) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?)", new String[]{"id"});
             ps.setString(1, a.getProject());
             ps.setString(2, a.getPackageId());
             ps.setString(3, a.getPackageName());
@@ -73,6 +74,7 @@ public class ApprovalDao {
             ps.setLong(7, a.getSubmittedAt());
             ps.setObject(8, a.getTestRunId());
             ps.setString(9, a.getDescription());
+            ps.setInt(10, a.getVersion());
             return ps;
         }, kh);
         return kh.getKey().longValue();
@@ -189,6 +191,22 @@ public class ApprovalDao {
 
     public void deleteDiffItemsByApprovalId(Long approvalId) {
         jdbc.update("DELETE FROM ruleuler_publish_approval_diff WHERE approval_id=?", approvalId);
+    }
+
+    /** 计算下一个系统版本号（per project+packageId） */
+    public int nextVersion(String project, String packageId) {
+        Integer max = jdbc.queryForObject(
+                "SELECT MAX(version) FROM ruleuler_publish_approval WHERE project=? AND package_id=?",
+                Integer.class, project, packageId);
+        return (max != null ? max : 0) + 1;
+    }
+
+    /** 按 snapshot ID 查快照 */
+    public PublishSnapshot findSnapshotById(Long snapshotId) {
+        List<PublishSnapshot> list = jdbc.query(
+                "SELECT * FROM ruleuler_publish_snapshot WHERE id=?",
+                SNAPSHOT_MAPPER, snapshotId);
+        return list.isEmpty() ? null : list.get(0);
     }
 
     // ---- helpers ----

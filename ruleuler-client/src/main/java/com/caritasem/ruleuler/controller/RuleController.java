@@ -8,8 +8,11 @@ import com.bstek.urule.runtime.KnowledgeSession;
 import com.bstek.urule.runtime.KnowledgeSessionFactory;
 import com.bstek.urule.runtime.service.KnowledgeService;
 import com.caritasem.ruleuler.dto.RespDTO;
+import com.caritasem.ruleuler.grayscale.GrayscaleContext;
+import com.caritasem.ruleuler.grayscale.GrayscaleKnowledgeCache;
 import com.caritasem.ruleuler.monitoring.TraceContext;
 import com.caritasem.ruleuler.monitoring.VarEventProducer;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,13 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Desc
- *
- * @author caritasem@foxmail.com
- * @version V1.0.0
- * @date 2018/1/4
- */
 @RestController
 public class RuleController {
 
@@ -37,6 +33,9 @@ public class RuleController {
 
     @Autowired(required = false)
     private VarEventProducer varEventProducer;
+
+    @Autowired
+    private GrayscaleKnowledgeCache grayscaleCache;
 
     private static Logger log = LoggerFactory.getLogger(RuleController.class);
 
@@ -47,7 +46,7 @@ public class RuleController {
         result.put("status", "UP");
         result.put("service", "urule.client");
         result.put("timestamp", System.currentTimeMillis());
-        
+
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
             int port = webServerAppContext.getWebServer().getPort();
@@ -57,7 +56,7 @@ public class RuleController {
             result.put("ip", "unknown");
             result.put("port", "unknown");
         }
-        
+
         return result;
     }
 
@@ -65,13 +64,24 @@ public class RuleController {
     public RespDTO process(@RequestBody Map<String, JSONObject> body,
             @PathVariable String project,
             @PathVariable String process,
-            @PathVariable String knowledge) {
+            @PathVariable String knowledge,
+            HttpServletRequest httpRequest) {
         String executionId = UUID.randomUUID().toString();
         long startMs = System.currentTimeMillis();
+        String knowledgePackageId = project + "/" + knowledge;
+
+        // 设置灰度路由上下文
+        String routingKey = httpRequest.getHeader("X-Routing-Key");
+        if (routingKey == null) routingKey = executionId;
+        Map<String, Object> routingAttrs = new HashMap<>();
+        for (Map.Entry<String, JSONObject> entry : body.entrySet()) {
+            routingAttrs.put(entry.getKey(), entry.getValue());
+        }
+        GrayscaleContext.set(new GrayscaleContext.ContextInfo(routingKey, routingAttrs));
+
         try {
             KnowledgeService knowledgeService = (KnowledgeService) Utils.getApplicationContext()
                     .getBean(KnowledgeService.BEAN_ID);
-            String knowledgePackageId = project + "/" + knowledge;
 
             KnowledgePackage knowledgePackage = knowledgeService.getKnowledge(knowledgePackageId);
             KnowledgeSession session = KnowledgeSessionFactory.newKnowledgeSession(knowledgePackage);
@@ -138,7 +148,15 @@ public class RuleController {
                 }
             }
 
-            return new RespDTO(200, "ok", result);
+            // 构建响应（含系统元数据）
+            RespDTO resp = new RespDTO(200, "ok", result);
+            String version = grayscaleCache.getVersion(knowledgePackageId);
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put("executionId", executionId);
+            meta.put("packageId", knowledgePackageId);
+            if (version != null) meta.put("version", version);
+            resp.setMeta(meta);
+            return resp;
 
         } catch (Exception e) {
             // 监控采集 — 失败路径
@@ -151,9 +169,17 @@ public class RuleController {
                 }
             }
             e.printStackTrace();
-            return new RespDTO(500, e.getMessage());
+
+            RespDTO resp = new RespDTO(500, e.getMessage());
+            String version = grayscaleCache.getVersion(knowledgePackageId);
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put("executionId", executionId);
+            meta.put("packageId", knowledgePackageId);
+            if (version != null) meta.put("version", version);
+            resp.setMeta(meta);
+            return resp;
+        } finally {
+            GrayscaleContext.clear();
         }
     }
-
-    
 }
