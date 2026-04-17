@@ -375,6 +375,9 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         {gsStrategy === 'PERCENTAGE' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 8 }}>灰度流量比例：<strong>{gsPercentage}%</strong></div>
+            <div style={{ marginBottom: 8, color: '#999', fontSize: 12 }}>
+              按请求随机分配流量，比例近似均匀但不保证同一用户始终命中同一版本。如需按业务属性精准路由，请使用「条件匹配」。
+            </div>
             <Slider min={1} max={100} value={gsPercentage} onChange={setGsPercentage} />
           </div>
         )}

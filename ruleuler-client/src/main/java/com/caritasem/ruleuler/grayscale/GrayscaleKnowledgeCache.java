@@ -32,6 +32,12 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
     @Value("${urule.resporityServerUrl:}")
     private String serverUrl;
 
+    private SnapshotPackageBuilder snapshotPackageBuilder;
+
+    public GrayscaleKnowledgeCache(SnapshotPackageBuilder snapshotPackageBuilder) {
+        this.snapshotPackageBuilder = snapshotPackageBuilder;
+    }
+
     private final MemoryKnowledgeCache delegate = new MemoryKnowledgeCache();
     private final ConcurrentHashMap<String, KnowledgePackage> grayCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, GrayscaleRoutingRule> routingRules = new ConcurrentHashMap<>();
@@ -178,19 +184,20 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
         applyRoutingStates(body);
     }
 
-    /** grayCache miss 时从 server 恢复：拉路由规则+触发 server 重新推送 gray 包 */
+    /** grayCache miss 时从 server 恢复：拉 snapshot 内容，本地构建 KnowledgePackage */
     private KnowledgePackage recoverGrayFromServer(String norm) {
         if (serverUrl == null || serverUrl.isBlank()) {
             log.warn("未配置 server 地址，无法恢复灰度: {}", norm);
             return null;
         }
         try {
-            String url = serverUrl + "/api/grayscale/active-states?project=" + norm.split("/", 2)[0];
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            // 1. 先拉路由规则
+            String statesUrl = serverUrl + "/api/grayscale/active-states?project=" + norm.split("/", 2)[0];
+            HttpURLConnection conn = (HttpURLConnection) new URL(statesUrl).openConnection();
             conn.setConnectTimeout(3000);
             conn.setReadTimeout(5000);
             if (conn.getResponseCode() >= 300) {
-                log.warn("恢复灰度失败: {}", conn.getResponseCode());
+                log.warn("恢复灰度路由失败: {}", conn.getResponseCode());
                 conn.disconnect();
                 return null;
             }
@@ -198,12 +205,44 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
             conn.disconnect();
             applyRoutingStates(body);
 
-            // gray 包由 server 端 getActiveStates 触发重新推送（走 /knowledgepackagereceiver 或 /api/grayscale/package）
-            return grayCache.get(norm);
+            // 2. 再拉 snapshot 内容
+            String snapshotUrl = serverUrl + "/api/grayscale/snapshot?packageId=" + java.net.URLEncoder.encode(norm, "UTF-8");
+            conn = (HttpURLConnection) new URL(snapshotUrl).openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(10000);
+            if (conn.getResponseCode() >= 300) {
+                log.warn("恢复灰度 snapshot 失败: {}", conn.getResponseCode());
+                conn.disconnect();
+                return null;
+            }
+            String snapshotJson = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            conn.disconnect();
+
+            // 3. 本地构建 KnowledgePackage
+            Map<String, Object> snapshotResp = objectMapper.readValue(snapshotJson,
+                    new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            Map<String, String> snapshotContent = (Map<String, String>) snapshotResp.get("snapshotContent");
+            String version = (String) snapshotResp.get("version");
+            if (snapshotContent == null || snapshotContent.isEmpty()) {
+                log.warn("灰度 snapshot 内容为空: {}", norm);
+                return null;
+            }
+
+            KnowledgePackage kp = snapshotPackageBuilder.build(snapshotContent);
+            cacheGrayPackage(norm, kp);
+            if (version != null) versionMap.put(norm, version);
+            log.info("灰度包恢复成功: {}, version={}", norm, version);
+            return kp;
         } catch (Exception e) {
             log.warn("恢复灰度状态失败: {} - {}", norm, e.getMessage());
             return null;
         }
+    }
+
+    /** 直接缓存灰度包（不走 putKnowledge 的 __gray 后缀逻辑） */
+    private void cacheGrayPackage(String norm, KnowledgePackage kp) {
+        grayCache.put(norm, kp);
     }
 
     /** 解析 server 返回的活跃状态列表，恢复路由规则和版本号到本地 */

@@ -13,7 +13,6 @@ import com.caritasem.ruleuler.grayscale.GrayscaleKnowledgeCache;
 import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
 import com.caritasem.ruleuler.monitoring.TraceContext;
 import com.caritasem.ruleuler.monitoring.VarEventProducer;
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,15 +67,13 @@ public class RuleController {
     public RespDTO process(@RequestBody Map<String, JSONObject> body,
             @PathVariable String project,
             @PathVariable String process,
-            @PathVariable String knowledge,
-            HttpServletRequest httpRequest) {
+            @PathVariable String knowledge) {
         String executionId = UUID.randomUUID().toString();
         long startMs = System.currentTimeMillis();
         String knowledgePackageId = project + "/" + knowledge;
 
-        // 设置灰度路由上下文
-        String routingKey = httpRequest.getHeader("X-Routing-Key");
-        if (routingKey == null) routingKey = executionId;
+        // 设置灰度路由上下文（PERCENTAGE 策略按请求随机分配，CONDITION 策略用 routingAttrs 匹配）
+        String routingKey = executionId;
         Map<String, Object> routingAttrs = new HashMap<>();
         for (Map.Entry<String, JSONObject> entry : body.entrySet()) {
             routingAttrs.put(entry.getKey(), entry.getValue());

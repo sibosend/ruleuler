@@ -66,6 +66,12 @@ public class GrayscaleController {
         return grayscaleService.getActiveStates(project);
     }
 
+    /** Client 恢复灰度包用：返回指定 packageId 的 snapshot 内容 JSON */
+    @GetMapping("/snapshot")
+    public Map<String, Object> getSnapshot(@RequestParam String packageId) {
+        return grayscaleService.getSnapshotContent(packageId);
+    }
+
     /** Client 上报灰度指标 */
     @PostMapping("/metrics/report")
     public Map<String, String> reportMetrics(@RequestBody Map<String, Object> body) {

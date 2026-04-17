@@ -93,7 +93,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.startsWith("/admin/")
                 || path.startsWith("/urule/res/")
                 || "/urule/loadknowledge".equals(path)
-                || "/urule/knowledge-package-service".equals(path);
+                || "/urule/knowledge-package-service".equals(path)
+                || path.startsWith("/api/grayscale/active-states")
+                || path.startsWith("/api/grayscale/snapshot")
+                || path.startsWith("/api/grayscale/metrics/report");
     }
 
     private String extractToken(HttpServletRequest request) {

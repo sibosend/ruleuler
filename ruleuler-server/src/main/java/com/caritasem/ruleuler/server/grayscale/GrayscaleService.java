@@ -210,6 +210,22 @@ public class GrayscaleService {
         return Map.of("rule", buildRuleVo(rule), "metrics", metrics);
     }
 
+    /** 返回指定 packageId 的灰度 snapshot 内容（供 client 恢复灰度包） */
+    public Map<String, Object> getSnapshotContent(String fullPackageId) {
+        String norm = fullPackageId;
+        if (norm.startsWith("/")) norm = norm.substring(1);
+        String[] parts = norm.split("/", 2);
+        if (parts.length < 2) throw new IllegalArgumentException("无效的 packageId: " + fullPackageId);
+        GrayscaleRule rule = grayscaleRuleDao.findActive(parts[0], parts[1]);
+        if (rule == null) throw new IllegalArgumentException("无活跃灰度规则: " + fullPackageId);
+        PublishSnapshot snapshot = approvalDao.findSnapshotById(rule.getSnapshotId());
+        if (snapshot == null) throw new IllegalArgumentException("快照不存在");
+        Map<String, String> content = parseSnapshotData(snapshot);
+        Approval approval = approvalDao.findById(rule.getApprovalId());
+        String version = approval != null ? "v" + approval.getVersion() : "unknown";
+        return Map.of("snapshotContent", content != null ? content : Map.of(), "version", version);
+    }
+
     /** 返回活跃灰度状态（project 为 null 则返回全部），同时重新推送 gray 包 */
     public List<Map<String, Object>> getActiveStates(String project) {
         List<GrayscaleRule> rules = (project != null && !project.isEmpty())

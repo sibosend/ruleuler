@@ -1,19 +1,13 @@
 package com.caritasem.ruleuler.grayscale;
 
-import com.bstek.urule.builder.KnowledgeBase;
-import com.bstek.urule.builder.KnowledgeBuilder;
-import com.bstek.urule.builder.ResourceBase;
-import com.bstek.urule.builder.resource.Resource;
 import com.bstek.urule.runtime.KnowledgePackage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,8 +24,7 @@ public class GrayscaleRoutingController {
     private GrayscaleKnowledgeCache cache;
 
     @Autowired
-    @Qualifier("urule.knowledgeBuilder")
-    private KnowledgeBuilder knowledgeBuilder;
+    private SnapshotPackageBuilder snapshotPackageBuilder;
 
     /**
      * 激活路由规则 + 版本号（不含包内容，仅路由配置变更时用）
@@ -79,7 +72,7 @@ public class GrayscaleRoutingController {
         }
 
         try {
-            KnowledgePackage kp = buildFromSnapshot(snapshotContent);
+            KnowledgePackage kp = snapshotPackageBuilder.build(snapshotContent);
             cache.putKnowledge(packageId, kp);
             if (version != null) cache.setVersion(packageId, version);
             log.info("接收包成功: packageId={}, version={}, resources={}", packageId, version, snapshotContent.size());
@@ -113,25 +106,5 @@ public class GrayscaleRoutingController {
         String packageId = java.net.URLDecoder.decode(path, StandardCharsets.UTF_8);
         cache.deactivateRouting(packageId);
         return Map.of("status", "ok");
-    }
-
-    /**
-     * 从 snapshot 内容构建 KnowledgePackage（同 SnapshotKnowledgeBuilder 逻辑）
-     */
-    @SuppressWarnings("unchecked")
-    private KnowledgePackage buildFromSnapshot(Map<String, String> snapshotContent) throws Exception {
-        ResourceBase resourceBase = knowledgeBuilder.newResourceBase();
-        java.lang.reflect.Field resourcesField = ResourceBase.class.getDeclaredField("resources");
-        resourcesField.setAccessible(true);
-        List<Resource> resources = (List<Resource>) resourcesField.get(resourceBase);
-        for (Map.Entry<String, String> entry : snapshotContent.entrySet()) {
-            String path = entry.getKey();
-            String xml = entry.getValue();
-            if (xml == null || xml.isBlank()) continue;
-            String resourcePath = path.startsWith("dbr:") ? path : "dbr:" + path;
-            resources.add(new Resource(xml, resourcePath));
-        }
-        KnowledgeBase kb = knowledgeBuilder.buildKnowledgeBase(resourceBase);
-        return kb.getKnowledgePackage();
     }
 }
