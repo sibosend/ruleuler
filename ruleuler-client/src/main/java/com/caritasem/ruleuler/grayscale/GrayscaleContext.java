@@ -8,10 +8,14 @@ import java.util.Map;
 public class GrayscaleContext {
 
     private static final ThreadLocal<ContextInfo> HOLDER = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> ROUTED_TO_GRAY = new ThreadLocal<>();
 
     public record ContextInfo(String routingKey, Map<String, Object> attributes) {}
 
     public static void set(ContextInfo info) { HOLDER.set(info); }
     public static ContextInfo get() { return HOLDER.get(); }
-    public static void clear() { HOLDER.remove(); }
+    public static void clear() { HOLDER.remove(); ROUTED_TO_GRAY.remove(); }
+
+    public static void markRoutedToGray(boolean toGray) { ROUTED_TO_GRAY.set(toGray); }
+    public static Boolean wasRoutedToGray() { return ROUTED_TO_GRAY.get(); }
 }

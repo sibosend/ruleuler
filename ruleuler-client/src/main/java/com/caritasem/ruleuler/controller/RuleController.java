@@ -150,9 +150,9 @@ public class RuleController {
             }
 
             // 灰度指标上报
-            if (grayscaleReporter != null) {
-                boolean hitGray = grayscaleCache.hasActiveRouting(knowledgePackageId);
-                String ver = hitGray ? "GRAY" : "BASE";
+            Boolean routedToGray = GrayscaleContext.wasRoutedToGray();
+            if (grayscaleReporter != null && routedToGray != null) {
+                String ver = routedToGray ? "GRAY" : "BASE";
                 grayscaleReporter.report(knowledgePackageId, ver, true, execMs);
             }
 
@@ -163,6 +163,7 @@ public class RuleController {
             meta.put("executionId", executionId);
             meta.put("packageId", knowledgePackageId);
             if (version != null) meta.put("version", version);
+            meta.put("route", routedToGray != null && routedToGray ? "GRAY" : "BASE");
             resp.setMeta(meta);
             return resp;
 

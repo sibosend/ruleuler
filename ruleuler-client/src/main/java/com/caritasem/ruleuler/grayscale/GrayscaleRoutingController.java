@@ -107,4 +107,25 @@ public class GrayscaleRoutingController {
         cache.deactivateRouting(packageId);
         return Map.of("status", "ok");
     }
+
+    /**
+     * 诊断：检查路由规则 + cache 实例
+     */
+    @GetMapping("/debug")
+    public Map<String, Object> debug() {
+        Map<String, Object> info = new java.util.LinkedHashMap<>();
+        info.put("cacheClass", cache.getClass().getName());
+
+        // 检查 CacheUtils 用的是哪个 cache
+        try {
+            var cacheUtilsCache = com.bstek.urule.runtime.cache.CacheUtils.getKnowledgeCache();
+            info.put("cacheUtilsClass", cacheUtilsCache != null ? cacheUtilsCache.getClass().getName() : "null");
+            info.put("sameInstance", cache == cacheUtilsCache);
+        } catch (Exception e) {
+            info.put("cacheUtilsError", e.getMessage());
+        }
+
+        info.put("hasActiveRouting", cache.hasActiveRouting("airport_gate_allocation_db/gate_pkg"));
+        return info;
+    }
 }

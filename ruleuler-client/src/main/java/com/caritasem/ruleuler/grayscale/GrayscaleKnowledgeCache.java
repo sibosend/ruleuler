@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - versionMap: 版本号映射（独立于 KnowledgePackage）
  */
 @Component("urule.knowledgeCache")
+@Primary
 public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.KnowledgeCache {
 
     private static final Logger log = LoggerFactory.getLogger(GrayscaleKnowledgeCache.class);
@@ -46,6 +48,16 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
     /** 启动时从 server 恢复所有活跃灰度路由规则 */
     @PostConstruct
     public void init() {
+        // 确保 CacheUtils 使用本实例（覆盖 XML 配置可能注册的其他 KnowledgeCache）
+        try {
+            java.lang.reflect.Field field = com.bstek.urule.runtime.cache.CacheUtils.class.getDeclaredField("knowledgeCache");
+            field.setAccessible(true);
+            field.set(null, this);
+            log.info("CacheUtils 已切换为 GrayscaleKnowledgeCache");
+        } catch (Exception e) {
+            log.warn("CacheUtils 切换失败: {}", e.getMessage());
+        }
+
         if (serverUrl == null || serverUrl.isBlank()) {
             log.info("未配置 server 地址，跳过灰度启动恢复");
             return;
@@ -80,9 +92,14 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
                 if (gray == null) {
                     gray = recoverGrayFromServer(norm);
                 }
-                return gray;
+                if (gray != null) {
+                    GrayscaleContext.markRoutedToGray(true);
+                    return gray;
+                }
+                // 灰度包不存在，降级到正常包
             }
         }
+        GrayscaleContext.markRoutedToGray(false);
         return delegate.getKnowledge(packageId);
     }
 
