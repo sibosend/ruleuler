@@ -140,17 +140,18 @@ public class RuleController {
 
             // 监控采集 — 成功路径
             long execMs = System.currentTimeMillis() - startMs;
+            Boolean routedToGray = GrayscaleContext.wasRoutedToGray();
+            String grayscaleBucket = (routedToGray != null && routedToGray) ? "GRAY" : "BASE";
             if (varEventProducer != null) {
                 try {
                     varEventProducer.produceSuccess(executionId, project, knowledgePackageId, process,
-                            execMs, body, entities, session, knowledgePackage);
+                            execMs, body, entities, session, knowledgePackage, grayscaleBucket);
                 } catch (Exception ex) {
                     log.warn("监控采集异常", ex);
                 }
             }
 
             // 灰度指标上报
-            Boolean routedToGray = GrayscaleContext.wasRoutedToGray();
             if (grayscaleReporter != null && routedToGray != null) {
                 String ver = routedToGray ? "GRAY" : "BASE";
                 grayscaleReporter.report(knowledgePackageId, ver, true, execMs);
@@ -170,9 +171,11 @@ public class RuleController {
         } catch (Exception e) {
             // 监控采集 — 失败路径
             long execMs = System.currentTimeMillis() - startMs;
+            Boolean failedRoutedToGray = GrayscaleContext.wasRoutedToGray();
+            String failedBucket = (failedRoutedToGray != null && failedRoutedToGray) ? "GRAY" : "BASE";
             if (varEventProducer != null) {
                 try {
-                    varEventProducer.produceFailure(executionId, project, project + "/" + knowledge, process, execMs);
+                    varEventProducer.produceFailure(executionId, project, project + "/" + knowledge, process, execMs, failedBucket);
                 } catch (Exception ex) {
                     log.warn("监控采集异常", ex);
                 }

@@ -18,6 +18,7 @@ interface Execution {
   status: string;
   exec_ms: number;
   var_count: number;
+  grayscale_bucket?: string;
 }
 
 const defaultRange: [Dayjs, Dayjs] = [dayjs().subtract(1, 'day'), dayjs()];
@@ -122,6 +123,10 @@ const ExecutionLogPage: React.FC = () => {
   }, []);
 
   const columns: ColumnsType<Execution> = useMemo(() => [
+    {
+      title: '执行ID', dataIndex: 'execution_id', key: 'execution_id', width: 120,
+      render: (v: string) => <span title={v}>{v.slice(0, 8)}...</span>,
+    },
     { title: '执行时间', dataIndex: 'exec_time', key: 'exec_time', width: 180 },
     { title: '项目', dataIndex: 'project', key: 'project', width: 140 },
     { title: '知识包', dataIndex: 'package_id', key: 'package_id', width: 160 },
@@ -131,6 +136,12 @@ const ExecutionLogPage: React.FC = () => {
       render: (v: string) => (
         <Tag color={v === 'success' ? 'green' : 'red'}>{v === 'success' ? '成功' : '失败'}</Tag>
       ),
+    },
+    {
+      title: '灰度', dataIndex: 'grayscale_bucket', key: 'grayscale_bucket', width: 80,
+      render: (v: string) => v === 'GRAY'
+        ? <Tag color="purple">GRAY</Tag>
+        : <Tag color="default">BASE</Tag>,
     },
     {
       title: '耗时(ms)', dataIndex: 'exec_ms', key: 'exec_ms', width: 100,

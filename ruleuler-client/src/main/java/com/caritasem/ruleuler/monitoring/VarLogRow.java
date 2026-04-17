@@ -16,5 +16,6 @@ public record VarLogRow(
     String valStr,         // 字符串型值
     String ioType,         // "input" / "output"
     long execMs,           // 执行耗时 ms
-    long createdAt         // System.currentTimeMillis()
+    long createdAt,        // System.currentTimeMillis()
+    String grayscaleBucket // "BASE" / "GRAY"
 ) {}

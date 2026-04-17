@@ -31,6 +31,7 @@ interface ExecutionInfo {
   exec_ms: number;
   created_at: string;
   status: string;
+  grayscale_bucket?: string;
   variables: VarDetail[];
 }
 
@@ -126,6 +127,7 @@ const ExecutionDetailPage: React.FC = () => {
           exec_ms: first.exec_ms as number,
           created_at: first.created_at as string,
           status: rows.some((r: Record<string, unknown>) => r.var_name === '') ? 'failed' : 'success',
+          grayscale_bucket: first.grayscale_bucket as string | undefined,
           variables: rows as unknown as VarDetail[],
         });
         // 并行加载追踪数据
@@ -164,6 +166,11 @@ const ExecutionDetailPage: React.FC = () => {
           <Tag color={detail.status === 'success' ? 'green' : 'red'}>
             {detail.status === 'success' ? '成功' : '失败'}
           </Tag>
+        </Descriptions.Item>
+        <Descriptions.Item label="灰度">
+          {detail.grayscale_bucket === 'GRAY'
+            ? <Tag color="purple">GRAY</Tag>
+            : <Tag color="default">BASE</Tag>}
         </Descriptions.Item>
         <Descriptions.Item label="执行时间">{detail.created_at}</Descriptions.Item>
       </Descriptions>

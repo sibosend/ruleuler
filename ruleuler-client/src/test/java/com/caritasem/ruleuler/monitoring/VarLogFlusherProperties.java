@@ -63,7 +63,7 @@ class VarLogFlusherProperties {
         return varLogRow().list().ofMinSize(1).ofMaxSize(200);
     }
 
-    /** 单条 VarLogRow 生成器（VarLogRow 有 12 个字段，超过 combine 上限 8，分两步组合） */
+    /** 单条 VarLogRow 生成器（VarLogRow 有 13 个字段，超过 combine 上限 8，分两步组合） */
     private Arbitrary<VarLogRow> varLogRow() {
         Arbitrary<String> s = Arbitraries.strings().alpha().ofMinLength(1).ofMaxLength(8);
         Arbitrary<String> ioType = Arbitraries.of("input", "output");
@@ -74,14 +74,15 @@ class VarLogFlusherProperties {
         Arbitrary<String> valStr = s.injectNull(0.3);
         Arbitrary<Long> execMs = Arbitraries.longs().between(0, 10000);
         Arbitrary<Long> createdAt = Arbitraries.longs().between(1_700_000_000_000L, 1_800_000_000_000L);
+        Arbitrary<String> grayscaleBucket = Arbitraries.of("BASE", "GRAY");
 
         // 前 8 个字段
         return Combinators.combine(s, s, s, s, s, s, varType, valNum)
                 .flatAs((executionId, project, packageId, flowId, varCategory, varName, vt, vn) ->
-                        // 后 4 个字段
-                        Combinators.combine(valStr, ioType, execMs, createdAt)
-                                .as((vs, io, ms, ca) ->
+                        // 后 5 个字段
+                        Combinators.combine(valStr, ioType, execMs, createdAt, grayscaleBucket)
+                                .as((vs, io, ms, ca, gb) ->
                                         new VarLogRow(executionId, project, packageId, flowId,
-                                                varCategory, varName, vt, vn, vs, io, ms, ca)));
+                                                varCategory, varName, vt, vn, vs, io, ms, ca, gb)));
     }
 }

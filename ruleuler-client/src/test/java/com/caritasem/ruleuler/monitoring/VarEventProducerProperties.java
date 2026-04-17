@@ -85,7 +85,7 @@ class VarEventProducerProperties {
         LinkedBlockingQueue<VarLogRow> queue = new LinkedBlockingQueue<>(10000);
         VarEventProducer producer = new VarEventProducer(queue);
         producer.produceSuccess("exec-1", "proj", "pkg", "flow",
-                100L, body, Collections.emptyMap(), session, pkg);
+                100L, body, Collections.emptyMap(), session, pkg, "BASE");
 
         // 验证 input 行数
         List<VarLogRow> inputRows = queue.stream()
@@ -177,7 +177,7 @@ class VarEventProducerProperties {
         LinkedBlockingQueue<VarLogRow> queue = new LinkedBlockingQueue<>(10000);
         VarEventProducer producer = new VarEventProducer(queue);
         producer.produceSuccess("exec-2", "proj", "pkg", "flow",
-                50L, body, entities, session, pkg);
+                50L, body, entities, session, pkg, "BASE");
 
         // 收集 output 行（排除 __param__）
         List<VarLogRow> outputRows = queue.stream()

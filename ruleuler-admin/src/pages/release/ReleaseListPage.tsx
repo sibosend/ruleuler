@@ -29,6 +29,7 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
   TESTING: { color: 'processing', label: '测试中' },
   PENDING: { color: 'blue', label: '待审核' },
   APPROVED: { color: 'cyan', label: '待上线' },
+  GRAYSCALE: { color: 'purple', label: '灰度中' },
   REJECTED: { color: 'red', label: '已拒绝' },
   PUBLISH_FAILED: { color: 'orange', label: '上线失败' },
   PUBLISHED: { color: 'green', label: '已上线' },
@@ -74,7 +75,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const fixedStatus = useMemo(() => {
     switch (mode) {
       case 'pending': return 'PENDING';
-      case 'pending-publish': return 'APPROVED,PUBLISH_FAILED';
+      case 'pending-publish': return 'APPROVED,PUBLISH_FAILED,GRAYSCALE';
       default: return undefined;
     }
   }, [mode]);

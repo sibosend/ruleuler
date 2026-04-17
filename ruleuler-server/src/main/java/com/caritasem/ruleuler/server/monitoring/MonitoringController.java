@@ -175,7 +175,8 @@ public class MonitoringController {
                     min(created_at) AS exec_time,
                     any(exec_ms) AS exec_ms,
                     count() AS var_count,
-                    if(countIf(var_name = '') > 0, 'failed', 'success') AS status
+                    if(countIf(var_name = '') > 0, 'failed', 'success') AS status,
+                    any(grayscale_bucket) AS grayscale_bucket
                 FROM execution_var_log FINAL
                 WHERE toDate(created_at) BETWEEN ? AND ?
                   AND project = ? AND package_id IN (?, ?)

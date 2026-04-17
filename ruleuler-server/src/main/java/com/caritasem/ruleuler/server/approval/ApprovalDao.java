@@ -113,6 +113,11 @@ public class ApprovalDao {
                 status.name(), approver, comment, approvedAt, id);
     }
 
+    /** 仅更新 status，不覆盖其他字段 */
+    public void updateStatusOnly(Long id, ApprovalStatus status) {
+        jdbc.update("UPDATE ruleuler_publish_approval SET status=? WHERE id=?", status.name(), id);
+    }
+
     public void updatePublishFailed(Long id, String failReason) {
         jdbc.update("UPDATE ruleuler_publish_approval SET status='PUBLISH_FAILED',fail_reason=? WHERE id=?",
                 failReason, id);

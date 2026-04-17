@@ -86,6 +86,11 @@ export const routeConfigs: RouteConfig[] = [
         permissionCode: 'menu:approvals',
       },
       {
+        path: '/releases/grayscale',
+        label: '灰度管理',
+        permissionCode: 'pack:grayscale:manage',
+      },
+      {
         path: '/releases/my',
         label: '我的申请',
         permissionCode: 'menu:approvals',
@@ -94,11 +99,6 @@ export const routeConfigs: RouteConfig[] = [
         path: '/releases/all',
         label: '全部记录',
         permissionCode: 'menu:approvals',
-      },
-      {
-        path: '/releases/grayscale',
-        label: '灰度管理',
-        permissionCode: 'pack:grayscale:manage',
       },
     ],
   },

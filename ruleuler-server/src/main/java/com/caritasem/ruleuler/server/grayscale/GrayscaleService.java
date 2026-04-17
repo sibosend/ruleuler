@@ -79,6 +79,7 @@ public class GrayscaleService {
 
         // 5. 持久化灰度规则
         long now = System.currentTimeMillis();
+        approvalDao.updateStatusOnly(approvalId, ApprovalStatus.GRAYSCALE);
         GrayscaleRule rule = GrayscaleRule.builder()
                 .project(approval.getProject())
                 .packageId(approval.getPackageId())
@@ -176,8 +177,14 @@ public class GrayscaleService {
         // 1. 推送路由规则停用到 clients
         pushRoutingDeleteToClients(fullPackageId, rule.getProject());
 
-        // 2. 更新状态
+        // 2. 更新灰度规则状态
         grayscaleRuleDao.updateStatus(ruleId, GrayscaleRuleStatus.ROLLED_BACK);
+
+        // 3. 审批单状态回退为 APPROVED
+        Approval rollbackApproval = approvalDao.findById(rule.getApprovalId());
+        if (rollbackApproval != null && rollbackApproval.getStatus() == ApprovalStatus.GRAYSCALE) {
+            approvalDao.updateStatusOnly(rule.getApprovalId(), ApprovalStatus.APPROVED);
+        }
 
         rule.setStatus(GrayscaleRuleStatus.ROLLED_BACK);
         log.info("灰度回退完成: ruleId={}, package={}, operator={}", ruleId, fullPackageId, operator);

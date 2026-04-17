@@ -39,7 +39,8 @@ public class VarEventProducer {
             Map<String, JSONObject> body,
             Map<String, GeneralEntity> entities,
             KnowledgeSession session,
-            KnowledgePackage knowledgePackage
+            KnowledgePackage knowledgePackage,
+            String grayscaleBucket
     ) {
         long now = System.currentTimeMillis();
         // 从变量库定义构建类型缓存：categoryName -> (varName -> Datatype)
@@ -61,7 +62,7 @@ public class VarEventProducer {
 
                 offer(new VarLogRow(executionId, project, packageId, flowId,
                         category, varName, dt.name(), mr.valNum(), mr.valStr(),
-                        "input", execMs, now));
+                        "input", execMs, now, grayscaleBucket));
             }
         }
 
@@ -87,7 +88,7 @@ public class VarEventProducer {
 
                 offer(new VarLogRow(executionId, project, packageId, flowId,
                         category, varName, dt.name(), mr.valNum(), mr.valStr(),
-                        "output", execMs, now));
+                        "output", execMs, now, grayscaleBucket));
             }
         }
 
@@ -99,7 +100,7 @@ public class VarEventProducer {
                 String paramName = entry.getKey();
                 Object paramValue = entry.getValue();
                 String typeName = paramDefs != null ? paramDefs.get(paramName) : null;
-                
+
                 Datatype dt = null;
                 if (typeName != null) {
                     try {
@@ -108,7 +109,7 @@ public class VarEventProducer {
                         dt = null;
                     }
                 }
-                
+
                 // 类型未定义时，根据实际值推断，保障参数监控不丢
                 if (dt == null) {
                     if (paramValue == null) {
@@ -133,7 +134,7 @@ public class VarEventProducer {
 
                 offer(new VarLogRow(executionId, project, packageId, flowId,
                         PARAM_CATEGORY, paramName, dt.name(), mr.valNum(), mr.valStr(),
-                        "output", execMs, now));
+                        "output", execMs, now, grayscaleBucket));
             }
         }
     }
@@ -143,10 +144,11 @@ public class VarEventProducer {
      */
     public void produceFailure(
             String executionId, String project, String packageId, String flowId,
-            long execMs
+            long execMs,
+            String grayscaleBucket
     ) {
         offer(new VarLogRow(executionId, project, packageId, flowId,
-                "", "", "", null, null, "", execMs, System.currentTimeMillis()));
+                "", "", "", null, null, "", execMs, System.currentTimeMillis(), grayscaleBucket));
     }
 
     /**

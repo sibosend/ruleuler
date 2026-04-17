@@ -25,8 +25,8 @@ public class VarLogFlusher {
     private static final String INSERT_SQL =
             "INSERT INTO execution_var_log " +
             "(execution_id, project, package_id, flow_id, var_category, var_name, " +
-            "var_type, val_num, val_str, io_type, exec_ms, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "var_type, val_num, val_str, io_type, exec_ms, created_at, grayscale_bucket) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private final BlockingQueue<VarLogRow> queue;
     private final DataSource dataSource;
@@ -120,6 +120,7 @@ public class VarLogFlusher {
                 ps.setString(10, r.ioType());
                 ps.setLong(11, r.execMs());
                 ps.setTimestamp(12, new Timestamp(r.createdAt()));
+                ps.setString(13, r.grayscaleBucket() != null ? r.grayscaleBucket() : "BASE");
                 ps.addBatch();
             }
             ps.executeBatch();
