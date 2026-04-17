@@ -60,7 +60,11 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 | Rule editing | Wizard only | Added REA text expression editor |
 | Variables | Requires Java POJO | GeneralEntity dynamic type |
 | Access control | None | RBAC users/roles/permissions |
-| Auto testing | None | Path coverage + MC/DC test generation |
+| Auto testing | None | Path coverage + test case batch generation & execution |
+| Variable Monitoring| None | Execution trace paths, PSI/Enum drift, time-series anomaly alerts |
+| Release & Gray | Save directly | Release approval workflow, Gray release (A/B), strict XML diff |
+| Dependency Analysis| None | Full component upstream/downstream lineage & impact assessment |
+| Audit Log | None | Operations playback for configuration & permission changes |
 | Auth | None | JWT |
 
 ## Documentation
