@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS `ruleuler_test_segment` (
   `run_id` bigint NOT NULL,
   `variable_name` varchar(100) NOT NULL,
   `variable_type` varchar(20) NOT NULL COMMENT 'INPUT / OUTPUT',
-  `segment_label` varchar(200) NOT NULL,
+  `segment_label` text NOT NULL,
   `case_count` int NOT NULL DEFAULT 0,
   `percentage` decimal(5,2) NOT NULL DEFAULT 0.00,
   `baseline_count` int DEFAULT NULL,
@@ -411,7 +411,27 @@ INSERT IGNORE INTO `ruleuler_monitoring_alert_config`
 VALUES (1, 0.05, 0.1, 0.03, 2.0, 0.1, 0.2, 0.15);
 
 -- ============================================================
--- 7. 发布审批表
+-- 7. 审计日志表
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_audit_log` (
+  `id`          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `action`      VARCHAR(30) NOT NULL,
+  `target_type` VARCHAR(20) NOT NULL,
+  `target_id`   BIGINT DEFAULT NULL,
+  `target_path` VARCHAR(500) DEFAULT NULL,
+  `project`     VARCHAR(100) DEFAULT NULL,
+  `operator`    VARCHAR(100) NOT NULL,
+  `detail`      JSON DEFAULT NULL,
+  `ip`          VARCHAR(50) DEFAULT NULL,
+  `created_at`  BIGINT NOT NULL,
+  INDEX `idx_target` (`target_type`, `target_id`),
+  INDEX `idx_project_time` (`project`, `created_at`),
+  INDEX `idx_operator_time` (`operator`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- 8. 发布审批表
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
@@ -427,11 +447,13 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_approval` (
   `submitted_at` bigint NOT NULL COMMENT '提交时间（毫秒时间戳）',
   `approved_at` bigint DEFAULT NULL COMMENT '审批时间（毫秒时间戳）',
   `test_run_id` bigint DEFAULT NULL COMMENT '关联自动测试运行 ID',
+  `version` int NOT NULL DEFAULT 0 COMMENT '系统版本号',
   `description` varchar(1000) DEFAULT NULL COMMENT '变更说明',
   `publisher` varchar(100) DEFAULT NULL,
   `published_at` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_project_pkg` (`project`,`package_id`),
+  KEY `idx_version` (`project`,`package_id`,`version`),
   KEY `idx_status` (`status`),
   KEY `idx_submitter` (`submitter`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -459,4 +481,43 @@ CREATE TABLE IF NOT EXISTS `ruleuler_publish_snapshot` (
   `created_at` bigint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_project_pkg` (`project`,`package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- 9. 灰度发布 / A-B 测试表
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_grayscale_rule` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project` varchar(255) NOT NULL,
+  `package_id` varchar(255) NOT NULL,
+  `approval_id` bigint NOT NULL COMMENT '灰度版本对应的审批单',
+  `snapshot_id` bigint NOT NULL COMMENT '灰度版本快照',
+  `strategy` varchar(20) NOT NULL COMMENT 'PERCENTAGE / CONDITION',
+  `percentage` int DEFAULT NULL,
+  `condition_expr` text DEFAULT NULL COMMENT 'REA 条件表达式',
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/ROLLED_OUT/ROLLED_BACK',
+  `description` varchar(500) DEFAULT NULL,
+  `created_by` varchar(100) NOT NULL,
+  `created_at` bigint NOT NULL,
+  `updated_at` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_active` (`project`,`package_id`,`status`),
+  KEY `idx_project_pkg` (`project`,`package_id`),
+  KEY `idx_approval` (`approval_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_grayscale_metrics` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `rule_id` bigint NOT NULL,
+  `version` varchar(10) NOT NULL COMMENT 'BASE/GRAY',
+  `hit_count` bigint NOT NULL DEFAULT 0,
+  `success_count` bigint NOT NULL DEFAULT 0,
+  `fail_count` bigint NOT NULL DEFAULT 0,
+  `total_exec_ms` bigint NOT NULL DEFAULT 0,
+  `stat_date` date NOT NULL,
+  `updated_at` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_rule_ver_date` (`rule_id`,`version`,`stat_date`),
+  KEY `idx_rule_date` (`rule_id`,`stat_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
