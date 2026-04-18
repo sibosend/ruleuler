@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Spin, Alert, Modal, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { loadProjectLibs, loadXml, loadRawXml } from './api/reaApi';
 import { printCondition, printAssignment } from './lib/expressionPrinter';
 import { createDefaultRule } from './lib/ruleUtils';
@@ -130,6 +131,7 @@ const ReaEditorPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const file = searchParams.get('file');
   const project = searchParams.get('project');
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +165,7 @@ const ReaEditorPage: React.FC = () => {
 
   const initialize = useCallback(async () => {
     if (!file || !project) {
-      setError('缺少必要参数: file 和 project');
+      setError(t('rea.missingParams'));
       setLoading(false);
       return;
     }
@@ -186,7 +188,7 @@ const ReaEditorPage: React.FC = () => {
           const libJsonArray = await loadXml(allLibPaths.join(';'));
           libData = buildLibraryData(paths, libJsonArray);
         } catch (e) {
-          message.error('库文件加载失败，补全功能不可用');
+          message.error(t('rea.libLoadFailed'));
           console.error('loadXml libs failed:', e);
         }
       }
@@ -203,13 +205,13 @@ const ReaEditorPage: React.FC = () => {
       const parsed = parseRulesFromXml(xmlContent);
       setRules(parsed);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '初始化失败';
-      Modal.error({ title: '加载失败', content: msg });
+      const msg = e instanceof Error ? e.message : t('rea.initFailed');
+      Modal.error({ title: t('rea.loadFailed'), content: msg });
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [file, project]);
+  }, [file, project, t]);
 
   const fetched = useRef(false);
   useEffect(() => {
@@ -223,7 +225,7 @@ const ReaEditorPage: React.FC = () => {
   if (!file || !project) {
     return (
       <div style={{ padding: 24 }}>
-        <Alert type="error" message="缺少必要参数" description="URL 必须包含 file 和 project 参数" />
+        <Alert type="error" message={t('rea.missingParams')} description={t('rea.missingParamsDesc')} />
       </div>
     );
   }
@@ -231,7 +233,7 @@ const ReaEditorPage: React.FC = () => {
   if (loading) {
     return (
       <div style={{ padding: 24, textAlign: 'center' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t('common.loading')} />
       </div>
     );
   }
@@ -239,7 +241,7 @@ const ReaEditorPage: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 24 }}>
-        <Alert type="error" message="加载失败" description={error} />
+        <Alert type="error" message={t('rea.loadFailed')} description={error} />
       </div>
     );
   }
@@ -260,7 +262,7 @@ const ReaEditorPage: React.FC = () => {
 
       {rules.length === 0 ? (
         <div style={{ color: '#999', padding: 24, textAlign: 'center' }}>
-          暂无规则，请点击"添加规则"
+          {t('rea.noRules')}
         </div>
       ) : (
         rules.map((rule) => (

@@ -11,6 +11,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder as cmPlaceholder } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { useTranslation } from 'react-i18next';
 import type { LibraryData } from '../lib/expressionParser';
 import { reaSyntaxHighlighting } from '../lib/cmHighlight';
 import { reaAutocompletion } from '../lib/cmAutocomplete';
@@ -28,9 +29,11 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
   value,
   onChange,
   libraries,
-  placeholder = '例: A.score > 5 AND (B.type == "VIP" OR level == "high")',
+  placeholder,
   onLintStatus,
 }) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('rea.conditionInputPlaceholder');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -50,7 +53,7 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
         reaSyntaxHighlighting(),
         reaAutocompletion('condition', libraries),
         reaLintExtension('condition', libraries, onLintStatus),
-        cmPlaceholder(placeholder),
+        cmPlaceholder(resolvedPlaceholder),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !internalUpdate.current) {
             onChangeRef.current(update.state.doc.toString());
@@ -76,7 +79,7 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
     const view = new EditorView({ state: startState, parent: containerRef.current });
     viewRef.current = view;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [libraries, placeholder]);
+  }, [libraries, resolvedPlaceholder]);
 
   useEffect(() => {
     createView();

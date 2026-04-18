@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder as cmPlaceholder } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import type { LibraryData } from '../lib/expressionParser';
 import { reaSyntaxHighlighting } from '../lib/cmHighlight';
 import { reaAutocompletion } from '../lib/cmAutocomplete';
@@ -18,10 +20,10 @@ export interface ExpressionAreaProps {
   helpUrl?: string;
 }
 
-const PLACEHOLDERS: Record<ExpressionAreaProps['type'], string> = {
-  condition: '例: A.score > 5 AND (B.type == "VIP" OR level == "high")',
-  action: '例: score = 10; level = "high"  多个用 ; 分隔',
-  else: '例: score = 0; level = "low"  多个用 ; 分隔（可选）',
+const PLACEHOLDER_KEYS: Record<ExpressionAreaProps['type'], string> = {
+  condition: 'rea.conditionPlaceholder',
+  action: 'rea.actionPlaceholder',
+  else: 'rea.elsePlaceholder',
 };
 
 const ExpressionArea: React.FC<ExpressionAreaProps> = ({
@@ -33,6 +35,7 @@ const ExpressionArea: React.FC<ExpressionAreaProps> = ({
   libraries,
   helpUrl,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [lintStatus, setLintStatus] = useState<LintStatus>('idle');
@@ -56,7 +59,7 @@ const ExpressionArea: React.FC<ExpressionAreaProps> = ({
         reaSyntaxHighlighting(),
         reaAutocompletion(type, libraries),
         reaLintExtension(type, libraries, setLintStatus),
-        cmPlaceholder(PLACEHOLDERS[type]),
+        cmPlaceholder(i18n.t(PLACEHOLDER_KEYS[type])),
         EditorView.editable.of(!hasError),
         EditorState.readOnly.of(hasError),
         EditorView.updateListener.of((update) => {
@@ -128,7 +131,7 @@ const ExpressionArea: React.FC<ExpressionAreaProps> = ({
             href={helpUrl}
             target="_blank"
             rel="noopener noreferrer"
-            title="表达式语法帮助"
+            title={t('rea.syntaxHelp')}
             style={{ marginLeft: 2, color: '#1677ff', textDecoration: 'none', fontSize: 11 }}
           >
             ?
@@ -159,9 +162,9 @@ const ExpressionArea: React.FC<ExpressionAreaProps> = ({
               lineHeight: 1,
               pointerEvents: 'none',
             }}
-            title="不支持的表达式，请使用向导式编辑器"
+            title={t('rea.unsupportedExpr')}
           >
-            ⚠ 只读
+            {t('rea.readOnly')}
           </span>
         )}
         {!hasError && lintStatus === 'valid' && (
@@ -176,7 +179,7 @@ const ExpressionArea: React.FC<ExpressionAreaProps> = ({
               lineHeight: 1,
               pointerEvents: 'none',
             }}
-            title="语法正确"
+            title={t('rea.syntaxOk')}
           >
             ✓
           </span>

@@ -35,8 +35,16 @@ const { loadProjects } = await import('@/api/project');
 // Validates: Requirements 1.2, 1.3, 1.4
 // ============================================================
 describe('Property 1: storageType 显示文本映射', () => {
+  const t = (key: string) => {
+    const map: Record<string, string> = {
+      'project.storageDb': '数据库',
+      'project.storageJcr': 'JCR',
+    };
+    return map[key] ?? key;
+  };
+
   it('db → 数据库', () => {
-    expect(formatStorageType('db')).toBe('数据库');
+    expect(formatStorageType('db', t)).toBe('数据库');
   });
 
   it('对任意非 db 值，返回 JCR', () => {
@@ -44,7 +52,7 @@ describe('Property 1: storageType 显示文本映射', () => {
       fc.property(
         fc.anything().filter((v) => v !== 'db'),
         (value) => {
-          expect(formatStorageType(value)).toBe('JCR');
+          expect(formatStorageType(value, t)).toBe('JCR');
         },
       ),
       { numRuns: 100 },

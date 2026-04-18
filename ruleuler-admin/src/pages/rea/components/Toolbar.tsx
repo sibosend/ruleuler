@@ -7,6 +7,8 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { parseCondition, parseAssignment } from '../lib/expressionParser';
 import { saveFile } from '../api/reaApi';
 import type { ProjectLibs } from '../api/reaApi';
@@ -74,7 +76,7 @@ function buildRuleSetXml(
     try {
       condXml = parseCondition(rule.conditionText, libraries.data);
     } catch (e) {
-      throw new Error(`规则 [${rule.name}] 的 [如果] 表达式语法错误：${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(i18n.t('rea.conditionError', { name: rule.name, error: e instanceof Error ? e.message : String(e) }));
     }
 
     // 动作
@@ -82,7 +84,7 @@ function buildRuleSetXml(
     try {
       actXml = parseAssignment(rule.actionText, libraries.data);
     } catch (e) {
-      throw new Error(`规则 [${rule.name}] 的 [那么] 表达式语法错误：${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(i18n.t('rea.actionError', { name: rule.name, error: e instanceof Error ? e.message : String(e) }));
     }
 
     // 属性
@@ -101,7 +103,7 @@ function buildRuleSetXml(
       try {
         elseXml = parseAssignment(rule.elseText, libraries.data);
       } catch (e) {
-        throw new Error(`规则 [${rule.name}] 的 [否则] 表达式语法错误：${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(i18n.t('rea.elseError', { name: rule.name, error: e instanceof Error ? e.message : String(e) }));
       }
       ruleBody += `    <else>\n  ${elseXml}\n    </else>\n`;
     }
@@ -125,11 +127,11 @@ function buildRuleSetXml(
 
 type LibType = 'variable' | 'constant' | 'parameter' | 'action';
 
-const LIB_LABELS: Record<LibType, string> = {
-  variable: '变量库',
-  constant: '常量库',
-  parameter: '参数库',
-  action: '动作库',
+const LIB_LABEL_KEYS: Record<LibType, string> = {
+  variable: 'rea.varLib',
+  constant: 'rea.constLib',
+  parameter: 'rea.paramLib',
+  action: 'rea.actionLib',
 };
 
 function buildLibMenuItems(
@@ -138,7 +140,7 @@ function buildLibMenuItems(
   onRemove: (type: LibType, path: string) => void,
 ): MenuProps['items'] {
   if (paths.length === 0) {
-    return [{ key: 'empty', label: '(无)', disabled: true }];
+    return [{ key: 'empty', label: i18n.t('rea.none'), disabled: true }];
   }
   return paths.map((p) => ({
     key: p,
@@ -171,17 +173,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onSaveComplete,
 }) => {
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   const handleSave = async (newVersion: boolean) => {
     setSaving(true);
     try {
       const xml = buildRuleSetXml(rules, libraries);
       await saveFile(file, xml, newVersion);
-      message.success(newVersion ? '已保存新版本' : '保存成功');
+      message.success(newVersion ? t('rea.savedNewVersion') : t('common.save'));
       onSaveComplete();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '保存失败';
-      Modal.error({ title: '保存失败', content: msg });
+      const msg = e instanceof Error ? e.message : t('rea.saveFailed');
+      Modal.error({ title: t('rea.saveFailed'), content: msg });
     } finally {
       setSaving(false);
     }
@@ -190,10 +193,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <Space wrap style={{ marginBottom: 12, padding: '8px 0', borderBottom: '1px solid #eee' }}>
       <Button icon={<PlusOutlined />} onClick={onAddRule}>
-        添加规则
+        {t('rea.addRule')}
       </Button>
 
-      {(Object.keys(LIB_LABELS) as LibType[]).map((type) => (
+      {(Object.keys(LIB_LABEL_KEYS) as LibType[]).map((type) => (
         <Dropdown
           key={type}
           menu={{
@@ -201,7 +204,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           }}
         >
           <Button>
-            {LIB_LABELS[type]} ({libraries.paths[type].length}) <DownOutlined />
+            {t(LIB_LABEL_KEYS[type])} ({libraries.paths[type].length}) <DownOutlined />
           </Button>
         </Dropdown>
       ))}
@@ -213,14 +216,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
         loading={saving}
         onClick={() => handleSave(false)}
       >
-        保存
+        {t('rea.save')}
       </Button>
       <Button
         icon={<SaveOutlined />}
         loading={saving}
         onClick={() => handleSave(true)}
       >
-        保存新版本
+        {t('rea.saveNewVersion')}
       </Button>
     </Space>
   );

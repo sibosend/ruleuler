@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Drawer, Tag, Empty, Spin, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { analyzeDependencies } from '@/api/dependency';
 import type { AnalysisResult, DependencyNode } from '@/api/dependency';
 
@@ -12,10 +13,10 @@ interface DependencyDrawerProps {
   onNavigate?: (path: string) => void;
 }
 
-const REF_KIND_LABEL: Record<string, string> = {
-  library: '库引用',
-  file: '文件引用',
-  package_item: '知识包引用',
+const REF_KIND_KEY: Record<string, string> = {
+  library: 'console.libraryRef',
+  file: 'console.fileRef',
+  package_item: 'console.packageRef',
 };
 
 function getNodeName(path: string): string {
@@ -33,6 +34,7 @@ function typeToColor(type: string): string {
 }
 
 const DependencyDrawer: React.FC<DependencyDrawerProps> = ({ open, filePath, onClose, onNavigate }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ const DependencyDrawer: React.FC<DependencyDrawerProps> = ({ open, filePath, onC
     setError(null);
     analyzeDependencies(filePath)
       .then((data) => setResult(data))
-      .catch((e) => setError(e.message ?? '分析失败'))
+      .catch((e) => setError(e.message ?? t('console.analysisFailed')))
       .finally(() => setLoading(false));
   }, [open, filePath]);
 
@@ -61,21 +63,21 @@ const DependencyDrawer: React.FC<DependencyDrawerProps> = ({ open, filePath, onC
 
   return (
     <Drawer
-      title={filePath ? `依赖分析 — ${getNodeName(filePath)}` : '依赖分析'}
+      title={filePath ? `${t('console.dependencyAnalysis')} — ${getNodeName(filePath)}` : t('console.dependencyAnalysis')}
       open={open}
       onClose={onClose}
       width={520}
       destroyOnClose
     >
-      {loading && <Spin tip="分析中..." style={{ display: 'block', margin: '40px auto' }} />}
+      {loading && <Spin tip={t('console.analyzing')} style={{ display: 'block', margin: '40px auto' }} />}
       {error && <Text type="danger">{error}</Text>}
       {!loading && !error && result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <Section title={`上游依赖（${result.target.type}依赖了以下组件）`} items={result.dependencies} empty="无上游依赖" onClick={handleClick} />
-          <Section title={`下游影响（以下组件依赖了${result.target.type}）`} items={result.referers} empty="无下游引用" onClick={handleClick} />
+          <Section title={t('console.upstreamDeps', { type: result.target.type })} items={result.dependencies} empty={t('console.noUpstream')} onClick={handleClick} />
+          <Section title={t('console.downstreamImpacts', { type: result.target.type })} items={result.referers} empty={t('console.noDownstream')} onClick={handleClick} />
           {result.affectedPackages.length > 0 && (
             <div>
-              <Text strong>受影响的知识包</Text>
+              <Text strong>{t('console.affectedPackages')}</Text>
               <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {result.affectedPackages.map((pkg, i) => (
                   <div key={i} style={{ padding: '4px 8px', background: '#fff7e6', borderRadius: 4, borderLeft: '3px solid #fa8c16' }}>
@@ -90,7 +92,7 @@ const DependencyDrawer: React.FC<DependencyDrawerProps> = ({ open, filePath, onC
           )}
         </div>
       )}
-      {!loading && !error && !result && <Empty description="请选择文件" />}
+      {!loading && !error && !result && <Empty description={t('console.selectFileFirst')} />}
     </Drawer>
   );
 };
@@ -101,6 +103,7 @@ function Section({ title, items, empty, onClick }: {
   empty: string;
   onClick: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
       <Text strong>{title}</Text>
@@ -117,7 +120,7 @@ function Section({ title, items, empty, onClick }: {
             <Tag color={typeToColor(node.type)} style={{ margin: 0 }}>{node.type}</Tag>
             <Text copyable={{ text: node.path }}>{getNodeName(node.path)}</Text>
             {node.refKind && (
-              <Text type="secondary" style={{ fontSize: 12 }}>{REF_KIND_LABEL[node.refKind] ?? node.refKind}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{REF_KIND_KEY[node.refKind] ? t(REF_KIND_KEY[node.refKind]!) : node.refKind}</Text>
             )}
           </div>
         ))}

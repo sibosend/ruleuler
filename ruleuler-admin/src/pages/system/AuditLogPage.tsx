@@ -3,37 +3,38 @@ import { Table, Select, Input, DatePicker, Tag, Space, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { fetchAuditLogs, type AuditLogRecord } from '../../api/auditLog';
+import { useTranslation } from 'react-i18next';
 
 const { RangePicker } = DatePicker;
 
 const ACTION_OPTIONS = [
-  { label: '创建文件', value: 'CREATE' },
-  { label: '更新文件', value: 'UPDATE' },
-  { label: '删除文件', value: 'DELETE' },
-  { label: '重命名', value: 'RENAME' },
-  { label: '复制', value: 'COPY' },
-  { label: '锁定', value: 'LOCK' },
-  { label: '解锁', value: 'UNLOCK' },
-  { label: '提交审批', value: 'PUBLISH_SUBMIT' },
-  { label: '审批通过', value: 'APPROVE' },
-  { label: '审批拒绝', value: 'REJECT' },
-  { label: '执行上线', value: 'PUBLISH' },
-  { label: '创建用户', value: 'USER_CREATE' },
-  { label: '修改用户', value: 'USER_UPDATE' },
-  { label: '删除用户', value: 'USER_DELETE' },
-  { label: '分配角色', value: 'ROLE_ASSIGN' },
-  { label: '创建角色', value: 'ROLE_CREATE' },
-  { label: '修改角色', value: 'ROLE_UPDATE' },
-  { label: '删除角色', value: 'ROLE_DELETE' },
-  { label: '分配权限', value: 'PERM_ASSIGN' },
+  { label: 'system.actionCreateFile', value: 'CREATE' },
+  { label: 'system.actionUpdateFile', value: 'UPDATE' },
+  { label: 'system.actionDeleteFile', value: 'DELETE' },
+  { label: 'system.actionRename', value: 'RENAME' },
+  { label: 'system.actionCopy', value: 'COPY' },
+  { label: 'system.actionLock', value: 'LOCK' },
+  { label: 'system.actionUnlock', value: 'UNLOCK' },
+  { label: 'system.actionSubmitApproval', value: 'PUBLISH_SUBMIT' },
+  { label: 'system.actionApprove', value: 'APPROVE' },
+  { label: 'system.actionReject', value: 'REJECT' },
+  { label: 'system.actionPublish', value: 'PUBLISH' },
+  { label: 'system.actionCreateUser', value: 'USER_CREATE' },
+  { label: 'system.actionUpdateUser', value: 'USER_UPDATE' },
+  { label: 'system.actionDeleteUser', value: 'USER_DELETE' },
+  { label: 'system.actionAssignRole', value: 'ROLE_ASSIGN' },
+  { label: 'system.actionCreateRole', value: 'ROLE_CREATE' },
+  { label: 'system.actionUpdateRole', value: 'ROLE_UPDATE' },
+  { label: 'system.actionDeleteRole', value: 'ROLE_DELETE' },
+  { label: 'system.actionAssignPerm', value: 'PERM_ASSIGN' },
 ];
 
 const TARGET_TYPE_OPTIONS = [
-  { label: '文件', value: 'FILE' },
-  { label: '目录', value: 'DIR' },
-  { label: '审批单', value: 'APPROVAL' },
-  { label: '用户', value: 'USER' },
-  { label: '角色', value: 'ROLE' },
+  { label: 'system.targetFile', value: 'FILE' },
+  { label: 'system.targetDir', value: 'DIR' },
+  { label: 'system.targetApproval', value: 'APPROVAL' },
+  { label: 'system.targetUser', value: 'USER' },
+  { label: 'system.targetRole', value: 'ROLE' },
 ];
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -59,6 +60,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
 };
 
 const AuditLogPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [action, setAction] = useState<string | undefined>();
   const [targetType, setTargetType] = useState<string | undefined>();
   const [operator, setOperator] = useState<string | undefined>();
@@ -85,7 +87,7 @@ const AuditLogPage: React.FC = () => {
       setData(Array.isArray(result?.records) ? result.records : []);
       setTotal(result?.total ?? 0);
     } catch {
-      message.error('加载审计日志失败');
+      message.error(t('system.loadAuditFailed'));
     } finally {
       setLoading(false);
     }
@@ -101,58 +103,58 @@ const AuditLogPage: React.FC = () => {
 
   const columns: ColumnsType<AuditLogRecord> = useMemo(() => [
     {
-      title: '时间', dataIndex: 'created_at', key: 'created_at', width: 180,
+      title: t('system.time'), dataIndex: 'created_at', key: 'created_at', width: 180,
       render: (v: number) => dayjs(v).format('YYYY-MM-DD HH:mm:ss'),
     },
-    { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 },
+    { title: t('system.operator'), dataIndex: 'operator', key: 'operator', width: 100 },
     {
-      title: '操作', dataIndex: 'action', key: 'action', width: 120,
+      title: t('system.actionType'), dataIndex: 'action', key: 'action', width: 120,
       render: (v: string) => {
         const opt = ACTION_OPTIONS.find(o => o.value === v);
-        return <Tag color={ACTION_COLOR_MAP[v] || 'default'}>{opt?.label || v}</Tag>;
+        return <Tag color={ACTION_COLOR_MAP[v] || 'default'}>{opt ? t(opt.label) : v}</Tag>;
       },
     },
     {
-      title: '目标类型', dataIndex: 'target_type', key: 'target_type', width: 90,
+      title: t('system.targetType'), dataIndex: 'target_type', key: 'target_type', width: 90,
       render: (v: string) => {
         const opt = TARGET_TYPE_OPTIONS.find(o => o.value === v);
-        return opt?.label || v;
+        return opt ? t(opt.label) : v;
       },
     },
     {
-      title: '目标路径', dataIndex: 'target_path', key: 'target_path', width: 300,
+      title: t('system.targetPath'), dataIndex: 'target_path', key: 'target_path', width: 300,
       ellipsis: true,
     },
-    { title: '项目', dataIndex: 'project', key: 'project', width: 120, ellipsis: true },
+    { title: t('system.project'), dataIndex: 'project', key: 'project', width: 120, ellipsis: true },
     {
-      title: '详情', dataIndex: 'detail', key: 'detail', width: 200,
+      title: t('system.detail'), dataIndex: 'detail', key: 'detail', width: 200,
       ellipsis: true,
       render: (v: Record<string, unknown>) => v ? JSON.stringify(v) : '-',
     },
-  ], []);
+  ], [i18n.language]);
 
   return (
     <div>
       <Space wrap style={{ marginBottom: 12 }}>
         <Select
           style={{ width: 150 }}
-          placeholder="操作类型"
+          placeholder={t('system.actionType')}
           allowClear
           value={action}
           onChange={(v) => { setAction(v); setPage(1); }}
-          options={ACTION_OPTIONS}
+          options={ACTION_OPTIONS.map(o => ({ ...o, label: t(o.label) }))}
         />
         <Select
           style={{ width: 120 }}
-          placeholder="目标类型"
+          placeholder={t('system.targetType')}
           allowClear
           value={targetType}
           onChange={(v) => { setTargetType(v); setPage(1); }}
-          options={TARGET_TYPE_OPTIONS}
+          options={TARGET_TYPE_OPTIONS.map(o => ({ ...o, label: t(o.label) }))}
         />
         <Input
           style={{ width: 140 }}
-          placeholder="操作人"
+          placeholder={t('system.operator')}
           allowClear
           value={operator}
           onChange={(e) => { setOperator(e.target.value || undefined); setPage(1); }}
@@ -176,7 +178,7 @@ const AuditLogPage: React.FC = () => {
           current: page,
           pageSize,
           total,
-          showTotal: (t) => `共 ${t} 条记录`,
+          showTotal: (total) => t('system.totalRecords', { total }),
           showSizeChanger: true,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); },
         }}

@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Pie, Column } from '@ant-design/charts';
+import { useTranslation } from 'react-i18next';
 import { getReport, getConflicts, updateBaseline } from '../../api/autotest';
 
 interface Summary {
@@ -51,6 +52,7 @@ const TestReportPage: React.FC = () => {
   const { runId } = useParams<{ name: string; runId: string }>();
   const navigate = useNavigate();
   const rid = Number(runId);
+  const { t } = useTranslation();
 
   const [summary, setSummary] = useState<Summary>({ totalCases: 0, sameCount: 0, changedCount: 0, consistencyRate: 0 });
   const [segments, setSegments] = useState<SegmentItem[]>([]);
@@ -70,17 +72,17 @@ const TestReportPage: React.FC = () => {
       setChangeDetails(rpt.changeDetails ?? []);
       const cl = cfRes.data?.data ?? cfRes.data ?? [];
       setConflicts(Array.isArray(cl) ? cl : []);
-    } catch { message.error('加载测试报告失败'); }
+    } catch { message.error(t('autotest.loadReportFailed')); }
     finally { setLoading(false); }
-  }, [runId, rid]);
+  }, [runId, rid, t]);
 
   const fetched = useRef(false);
   useEffect(() => { if (fetched.current) return; fetched.current = true; fetchData(); }, [fetchData]);
 
   const handleUpdateBaseline = async () => {
     setUpdatingBaseline(true);
-    try { await updateBaseline(rid); message.success('已更新为新的 Baseline'); fetchData(); }
-    catch { message.error('更新 Baseline 失败'); }
+    try { await updateBaseline(rid); message.success(t('autotest.baselineUpdated')); fetchData(); }
+    catch { message.error(t('autotest.updateBaselineFailed')); }
     finally { setUpdatingBaseline(false); }
   };
 
@@ -98,37 +100,37 @@ const TestReportPage: React.FC = () => {
 
   // Anchor 导航 — 输出和输入分组
   const anchorItems: { key: string; href: string; title: string; children?: { key: string; href: string; title: string }[] }[] = [
-    { key: 'summary', href: '#summary', title: '汇总' },
+    { key: 'summary', href: '#summary', title: t('autotest.summary') },
   ];
-  if (conflicts.length > 0) anchorItems.push({ key: 'conflicts', href: '#conflicts', title: '冲突检测' });
+  if (conflicts.length > 0) anchorItems.push({ key: 'conflicts', href: '#conflicts', title: t('autotest.conflictDetection') });
   if (outputGroups.length > 0) {
     anchorItems.push({
-      key: 'output-dist', href: '#output-dist', title: '输出分布',
+      key: 'output-dist', href: '#output-dist', title: t('autotest.outputDistribution'),
       children: outputGroups.map(([v]) => ({ key: `out-${v}`, href: `#out-${v}`, title: v })),
     });
   }
   if (inputGroups.length > 0) {
     anchorItems.push({
-      key: 'input-cov', href: '#input-cov', title: '输入覆盖',
+      key: 'input-cov', href: '#input-cov', title: t('autotest.inputCoverage'),
       children: inputGroups.map(([v]) => ({ key: `in-${v}`, href: `#in-${v}`, title: v })),
     });
   }
-  if (changeDetails.length > 0) anchorItems.push({ key: 'changes', href: '#changes', title: `变化明细 (${changeDetails.length})` });
+  if (changeDetails.length > 0) anchorItems.push({ key: 'changes', href: '#changes', title: t('autotest.changeDetailsCount', { count: changeDetails.length }) });
 
   // 输出分布：有 baseline 用分组柱状图，无 baseline 用饼图
   const renderOutputSection = (varName: string, items: SegmentItem[]) => {
     const sorted = [...items].sort((a, b) => b.caseCount - a.caseCount);
     const hasBaseline = sorted.some(s => s.baselineCount != null);
     const cols: any[] = [
-      { title: '值', dataIndex: 'segmentLabel', key: 'sl' },
-      { title: '条数', dataIndex: 'caseCount', key: 'cc', width: 80, defaultSortOrder: 'descend' as const, sorter: (a: SegmentItem, b: SegmentItem) => a.caseCount - b.caseCount },
-      { title: '占比', dataIndex: 'percentage', key: 'pct', width: 80, render: (v: number) => `${v}%` },
+      { title: t('autotest.value'), dataIndex: 'segmentLabel', key: 'sl' },
+      { title: t('autotest.count'), dataIndex: 'caseCount', key: 'cc', width: 80, defaultSortOrder: 'descend' as const, sorter: (a: SegmentItem, b: SegmentItem) => a.caseCount - b.caseCount },
+      { title: t('autotest.percentage'), dataIndex: 'percentage', key: 'pct', width: 80, render: (v: number) => `${v}%` },
     ];
     if (hasBaseline) {
       cols.push(
-        { title: 'Baseline', dataIndex: 'baselineCount', key: 'bc', width: 80, render: (v: number | null) => v ?? '-' },
-        { title: 'Baseline%', dataIndex: 'baselinePercentage', key: 'bp', width: 80, render: (v: number | null) => v != null ? `${v}%` : '-' },
-        { title: '变化', dataIndex: 'changePct', key: 'cp', width: 90,
+        { title: t('autotest.baseline'), dataIndex: 'baselineCount', key: 'bc', width: 80, render: (v: number | null) => v ?? '-' },
+        { title: t('autotest.baselinePercent'), dataIndex: 'baselinePercentage', key: 'bp', width: 80, render: (v: number | null) => v != null ? `${v}%` : '-' },
+        { title: t('autotest.change'), dataIndex: 'changePct', key: 'cp', width: 90,
           render: (v: number | null) => {
             if (v == null) return '-';
             const warn = Math.abs(v) > 5;
@@ -143,7 +145,7 @@ const TestReportPage: React.FC = () => {
     if (hasBaseline) {
       const barData: { label: string; value: number; group: string }[] = [];
       for (const s of sorted) {
-        barData.push({ label: s.segmentLabel, value: s.caseCount, group: '本次' });
+        barData.push({ label: s.segmentLabel, value: s.caseCount, group: t('autotest.currentRun') });
         barData.push({ label: s.segmentLabel, value: s.baselineCount ?? 0, group: 'Baseline' });
       }
       chart = (
@@ -184,9 +186,9 @@ const TestReportPage: React.FC = () => {
         <Card title={varName} size="small">
           <Table
             columns={[
-              { title: '区间', dataIndex: 'segmentLabel', key: 'sl' },
-              { title: '用例数', dataIndex: 'caseCount', key: 'cc', width: 80, defaultSortOrder: 'descend' as const, sorter: (a: SegmentItem, b: SegmentItem) => a.caseCount - b.caseCount },
-              { title: '占比', dataIndex: 'percentage', key: 'pct', width: 80, render: (v: number) => `${v}%` },
+              { title: t('autotest.interval'), dataIndex: 'segmentLabel', key: 'sl' },
+              { title: t('autotest.caseCount'), dataIndex: 'caseCount', key: 'cc', width: 80, defaultSortOrder: 'descend' as const, sorter: (a: SegmentItem, b: SegmentItem) => a.caseCount - b.caseCount },
+              { title: t('autotest.percentage'), dataIndex: 'percentage', key: 'pct', width: 80, render: (v: number) => `${v}%` },
             ]}
             dataSource={sorted} rowKey="segmentLabel" size="small" pagination={false} />
         </Card>
@@ -210,11 +212,11 @@ const TestReportPage: React.FC = () => {
   };
 
   const detailCols = [
-    { title: '输入', dataIndex: 'inputData', key: 'in',
+    { title: t('monitoring.input'), dataIndex: 'inputData', key: 'in',
       render: (v: string) => <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{fmtJson(v)}</pre> },
-    { title: 'Baseline输出', dataIndex: 'baselineOutput', key: 'bo',
+    { title: `${t('autotest.baseline')}${t('monitoring.output')}`, dataIndex: 'baselineOutput', key: 'bo',
       render: (v: string) => <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{fmtJson(v)}</pre> },
-    { title: '本次输出', dataIndex: 'actualOutput', key: 'ao',
+    { title: `${t('autotest.currentRun')}${t('monitoring.output')}`, dataIndex: 'actualOutput', key: 'ao',
       render: (v: string, r: ChangeDetail) => (
         <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
           background: r.diffStatus === 'CHANGED' ? '#fff1f0' : undefined, padding: '2px 4px', borderRadius: 2 }}>
@@ -222,7 +224,7 @@ const TestReportPage: React.FC = () => {
         </pre>
       ),
     },
-    { title: '状态', dataIndex: 'diffStatus', key: 'ds', width: 80, render: () => <Tag color="red">CHANGED</Tag> },
+    { title: t('common.status'), dataIndex: 'diffStatus', key: 'ds', width: 80, render: () => <Tag color="red">CHANGED</Tag> },
   ];
 
   return (
@@ -238,28 +240,28 @@ const TestReportPage: React.FC = () => {
       {/* 右侧内容 */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Space style={{ marginBottom: 12 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
-          <span style={{ fontSize: 15, fontWeight: 500 }}>测试报告 Run #{runId}</span>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>{t('common.back')}</Button>
+          <span style={{ fontSize: 15, fontWeight: 500 }}>{t('autotest.testReport')} Run #{runId}</span>
         </Space>
 
         {/* 汇总 */}
         <div id="summary">
           <Row gutter={12} style={{ marginBottom: 12 }}>
-            <Col span={6}><Card size="small"><Statistic title="总用例" value={summary.totalCases} /></Card></Col>
-            <Col span={6}><Card size="small"><Statistic title="一致" value={summary.sameCount} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-            <Col span={6}><Card size="small"><Statistic title="不一致" value={summary.changedCount}
+            <Col span={6}><Card size="small"><Statistic title={t('autotest.totalCases')} value={summary.totalCases} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title={t('autotest.consistent')} value={summary.sameCount} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title={t('autotest.inconsistent')} value={summary.changedCount}
               valueStyle={summary.changedCount > 0 ? { color: '#f5222d' } : undefined} /></Card></Col>
-            <Col span={6}><Card size="small"><Statistic title="一致率" value={summary.consistencyRate} suffix="%" precision={1} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title={t('autotest.consistencyRate')} value={summary.consistencyRate} suffix="%" precision={1} /></Card></Col>
           </Row>
         </div>
 
         {summary.changedCount > 0 && (
           <Alert style={{ marginBottom: 12 }} type="warning" showIcon
-            message={`本次运行有 ${summary.changedCount} 条变化`}
+            message={t('autotest.changedCountMsg', { count: summary.changedCount })}
             action={
               <Button size="small" type="primary" icon={<CheckCircleOutlined />}
                 loading={updatingBaseline} onClick={handleUpdateBaseline}>
-                确认变化并更新 Baseline
+                {t('autotest.confirmUpdateBaseline')}
               </Button>
             } />
         )}
@@ -267,7 +269,7 @@ const TestReportPage: React.FC = () => {
         {/* 冲突 */}
         {conflicts.length > 0 && (
           <div id="conflicts" style={{ marginBottom: 12 }}>
-            <Card title="冲突检测" size="small">
+            <Card title={t('autotest.conflictDetection')} size="small">
               {conflicts.map((c, i) => (
                 <Alert key={i} style={{ marginBottom: 4 }}
                   type={c.severity === 'ERROR' ? 'error' : 'warning'}
@@ -281,7 +283,7 @@ const TestReportPage: React.FC = () => {
         {/* 输出分布 */}
         {outputGroups.length > 0 && (
           <div id="output-dist">
-            <h4 style={{ margin: '12px 0 8px' }}>输出分布</h4>
+            <h4 style={{ margin: '12px 0 8px' }}>{t('autotest.outputDistribution')}</h4>
             {outputGroups.map(([v, items]) => renderOutputSection(v, items))}
           </div>
         )}
@@ -289,7 +291,7 @@ const TestReportPage: React.FC = () => {
         {/* 输入覆盖 */}
         {inputGroups.length > 0 && (
           <div id="input-cov">
-            <h4 style={{ margin: '12px 0 8px' }}>输入覆盖</h4>
+            <h4 style={{ margin: '12px 0 8px' }}>{t('autotest.inputCoverage')}</h4>
             {inputGroups.map(([v, items]) => renderInputSection(v, items))}
           </div>
         )}
@@ -297,9 +299,9 @@ const TestReportPage: React.FC = () => {
         {/* 变化明细 */}
         {changeDetails.length > 0 && (
           <div id="changes" style={{ marginTop: 12 }}>
-            <Card title={`变化明细（${changeDetails.length} 条）`} size="small">
+            <Card title={t('autotest.changeDetailsCount', { count: changeDetails.length })} size="small">
               <Table columns={detailCols} dataSource={changeDetails} rowKey={(_, i) => String(i)}
-                size="small" pagination={{ pageSize: 20, showTotal: t => `共 ${t} 条` }} loading={loading} />
+                size="small" pagination={{ pageSize: 20, showTotal: total => t('common.total', { count: total }) }} loading={loading} />
             </Card>
           </div>
         )}

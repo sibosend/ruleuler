@@ -12,10 +12,10 @@ const projectArb = fc
   .stringMatching(/^[a-zA-Z0-9\u4e00-\u9fa5]{1,30}$/)
   .filter((s) => s.length > 0 && !s.includes('/') && !s.includes('/edit/'));
 
-/** 合法文件路径：非空，可含 `/`、中文、字母数字、点、下划线 */
+/** 合法文件路径：非空，可含 `/`、中文、字母数字、点、下划线；必须含至少一个非 `/` 字符 */
 const filePathArb = fc
   .stringMatching(/^[a-zA-Z0-9\u4e00-\u9fa5._/]{1,60}$/)
-  .filter((s) => s.length > 0 && !s.includes('/edit/'));
+  .filter((s) => s.length > 0 && !s.includes('/edit/') && s.replace(/\//g, '').length > 0);
 
 describe('Property 4: EditorRoute round-trip', () => {
   // Feature: console-tree-refactor, Property 4: EditorRoute round-trip
@@ -27,7 +27,10 @@ describe('Property 4: EditorRoute round-trip', () => {
         const parsed = parseEditorRoute(route);
         expect(parsed).not.toBeNull();
         expect(parsed!.project).toBe(project);
-        expect(parsed!.filePath).toBe(filePath);
+        // buildEditorRoute strips a leading '/' from filePath, so round-trip
+        // returns the cleaned version
+        const expectedFilePath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+        expect(parsed!.filePath).toBe(expectedFilePath);
       }),
       { numRuns: 100 },
     );

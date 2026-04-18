@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { WarningOutlined, ArrowUpOutlined, ArrowDownOutlined, DownOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import {
@@ -44,6 +45,7 @@ interface AnomalyRecord {
 }
 
 const MonitoringPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -100,7 +102,7 @@ const MonitoringPage: React.FC = () => {
         // URL没指定project时默认选第一个
         if (!project && list.length > 0) setProject(list[0]);
       })
-      .catch(() => message.error('加载项目列表失败'));
+      .catch(() => message.error(t('monitoring.loadProjectsFailed')));
   }, []);
 
   // --- load packages when project changes ---
@@ -170,7 +172,7 @@ const MonitoringPage: React.FC = () => {
         setTrendData(trData || []);
       }
     } catch {
-      if (!silent) message.error('加载实时数据失败');
+      if (!silent) message.error(t('monitoring.loadRealtimeFailed'));
     } finally {
       if (!silent) setVarLoading(false);
     }
@@ -234,7 +236,7 @@ const MonitoringPage: React.FC = () => {
       ]);
       setTrendData(Array.isArray(trData) ? trData : []);
     } catch {
-      message.error('加载趋势失败');
+      message.error(t('monitoring.loadTrendFailed'));
     }
 
     // Fetch PSI (numeric only)
@@ -261,7 +263,7 @@ const MonitoringPage: React.FC = () => {
       const data = await fetchVersionCompare({ project, packageId, versionA, versionB });
       setVersionCompareData(Array.isArray(data) ? data : []);
     } catch {
-      message.error('版本对比失败');
+      message.error(t('monitoring.versionCompareFailed'));
     } finally {
       setVersionLoading(false);
     }
@@ -304,26 +306,26 @@ const MonitoringPage: React.FC = () => {
       }),
     },
     line: { style: { stroke: '#1677ff', lineWidth: 2 } },
-    axis: { x: { title: '时间 (5m窗口)' }, y: { title: '缺失率' } },
-  }), [chartData, spikeTimes]);
+    axis: { x: { title: t('monitoring.time5mWindow') }, y: { title: t('monitoring.missingRate') } },
+  }), [chartData, spikeTimes, i18n.language]);
 
   // --- variable folding: show first 20 anomaly vars, rest collapsed ---
 
   // --- daily trend chart data ---
   const execVolumeData = useMemo(() => {
     return dailyTrend.flatMap(d => [
-      { date: d.stat_date, value: d.total_executions, type: '总执行量' },
-      { date: d.stat_date, value: d.missing_executions, type: '缺失量' },
-      { date: d.stat_date, value: d.error_executions, type: '错误量' },
+      { date: d.stat_date, value: d.total_executions, type: t('monitoring.totalExecVolume') },
+      { date: d.stat_date, value: d.missing_executions, type: t('monitoring.missingVolume') },
+      { date: d.stat_date, value: d.error_executions, type: t('monitoring.errorVolume') },
     ]);
-  }, [dailyTrend]);
+  }, [dailyTrend, i18n.language]);
 
   const rateTrendData = useMemo(() => {
     return dailyTrend.flatMap(d => [
-      { date: d.stat_date, value: +(d.anomaly_rate * 100).toFixed(2), type: '异常率(%)' },
-      { date: d.stat_date, value: +(d.error_rate * 100).toFixed(2), type: '错误率(%)' },
+      { date: d.stat_date, value: +(d.anomaly_rate * 100).toFixed(2), type: t('monitoring.anomalyRatePercent') },
+      { date: d.stat_date, value: +(d.error_rate * 100).toFixed(2), type: t('monitoring.errorRatePercent') },
     ]);
-  }, [dailyTrend]);
+  }, [dailyTrend, i18n.language]);
   const displayedVariables = useMemo(() => {
     if (showAllVars) return variables;
     return variables.slice(0, 20);
@@ -331,7 +333,7 @@ const MonitoringPage: React.FC = () => {
 
   // --- helpers ---
   const renderDodInfo = (todayVal: number, yesterdayVal: number, isPercent = false) => {
-    if (yesterdayVal === 0) return <span style={{ color: '#999' }}>昨日: {yesterdayVal}</span>;
+    if (yesterdayVal === 0) return <span style={{ color: '#999' }}>{t('monitoring.yesterday')}: {yesterdayVal}</span>;
     const diff = todayVal - yesterdayVal;
     const dod = yesterdayVal > 0 ? (diff / yesterdayVal) * 100 : 0;
 
@@ -340,7 +342,7 @@ const MonitoringPage: React.FC = () => {
       const isBad = diffPoints > 0;
       return (
         <Space>
-          <span>昨日: {(yesterdayVal * 100).toFixed(2)}%</span>
+          <span>{t('monitoring.yesterday')}: {(yesterdayVal * 100).toFixed(2)}%</span>
           <span style={{ color: isBad ? '#cf1322' : '#3f8600' }}>
             {diffPoints > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(diffPoints).toFixed(2)}%
           </span>
@@ -350,7 +352,7 @@ const MonitoringPage: React.FC = () => {
 
     return (
       <Space>
-        <span>昨日: {yesterdayVal}</span>
+        <span>{t('monitoring.yesterday')}: {yesterdayVal}</span>
         <span style={{ color: diff > 0 ? '#3f8600' : '#cf1322' }}>
           {diff > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(dod).toFixed(2)}%
         </span>
@@ -383,16 +385,16 @@ const MonitoringPage: React.FC = () => {
 
   // --- table columns ---
   const columns = useMemo(() => [
-    { title: '类别', dataIndex: 'var_category', key: 'var_category', width: 140 },
-    { title: '变量名', dataIndex: 'var_name', key: 'var_name', width: 180 },
-    { title: '类型', dataIndex: 'var_type', key: 'var_type', width: 80 },
+    { title: t('monitoring.category'), dataIndex: 'var_category', key: 'var_category', width: 140 },
+    { title: t('monitoring.varName'), dataIndex: 'var_name', key: 'var_name', width: 180 },
+    { title: t('monitoring.type'), dataIndex: 'var_type', key: 'var_type', width: 80 },
     {
-      title: '请求量', dataIndex: 'sample_count', key: 'sample_count', width: 90,
+      title: t('monitoring.requestCount'), dataIndex: 'sample_count', key: 'sample_count', width: 90,
       sorter: true,
       sortOrder: sortBy === 'sample_count' ? 'descend' as const : undefined,
     },
     {
-      title: '缺失率', dataIndex: 'missing_rate', key: 'missing_rate', width: 130,
+      title: t('monitoring.missingRate'), dataIndex: 'missing_rate', key: 'missing_rate', width: 130,
       sorter: true,
       sortOrder: sortBy === 'missing_rate' ? 'descend' as const : undefined,
       render: (_: number | null, r: Variable) => (
@@ -400,16 +402,16 @@ const MonitoringPage: React.FC = () => {
           <span style={{ color: r.missing_rate != null && r.missing_rate > 0.05 ? '#ff4d4f' : 'inherit' }}>
             {r.missing_rate != null ? `${(r.missing_rate * 100).toFixed(1)}%` : '-'}
           </span>
-          {renderDodArrow(r.dod_missing_rate_pct, r.wow_missing_rate_pct, '上周缺失率', null, true)}
+          {renderDodArrow(r.dod_missing_rate_pct, r.wow_missing_rate_pct, t('monitoring.lastWeekMissingRate'), null, true)}
         </span>
       ),
     },
     {
-      title: '均值', dataIndex: 'mean', key: 'mean', width: 140,
+      title: t('monitoring.mean'), dataIndex: 'mean', key: 'mean', width: 140,
       render: (_: number | null, r: Variable) => (
         <span>
           {r.mean != null ? r.mean.toFixed(2) : '-'}
-          {renderDodArrow(r.dod_mean_pct, r.wow_mean_pct, '昨日均值', r.yesterday_mean, false)}
+          {renderDodArrow(r.dod_mean_pct, r.wow_mean_pct, t('monitoring.yesterdayMean'), r.yesterday_mean, false)}
         </span>
       ),
     },
@@ -436,7 +438,7 @@ const MonitoringPage: React.FC = () => {
       },
     },
     {
-      title: '错误率', dataIndex: 'error_rate', key: 'error_rate', width: 90,
+      title: t('monitoring.errorRate'), dataIndex: 'error_rate', key: 'error_rate', width: 90,
       sorter: true,
       sortOrder: sortBy === 'error_rate' ? 'descend' as const : undefined,
       render: (v: number | null) => (
@@ -446,7 +448,7 @@ const MonitoringPage: React.FC = () => {
       ),
     },
     {
-      title: '告警', dataIndex: 'alert_flags', key: 'alert_flags', width: 160,
+      title: t('monitoring.alert'), dataIndex: 'alert_flags', key: 'alert_flags', width: 160,
       sorter: true,
       sortOrder: sortBy === 'anomaly' ? 'descend' as const : undefined,
       render: (v: string | null, r: Variable) => {
@@ -455,58 +457,58 @@ const MonitoringPage: React.FC = () => {
         return (
           <Space size={4} wrap>
             {v && <Tag icon={<WarningOutlined />} color="error">{v}</Tag>}
-            {drift && !drift.has_baseline && <Tag color="default">无基准</Tag>}
-            {drift?.enum_drift && <Tag color="warning">分布偏移</Tag>}
-            {drift?.top_value_changed && <Tag color="error">主值变更</Tag>}
+            {drift && !drift.has_baseline && <Tag color="default">{t('monitoring.noBaseline')}</Tag>}
+            {drift?.enum_drift && <Tag color="warning">{t('monitoring.distributionDrift')}</Tag>}
+            {drift?.top_value_changed && <Tag color="error">{t('monitoring.topValueChange')}</Tag>}
             {!v && (!drift || (!drift.enum_drift && !drift.top_value_changed && drift.has_baseline !== false)) && '-'}
           </Space>
         );
       },
     },
-  ], [psiCache, enumDriftMap, sortBy]);
+  ], [psiCache, enumDriftMap, sortBy, i18n.language]);
 
   // --- anomaly records columns ---
   const anomalyColumns = useMemo(() => [
     {
-      title: '执行ID', dataIndex: 'execution_id', key: 'execution_id', width: 200,
+      title: t('monitoring.execId'), dataIndex: 'execution_id', key: 'execution_id', width: 200,
       render: (id: string) => (
         <a onClick={() => navigate(`/monitoring/executions/${id}`)}>{id}</a>
       ),
     },
-    { title: '执行时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+    { title: t('monitoring.execTime'), dataIndex: 'created_at', key: 'created_at', width: 180 },
     {
-      title: '变量值', key: 'value', width: 120,
+      title: t('monitoring.varValue'), key: 'value', width: 120,
       render: (_: any, r: AnomalyRecord) => r.val_num != null ? r.val_num : (r.val_str ?? '-'),
     },
     {
-      title: '异常类型', dataIndex: 'anomaly_type', key: 'anomaly_type', width: 100,
+      title: t('monitoring.anomalyType'), dataIndex: 'anomaly_type', key: 'anomaly_type', width: 100,
       render: (v: string) => <Tag color="error">{v}</Tag>,
     },
-  ], [navigate]);
+  ], [navigate, i18n.language]);
 
   // --- version compare columns ---
   const versionCompareColumns = useMemo(() => [
-    { title: '类别', dataIndex: 'varCategory', key: 'varCategory', width: 120 },
-    { title: '变量名', dataIndex: 'varName', key: 'varName', width: 150 },
+    { title: t('monitoring.category'), dataIndex: 'varCategory', key: 'varCategory', width: 120 },
+    { title: t('monitoring.varName'), dataIndex: 'varName', key: 'varName', width: 150 },
     {
-      title: `版本A`, key: 'periodA', width: 180,
+      title: t('monitoring.versionA'), key: 'periodA', width: 180,
       render: (_: any, r: any) => r.periodA ? (
         <div>
-          <div>缺失率: {r.periodA.missing_rate != null ? `${(r.periodA.missing_rate * 100).toFixed(1)}%` : '-'}</div>
-          <div>均值: {r.periodA.mean != null ? r.periodA.mean.toFixed(2) : '-'}</div>
+          <div>{t('monitoring.missingRate')}: {r.periodA.missing_rate != null ? `${(r.periodA.missing_rate * 100).toFixed(1)}%` : '-'}</div>
+          <div>{t('monitoring.mean')}: {r.periodA.mean != null ? r.periodA.mean.toFixed(2) : '-'}</div>
         </div>
       ) : '-',
     },
     {
-      title: `版本B`, key: 'periodB', width: 180,
+      title: t('monitoring.versionB'), key: 'periodB', width: 180,
       render: (_: any, r: any) => r.periodB ? (
         <div>
-          <div>缺失率: {r.periodB.missing_rate != null ? `${(r.periodB.missing_rate * 100).toFixed(1)}%` : '-'}</div>
-          <div>均值: {r.periodB.mean != null ? r.periodB.mean.toFixed(2) : '-'}</div>
+          <div>{t('monitoring.missingRate')}: {r.periodB.missing_rate != null ? `${(r.periodB.missing_rate * 100).toFixed(1)}%` : '-'}</div>
+          <div>{t('monitoring.mean')}: {r.periodB.mean != null ? r.periodB.mean.toFixed(2) : '-'}</div>
         </div>
       ) : '-',
     },
-  ], []);
+  ], [i18n.language]);
 
   // --- PSI info for selected var ---
   const selectedPsiVal = useMemo(() => {
@@ -521,18 +523,18 @@ const MonitoringPage: React.FC = () => {
       <Card size="small" bodyStyle={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space wrap>
-            <Select style={{ width: 180 }} placeholder="选择项目" value={project} onChange={setProject}
+            <Select style={{ width: 180 }} placeholder={t('common.selectProject')} value={project} onChange={setProject}
               options={projects.map((p) => ({ label: p, value: p }))} allowClear />
-            <Select style={{ width: 220 }} placeholder="选择知识包" value={packageId} onChange={setPackageId} disabled={!project}
+            <Select style={{ width: 220 }} placeholder={t('common.selectPackage')} value={packageId} onChange={setPackageId} disabled={!project}
               options={packages.map((p) => ({ label: `${p.name} (${p.id})`, value: p.id }))} allowClear />
             <Radio.Group value={ioType} onChange={(e) => setIoType(e.target.value)}>
-              <Radio.Button value="input">输入</Radio.Button>
-              <Radio.Button value="output">输出</Radio.Button>
+              <Radio.Button value="input">{t('monitoring.input')}</Radio.Button>
+              <Radio.Button value="output">{t('monitoring.output')}</Radio.Button>
             </Radio.Group>
           </Space>
           <Space>
-            <span style={{ color: '#999', fontSize: 13 }}>最新更新: {lastRefresh.toLocaleTimeString()}</span>
-            <span style={{ fontSize: 13 }}>自动刷新</span>
+            <span style={{ color: '#999', fontSize: 13 }}>{t('monitoring.lastUpdate')}: {lastRefresh.toLocaleTimeString()}</span>
+            <span style={{ fontSize: 13 }}>{t('monitoring.autoRefresh')}</span>
             <Switch checked={autoRefresh} onChange={setAutoRefresh} size="small" />
           </Space>
         </div>
@@ -542,7 +544,7 @@ const MonitoringPage: React.FC = () => {
       <Row gutter={16}>
         <Col span={8}>
           <Card size="small">
-            <Statistic title="当日总执行量" value={dashboard?.today?.total_executions || 0} precision={0} />
+            <Statistic title={t('monitoring.todayTotalExec')} value={dashboard?.today?.total_executions || 0} precision={0} />
             <div style={{ marginTop: 8, fontSize: 13 }}>
               {renderDodInfo(dashboard?.today?.total_executions || 0, dashboard?.yesterday?.total_executions || 0, false)}
             </div>
@@ -550,7 +552,7 @@ const MonitoringPage: React.FC = () => {
         </Col>
         <Col span={8}>
           <Card size="small">
-            <Statistic title="异常率" value={(dashboard?.today?.anomaly_rate || 0) * 100} precision={2} suffix="%" />
+            <Statistic title={t('monitoring.anomalyRate')} value={(dashboard?.today?.anomaly_rate || 0) * 100} precision={2} suffix="%" />
             <div style={{ marginTop: 8, fontSize: 13 }}>
               {renderDodInfo(dashboard?.today?.anomaly_rate || 0, dashboard?.yesterday?.anomaly_rate || 0, true)}
             </div>
@@ -558,7 +560,7 @@ const MonitoringPage: React.FC = () => {
         </Col>
         <Col span={8}>
           <Card size="small">
-            <Statistic title="错误率" value={(dashboard?.today?.error_rate || 0) * 100} precision={2} suffix="%" />
+            <Statistic title={t('monitoring.errorRate')} value={(dashboard?.today?.error_rate || 0) * 100} precision={2} suffix="%" />
             <div style={{ marginTop: 8, fontSize: 13 }}>
               {renderDodInfo(dashboard?.today?.error_rate || 0, dashboard?.yesterday?.error_rate || 0, true)}
             </div>
@@ -575,12 +577,12 @@ const MonitoringPage: React.FC = () => {
       {dailyTrend.length > 0 && (
         <Row gutter={16}>
           <Col span={14}>
-            <Card size="small" title="近14日执行量走势">
+            <Card size="small" title={t('monitoring.last14dExecTrend')}>
               <Line data={execVolumeData} xField="date" yField="value" colorField="type" height={220} />
             </Card>
           </Col>
           <Col span={10}>
-            <Card size="small" title="近14日异常率/错误率走势">
+            <Card size="small" title={t('monitoring.last14dRateTrend')}>
               <Line data={rateTrendData} xField="date" yField="value" colorField="type" height={220} />
             </Card>
           </Col>
@@ -589,7 +591,7 @@ const MonitoringPage: React.FC = () => {
 
       {/* 中间漂移表 — 抽屉打开时压缩为 60% */}
       <div style={{ width: drawerOpen ? '60%' : '100%', transition: 'width 0.3s ease' }}>
-        <Card size="small" title="实时变量分布 (自动排序：异常优先)">
+        <Card size="small" title={t('monitoring.realtimeVarDistribution')}>
           <Table
             columns={columns}
             dataSource={displayedVariables}
@@ -620,14 +622,14 @@ const MonitoringPage: React.FC = () => {
           {!showAllVars && variables.length > 20 && (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <Button type="link" icon={<DownOutlined />} onClick={() => setShowAllVars(true)}>
-                展开全部 ({variables.length} 个变量)
+                {t('monitoring.expandAll')} ({t('monitoring.varCount', { count: variables.length })})
               </Button>
             </div>
           )}
           {showAllVars && variables.length > 20 && (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <Button type="link" onClick={() => setShowAllVars(false)}>
-                收起 (仅显示前 20 个)
+                {t('monitoring.collapseVars')} ({t('monitoring.showFirst', { count: 20 })})
               </Button>
             </div>
           )}
@@ -636,7 +638,7 @@ const MonitoringPage: React.FC = () => {
 
       {/* 右侧下钻抽屉 */}
       <Drawer
-        title={selectedVar ? `${selectedVar.var_category}.${selectedVar.var_name}` : '变量详情'}
+        title={selectedVar ? `${selectedVar.var_category}.${selectedVar.var_name}` : t('monitoring.variableDetail')}
         placement="right"
         width="40%"
         open={drawerOpen}
@@ -649,17 +651,17 @@ const MonitoringPage: React.FC = () => {
             items={[
               {
                 key: 'trend',
-                label: '趋势',
+                label: t('monitoring.trend'),
                 children: (
                   <div>
                     {/* 变量基本信息 */}
                     <Descriptions size="small" column={2} style={{ marginBottom: 16 }}>
-                      <Descriptions.Item label="类型">{selectedVar.var_type}</Descriptions.Item>
-                      <Descriptions.Item label="请求量">{selectedVar.sample_count}</Descriptions.Item>
-                      <Descriptions.Item label="缺失率">
+                      <Descriptions.Item label={t('monitoring.type')}>{selectedVar.var_type}</Descriptions.Item>
+                      <Descriptions.Item label={t('monitoring.requestCount')}>{selectedVar.sample_count}</Descriptions.Item>
+                      <Descriptions.Item label={t('monitoring.missingRate')}>
                         {selectedVar.missing_rate != null ? `${(selectedVar.missing_rate * 100).toFixed(1)}%` : '-'}
                       </Descriptions.Item>
-                      <Descriptions.Item label="均值">
+                      <Descriptions.Item label={t('monitoring.mean')}>
                         {selectedVar.mean != null ? selectedVar.mean.toFixed(2) : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="Min / Max">
@@ -681,14 +683,14 @@ const MonitoringPage: React.FC = () => {
                     {chartData.length > 0 ? (
                       <Line {...chartConfig} />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无趋势数据</div>
+                      <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>{t('monitoring.noTrendData')}</div>
                     )}
                   </div>
                 ),
               },
               {
                 key: 'anomaly',
-                label: '异常记录',
+                label: t('monitoring.anomalyRecords'),
                 children: (
                   <Table
                     columns={anomalyColumns}
@@ -700,7 +702,7 @@ const MonitoringPage: React.FC = () => {
                       current: anomalyPage,
                       pageSize: 20,
                       total: anomalyTotal,
-                      showTotal: (t) => `共 ${t} 条`,
+                      showTotal: (total) => t('common.totalRecords', { count: total }),
                       onChange: (page) => {
                         setAnomalyPage(page);
                         if (selectedVar) loadAnomalyRecords(selectedVar, page);
@@ -711,13 +713,13 @@ const MonitoringPage: React.FC = () => {
               },
               {
                 key: 'version',
-                label: '版本对比',
+                label: t('monitoring.versionCompare'),
                 children: (
                   <div>
                     <Space style={{ marginBottom: 16 }} wrap>
                       <Select
                         style={{ width: 160 }}
-                        placeholder="版本A"
+                        placeholder={t('monitoring.versionA')}
                         value={versionA}
                         onChange={setVersionA}
                         allowClear
@@ -725,7 +727,7 @@ const MonitoringPage: React.FC = () => {
                       />
                       <Select
                         style={{ width: 160 }}
-                        placeholder="版本B"
+                        placeholder={t('monitoring.versionB')}
                         value={versionB}
                         onChange={setVersionB}
                         allowClear
@@ -737,7 +739,7 @@ const MonitoringPage: React.FC = () => {
                         disabled={!versionA || !versionB}
                         loading={versionLoading}
                       >
-                        对比
+                        {t('monitoring.compare')}
                       </Button>
                     </Space>
                     {versionCompareData.length > 0 && (
@@ -751,7 +753,7 @@ const MonitoringPage: React.FC = () => {
                     )}
                     {versionCompareData.length === 0 && !versionLoading && (
                       <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-                        选择两个版本后点击"对比"查看结果
+                        {t('monitoring.compareHint')}
                       </div>
                     )}
                   </div>

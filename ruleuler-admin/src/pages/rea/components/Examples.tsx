@@ -1,26 +1,29 @@
 import React from 'react';
 import { List, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 
 export interface ExamplesProps {
   type: 'condition' | 'action' | 'else';
   onInsert: (text: string) => void;
 }
 
-const CONDITION_EXAMPLES = [
-  '变量 == 值',
-  '变量 > 值 AND 变量 < 值',
-  '变量 In (值1, 值2)',
-  '变量 Contain 值',
+const CONDITION_EXAMPLE_KEYS = [
+  'rea.exampleCondition1',
+  'rea.exampleCondition2',
+  'rea.exampleCondition3',
+  'rea.exampleCondition4',
 ];
 
-const ASSIGNMENT_EXAMPLES = [
-  '变量 = 值',
-  '变量 = 变量 + 值',
+const ASSIGNMENT_EXAMPLE_KEYS = [
+  'rea.exampleAction1',
+  'rea.exampleAction2',
 ];
 
 const Examples: React.FC<ExamplesProps> = ({ type, onInsert }) => {
-  const items = type === 'condition' ? CONDITION_EXAMPLES : ASSIGNMENT_EXAMPLES;
+  const { t } = useTranslation();
+  const exampleKeys = type === 'condition' ? CONDITION_EXAMPLE_KEYS : ASSIGNMENT_EXAMPLE_KEYS;
+  const items = exampleKeys.map(key => t(key));
 
   return (
     <List
@@ -39,7 +42,7 @@ const Examples: React.FC<ExamplesProps> = ({ type, onInsert }) => {
             icon={<PlusOutlined />}
             onClick={() => onInsert(item)}
           >
-            插入
+            {t('rea.insert')}
           </Button>
         </List.Item>
       )}

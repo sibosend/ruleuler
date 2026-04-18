@@ -50,16 +50,24 @@ beforeEach(() => {
 // formatStorageType 函数测试（Preservation）
 // ============================================================
 describe('formatStorageType', () => {
+  const t = (key: string) => {
+    const map: Record<string, string> = {
+      'project.storageDb': '数据库',
+      'project.storageJcr': 'JCR',
+    };
+    return map[key] ?? key;
+  };
+
   it('db → 数据库', () => {
-    expect(formatStorageType('db')).toBe('数据库');
+    expect(formatStorageType('db', t)).toBe('数据库');
   });
 
   it('jcr → JCR', () => {
-    expect(formatStorageType('jcr')).toBe('JCR');
+    expect(formatStorageType('jcr', t)).toBe('JCR');
   });
 
   it('undefined → JCR', () => {
-    expect(formatStorageType(undefined)).toBe('JCR');
+    expect(formatStorageType(undefined, t)).toBe('JCR');
   });
 });
 

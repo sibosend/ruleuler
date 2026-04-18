@@ -57,10 +57,16 @@ describe('Property 2: 文件类型到编辑器 URL 映射正确性', () => {
         const src = buildEditorSrc(fileName, fullPath);
         expect(src).not.toBeNull();
 
-        const editorUrl = getEditorUrl(fileName)!;
-        expect(src).toContain(editorUrl);
-        const expectedFile = fullPath.startsWith('dbr:') ? fullPath : `dbr:${fullPath}`;
-        expect(src).toContain(`?file=${encodeURIComponent(expectedFile)}`);
+        // .rea.xml uses a separate frontend editor page
+        if (fileName.endsWith('.rea.xml')) {
+          expect(src).toContain('/admin/rea-editor');
+          expect(src).toContain(`?file=${encodeURIComponent(`dbr:${fullPath}`)}`);
+        } else {
+          const editorUrl = getEditorUrl(fileName)!;
+          expect(src).toContain(editorUrl);
+          const expectedFile = fullPath.startsWith('dbr:') ? fullPath : `dbr:${fullPath}`;
+          expect(src).toContain(`?file=${encodeURIComponent(expectedFile)}`);
+        }
       }),
       { numRuns: 100 },
     );

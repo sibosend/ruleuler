@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Table, Select, DatePicker, Button, Card, Tag, Space, message,
 } from 'antd';
 import { SwapOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import { fetchCompare, fetchRealtimeVariables } from '../../api/monitoring';
@@ -69,20 +70,20 @@ interface CompareResult {
 /* ── 指标定义 ── */
 
 const NUMERIC_METRICS: { key: keyof PeriodStats; label: string }[] = [
-  { key: 'mean', label: '均值' },
-  { key: 'std', label: '标准差' },
-  { key: 'p25', label: 'P25' },
-  { key: 'p50', label: 'P50' },
-  { key: 'p75', label: 'P75' },
-  { key: 'missing_rate', label: '缺失率' },
-  { key: 'outlier_rate', label: '异常率' },
+  { key: 'mean', label: 'monitoring.mean' },
+  { key: 'std', label: 'monitoring.stddev' },
+  { key: 'p25', label: 'monitoring.p25' },
+  { key: 'p50', label: 'monitoring.p50' },
+  { key: 'p75', label: 'monitoring.p75' },
+  { key: 'missing_rate', label: 'monitoring.missingRate' },
+  { key: 'outlier_rate', label: 'monitoring.outlierRate' },
 ];
 
 const CATEGORY_METRICS: { key: keyof PeriodStats; label: string }[] = [
-  { key: 'top_value', label: '最高频值' },
-  { key: 'top_freq_ratio', label: '最高频占比' },
-  { key: 'distinct_count', label: '去重数' },
-  { key: 'missing_rate', label: '缺失率' },
+  { key: 'top_value', label: 'monitoring.topFreqValue' },
+  { key: 'top_freq_ratio', label: 'monitoring.topFreqRatio' },
+  { key: 'distinct_count', label: 'monitoring.distinctCount' },
+  { key: 'missing_rate', label: 'monitoring.missingRate' },
 ];
 
 /* ── 格式化 ── */
@@ -111,6 +112,7 @@ const disabledDate = (current: Dayjs) =>
 /* ── 组件 ── */
 
 const PeriodComparePage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<string[]>([]);
   const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
@@ -140,7 +142,7 @@ const PeriodComparePage: React.FC = () => {
         setProjects(list);
         if (!project && list.length > 0) setProject(list[0]);
       })
-      .catch(() => message.error('加载项目列表失败'));
+      .catch(() => message.error(t('monitoring.loadProjectsFailed')));
   }, []);
 
   /* 加载知识包 */
@@ -187,13 +189,13 @@ const PeriodComparePage: React.FC = () => {
         // 自动选中所有变量
         setSelectedVars(list.map((v) => `${v.var_category}:${v.var_name}`));
       })
-      .catch(() => message.error('加载变量列表失败'));
+      .catch(() => message.error(t('monitoring.loadVariablesFailed')));
   }, [project, packageId, ioType]);
 
   /* 执行对比 */
   const handleCompare = useCallback(async () => {
     if (!project || !packageId || selectedVars.length === 0 || !periodA || !periodB) {
-      message.warning('请完整选择项目、知识包、变量和两个周期');
+      message.warning(t('monitoring.completeSelection'));
       return;
     }
     setLoading(true);
@@ -211,7 +213,7 @@ const PeriodComparePage: React.FC = () => {
       });
       setResults(Array.isArray(data) ? data : []);
     } catch {
-      message.error('对比请求失败');
+      message.error(t('monitoring.compareFailed'));
     } finally {
       setLoading(false);
     }
@@ -236,7 +238,7 @@ const PeriodComparePage: React.FC = () => {
     const drift = isNumeric && isDriftSignificant(r.periodA, r.periodB);
 
     return metrics.map((m) => ({
-      metric: m.label,
+      metric: t(m.label),
       a: r.periodA[m.key],
       b: r.periodB[m.key],
       key: m.key,
@@ -246,13 +248,30 @@ const PeriodComparePage: React.FC = () => {
 
   const [varFilterOpen, setVarFilterOpen] = useState(false);
 
+  const compareTableColumns = useMemo(() => [
+    { title: t('monitoring.metric'), dataIndex: 'metric', width: 120 },
+    { title: t('monitoring.periodALabel'), dataIndex: 'a', width: 140, render: (v: unknown) => fmtVal(v) },
+    { title: t('monitoring.periodBLabel'), dataIndex: 'b', width: 140, render: (v: unknown) => fmtVal(v) },
+    {
+      title: t('monitoring.diffPercent'),
+      dataIndex: 'key',
+      width: 120,
+      render: (_: string, row: MetricRow) => {
+        const txt = fmtDiff(row.a, row.b);
+        const highlight =
+          row.drift && (row.key === 'missing_rate' || row.key === 'mean');
+        return <span style={highlight ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>{txt}</span>;
+      },
+    },
+  ], [i18n.language]);
+
   return (
     <div>
       {/* 筛选器 */}
       <Space wrap style={{ marginBottom: 12 }}>
         <Select
           style={{ width: 180 }}
-          placeholder="选择项目"
+          placeholder={t('common.selectProject')}
           allowClear
           value={project}
           onChange={setProject}
@@ -260,7 +279,7 @@ const PeriodComparePage: React.FC = () => {
         />
         <Select
           style={{ width: 220 }}
-          placeholder="选择知识包"
+          placeholder={t('common.selectPackage')}
           allowClear
           value={packageId}
           onChange={setPackageId}
@@ -272,8 +291,8 @@ const PeriodComparePage: React.FC = () => {
           value={ioType}
           onChange={setIoType}
           options={[
-            { label: '输入', value: 'input' },
-            { label: '输出', value: 'output' },
+            { label: t('monitoring.input'), value: 'input' },
+            { label: t('monitoring.output'), value: 'output' },
           ]}
         />
         <Button
@@ -281,7 +300,7 @@ const PeriodComparePage: React.FC = () => {
           type="link"
           onClick={() => setVarFilterOpen(!varFilterOpen)}
         >
-          {varFilterOpen ? '收起变量筛选' : `变量筛选（已选 ${selectedVars.length}/${varOptions.length}）`}
+          {varFilterOpen ? t('monitoring.collapseVarFilter') : `${t('monitoring.varFilter')}（${t('monitoring.selected', { count: selectedVars.length })}/${varOptions.length}）`}
         </Button>
       </Space>
 
@@ -290,7 +309,7 @@ const PeriodComparePage: React.FC = () => {
           <Select
             mode="multiple"
             style={{ minWidth: 500 }}
-            placeholder="筛选变量（默认全部）"
+            placeholder={t('monitoring.filterVarPlaceholder')}
             value={selectedVars}
             onChange={setSelectedVars}
             maxTagCount={5}
@@ -303,20 +322,20 @@ const PeriodComparePage: React.FC = () => {
       )}
 
       <Space wrap style={{ marginBottom: 12 }}>
-        <span>周期A：</span>
+        <span>{t('monitoring.periodA')}</span>
         <RangePicker
           value={periodA}
           onChange={(v) => { if (v && v[0] && v[1]) setPeriodA([v[0], v[1]]); }}
           disabledDate={disabledDate}
         />
-        <span>周期B：</span>
+        <span>{t('monitoring.periodB')}</span>
         <RangePicker
           value={periodB}
           onChange={(v) => { if (v && v[0] && v[1]) setPeriodB([v[0], v[1]]); }}
           disabledDate={disabledDate}
         />
         <Button type="primary" icon={<SwapOutlined />} onClick={handleCompare} loading={loading}>
-          对比
+          {t('monitoring.compare')}
         </Button>
       </Space>
 
@@ -332,7 +351,7 @@ const PeriodComparePage: React.FC = () => {
               <Space>
                 <span>{r.varCategory}.{r.varName}</span>
                 <Tag>{r.varType}</Tag>
-                {hasDrift && <Tag icon={<WarningOutlined />} color="error">显著漂移</Tag>}
+                {hasDrift && <Tag icon={<WarningOutlined />} color="error">{t('monitoring.significantDrift')}</Tag>}
               </Space>
             }
             style={{ marginBottom: 12 }}
@@ -342,22 +361,7 @@ const PeriodComparePage: React.FC = () => {
               rowKey="key"
               size="small"
               pagination={false}
-              columns={[
-                { title: '指标', dataIndex: 'metric', width: 120 },
-                { title: '周期A', dataIndex: 'a', width: 140, render: (v) => fmtVal(v) },
-                { title: '周期B', dataIndex: 'b', width: 140, render: (v) => fmtVal(v) },
-                {
-                  title: '差异%',
-                  dataIndex: 'key',
-                  width: 120,
-                  render: (_, row) => {
-                    const txt = fmtDiff(row.a, row.b);
-                    const highlight =
-                      row.drift && (row.key === 'missing_rate' || row.key === 'mean');
-                    return <span style={highlight ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>{txt}</span>;
-                  },
-                },
-              ]}
+              columns={compareTableColumns}
               rowClassName={(row) =>
                 row.drift && (row.key === 'missing_rate' || row.key === 'mean') ? 'drift-row' : ''
               }
@@ -368,7 +372,7 @@ const PeriodComparePage: React.FC = () => {
 
       {results.length === 0 && !loading && (
         <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
-          请选择变量和周期后点击"对比"
+          {t('monitoring.selectVarPeriod')}
         </div>
       )}
 

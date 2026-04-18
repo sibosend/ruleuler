@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   listApprovals, getApprovalDetail, approveApproval, rejectApproval,
   publishApproval,
@@ -26,24 +27,25 @@ interface Props {
 }
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
-  TESTING: { color: 'processing', label: '测试中' },
-  PENDING: { color: 'blue', label: '待审核' },
-  APPROVED: { color: 'cyan', label: '待上线' },
-  GRAYSCALE: { color: 'purple', label: '灰度中' },
-  REJECTED: { color: 'red', label: '已拒绝' },
-  PUBLISH_FAILED: { color: 'orange', label: '上线失败' },
-  PUBLISHED: { color: 'green', label: '已上线' },
+  TESTING: { color: 'processing', label: 'release.statusTesting' },
+  PENDING: { color: 'blue', label: 'release.statusPending' },
+  APPROVED: { color: 'cyan', label: 'release.statusApproved' },
+  GRAYSCALE: { color: 'purple', label: 'release.statusGrayscale' },
+  REJECTED: { color: 'red', label: 'release.statusRejected' },
+  PUBLISH_FAILED: { color: 'orange', label: 'release.statusPublishFailed' },
+  PUBLISHED: { color: 'green', label: 'release.statusPublished' },
 };
 
 const CHANGE_TYPE_MAP: Record<string, { color: string; label: string }> = {
-  ADDED: { color: 'green', label: '新增' },
-  MODIFIED: { color: 'blue', label: '修改' },
-  DELETED: { color: 'red', label: '删除' },
+  ADDED: { color: 'green', label: 'release.changeAdded' },
+  MODIFIED: { color: 'blue', label: 'release.changeModified' },
+  DELETED: { color: 'red', label: 'release.changeDeleted' },
 };
 
 const PAGE_SIZE = 20;
 
 const ReleaseListPage: React.FC<Props> = ({ mode }) => {
+  const { t, i18n } = useTranslation();
   const [projects, setProjects] = useState<string[]>([]);
   const [project, setProject] = useState<string | null>(null);
   const [data, setData] = useState<ApprovalVO[]>([]);
@@ -128,10 +130,10 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     try {
       if (commentModal.type === 'approve') {
         await approveApproval(commentModal.id, comment || undefined);
-        message.success('审批通过');
+        message.success(t('release.approveSuccess'));
       } else {
         await rejectApproval(commentModal.id, comment || undefined);
-        message.success('已拒绝');
+        message.success(t('release.rejectSuccess'));
       }
       setCommentModal(null);
       setComment('');
@@ -142,7 +144,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const handlePublish = async (id: number) => {
     try {
       await publishApproval(id);
-      message.success('上线成功');
+      message.success(t('release.publishSuccess'));
       fetchData();
     } catch { /* request.ts 已处理 */ }
   };
@@ -158,7 +160,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         description: gsDescription || undefined,
         operator: currentUser || undefined,
       });
-      message.success('灰度发布已激活');
+      message.success(t('release.grayscaleActivated'));
       setGrayscaleModal(null);
       setGsDescription('');
       setGsCondition('');
@@ -201,25 +203,25 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const columns: ColumnsType<ApprovalVO> = useMemo(() => {
     const base: ColumnsType<ApprovalVO> = [
       { title: 'ID', dataIndex: 'id', width: 60 },
-      { title: '知识包', dataIndex: 'packageName', ellipsis: true },
+      { title: t('release.knowledgePackage'), dataIndex: 'packageName', ellipsis: true },
       {
-        title: '状态', dataIndex: 'status', width: 100,
-        render: (s: string) => { const m = STATUS_MAP[s]; return m ? <Tag color={m.color}>{m.label}</Tag> : s; },
+        title: t('common.status'), dataIndex: 'status', width: 100,
+        render: (s: string) => { const m = STATUS_MAP[s]; return m ? <Tag color={m.color}>{t(m.label)}</Tag> : s; },
       },
-      { title: '提交人', dataIndex: 'submitter', width: 90 },
+      { title: t('release.submitter'), dataIndex: 'submitter', width: 90 },
       {
-        title: '提交时间', dataIndex: 'submittedAt', width: 170,
-        render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+        title: t('release.submitTime'), dataIndex: 'submittedAt', width: 170,
+        render: (v: number) => v ? new Date(v).toLocaleString() : '-',
       },
     ];
 
     // 审批列：pending / all / my 都显示
     if (mode !== 'pending-publish') {
       base.push(
-        { title: '审批人', dataIndex: 'approver', width: 90, render: (v: string) => v ?? '-' },
+        { title: t('release.approver'), dataIndex: 'approver', width: 90, render: (v: string) => v ?? '-' },
         {
-          title: '审批时间', dataIndex: 'approvedAt', width: 170,
-          render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+          title: t('release.approveTime'), dataIndex: 'approvedAt', width: 170,
+          render: (v: number) => v ? new Date(v).toLocaleString() : '-',
         },
       );
     }
@@ -227,10 +229,10 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     // 上线列：pending-publish / all / my 都显示
     if (mode !== 'pending') {
       base.push(
-        { title: '上线人', dataIndex: 'publisher', width: 90, render: (v: string) => v ?? '-' },
+        { title: t('release.publisher'), dataIndex: 'publisher', width: 90, render: (v: string) => v ?? '-' },
         {
-          title: '上线时间', dataIndex: 'publishedAt', width: 170,
-          render: (t: number) => t ? new Date(t).toLocaleString() : '-',
+          title: t('release.publishTime'), dataIndex: 'publishedAt', width: 170,
+          render: (v: number) => v ? new Date(v).toLocaleString() : '-',
         },
       );
     }
@@ -238,27 +240,27 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     // 失败原因
     if (mode === 'pending-publish' || mode === 'all') {
       base.push({
-        title: '失败原因', dataIndex: 'failReason', width: 200, ellipsis: true,
+        title: t('release.failReason'), dataIndex: 'failReason', width: 200, ellipsis: true,
         render: (v: string) => v ? <span style={{ color: '#ff4d4f' }}>{v}</span> : '-',
       });
     }
 
     // 操作列
     base.push({
-      title: '操作', width: 200, fixed: 'right',
+      title: t('common.operation'), width: 200, fixed: 'right',
       render: (_: any, record: ApprovalVO) => (
         <Space size="small">
-          <Button size="small" onClick={() => openDetail(record)}>查看</Button>
+          <Button size="small" onClick={() => openDetail(record)}>{t('release.viewDetail')}</Button>
           {/* 待审核：审批操作 */}
           {canApprove && record.status === 'PENDING' && (mode === 'pending' || mode === 'all') && (
             <>
               <Button size="small" type="primary"
                 onClick={() => { setCommentModal({ open: true, type: 'approve', id: record.id }); setComment(''); }}>
-                通过
+                {t('release.approveAction')}
               </Button>
               <Button size="small" danger
                 onClick={() => { setCommentModal({ open: true, type: 'reject', id: record.id }); setComment(''); }}>
-                拒绝
+                {t('release.rejectAction')}
               </Button>
             </>
           )}
@@ -267,20 +269,20 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
             && (mode === 'pending-publish' || mode === 'all') && (
             <>
               <Popconfirm
-                title={record.status === 'PUBLISH_FAILED' ? '确认重新上线？' : '确认上线？'}
+                title={record.status === 'PUBLISH_FAILED' ? t('release.confirmRepublish') : t('release.confirmPublish')}
                 onConfirm={() => handlePublish(record.id)}
-                okText="确认"
-                cancelText="取消"
+                okText={t('common.confirm')}
+                cancelText={t('common.cancel')}
               >
                 <Button size="small" type="primary">
-                  {record.status === 'PUBLISH_FAILED' ? '重新上线' : '上线'}
+                  {record.status === 'PUBLISH_FAILED' ? t('release.republish') : t('release.publishBtn')}
                 </Button>
               </Popconfirm>
               {record.status === 'APPROVED' && (
                 <Button size="small"
                   onClick={() => openGrayscaleModal(record.id, record.project)}
                 >
-                  灰度发布
+                  {t('release.grayscaleBtn')}
                 </Button>
               )}
             </>
@@ -290,7 +292,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     });
 
     return base;
-  }, [mode, canApprove, canSubmit]);
+  }, [mode, canApprove, canSubmit, i18n.language]);
 
   // diff 分组
   const groupedDiffs = diffDrawer.diffs.reduce<Record<string, ApprovalDiffItem[]>>((acc, d) => {
@@ -307,7 +309,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     <div style={{ padding: 24 }}>
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
-          placeholder="选择项目"
+          placeholder={t('common.selectProject')}
           showSearch
           style={{ width: 200 }}
           value={project}
@@ -319,14 +321,14 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         </Select>
         {showStatusFilter && (
           <Select
-            placeholder="状态筛选"
+            placeholder={t('release.statusFilter')}
             allowClear
             style={{ width: 140 }}
             value={statusFilter}
             onChange={(v) => { setStatusFilter(v); setPage(1); }}
           >
             {Object.entries(STATUS_MAP).map(([k, v]) => (
-              <Select.Option key={k} value={k}>{v.label}</Select.Option>
+              <Select.Option key={k} value={k}>{t(v.label)}</Select.Option>
             ))}
           </Select>
         )}
@@ -337,14 +339,14 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         columns={columns}
         dataSource={data}
         loading={loading}
-        pagination={{ current: page, total, pageSize: PAGE_SIZE, onChange: setPage, showTotal: (t) => `共 ${t} 条` }}
+        pagination={{ current: page, total, pageSize: PAGE_SIZE, onChange: setPage, showTotal: (total) => t('common.total', { count: total }) }}
         scroll={{ x: 1200 }}
         size="middle"
       />
 
       {/* 审批意见弹窗 */}
       <Modal
-        title={commentModal?.type === 'approve' ? '审批通过' : '拒绝审批'}
+        title={commentModal?.type === 'approve' ? t('release.approveAction') : t('release.rejectAction')}
         open={!!commentModal?.open}
         onOk={handleApprove}
         onCancel={() => { setCommentModal(null); setComment(''); }}
@@ -353,7 +355,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
           rows={3}
           maxLength={500}
           showCount
-          placeholder="审批意见（选填）"
+          placeholder={t('release.commentPlaceholder')}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
         />
@@ -361,23 +363,23 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
 
       {/* 灰度发布配置弹窗 */}
       <Modal
-        title="灰度发布配置"
+        title={t('release.grayscaleConfig')}
         open={!!grayscaleModal?.open}
         onOk={handleGrayscale}
         onCancel={() => setGrayscaleModal(null)}
-        okText="启动灰度"
+        okText={t('release.startGrayscale')}
       >
         <div style={{ marginBottom: 16 }}>
           <Radio.Group value={gsStrategy} onChange={(e) => setGsStrategy(e.target.value)}>
-            <Radio value="PERCENTAGE">流量比例</Radio>
-            <Radio value="CONDITION">条件匹配</Radio>
+            <Radio value="PERCENTAGE">{t('release.percentage')}</Radio>
+            <Radio value="CONDITION">{t('release.conditionMatch')}</Radio>
           </Radio.Group>
         </div>
         {gsStrategy === 'PERCENTAGE' && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8 }}>灰度流量比例：<strong>{gsPercentage}%</strong></div>
+            <div style={{ marginBottom: 8 }}>{t('release.grayscaleRatio', { percent: gsPercentage })}</div>
             <div style={{ marginBottom: 8, color: '#999', fontSize: 12 }}>
-              按请求随机分配流量，比例近似均匀但不保证同一用户始终命中同一版本。如需按业务属性精准路由，请使用「条件匹配」。
+              {t('release.grayscaleRatioDesc')}
             </div>
             <Slider min={1} max={100} value={gsPercentage} onChange={setGsPercentage} />
           </div>
@@ -385,13 +387,13 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         {gsStrategy === 'CONDITION' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-              条件表达式（REA 语法），满足条件的请求路由到灰度版本
+              {t('release.conditionDesc')}
             </div>
             <ReaConditionInput
               value={gsCondition}
               onChange={setGsCondition}
               libraries={gsLibraries}
-              placeholder='例: FlightInfo.level == "VIP" AND FlightInfo.score > 5'
+              placeholder={t('release.conditionPlaceholder')}
             />
           </div>
         )}
@@ -399,7 +401,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
           rows={2}
           maxLength={500}
           showCount
-          placeholder="灰度说明（选填）"
+          placeholder={t('release.grayscaleDescPlaceholder')}
           value={gsDescription}
           onChange={(e) => setGsDescription(e.target.value)}
         />
@@ -407,7 +409,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
 
       {/* Diff 详情抽屉 */}
       <Drawer
-        title={`审批详情 #${diffDrawer.approval?.id ?? ''}`}
+        title={t('release.approvalDetail', { id: diffDrawer.approval?.id ?? '' })}
         width={640}
         open={diffDrawer.open}
         onClose={() => setDiffDrawer({ open: false, approval: null, diffs: [] })}
@@ -415,40 +417,40 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
         {diffDrawer.approval && (
           <>
             <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="知识包">{diffDrawer.approval.packageName}</Descriptions.Item>
-              <Descriptions.Item label="状态">
+              <Descriptions.Item label={t('release.knowledgePackage')}>{diffDrawer.approval.packageName}</Descriptions.Item>
+              <Descriptions.Item label={t('common.status')}>
                 <Tag color={STATUS_MAP[diffDrawer.approval.status]?.color}>
-                  {STATUS_MAP[diffDrawer.approval.status]?.label}
+                  {t(STATUS_MAP[diffDrawer.approval.status]?.label ?? diffDrawer.approval.status)}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="提交人">{diffDrawer.approval.submitter}</Descriptions.Item>
-              <Descriptions.Item label="提交时间">
+              <Descriptions.Item label={t('release.submitter')}>{diffDrawer.approval.submitter}</Descriptions.Item>
+              <Descriptions.Item label={t('release.submitTime')}>
                 {diffDrawer.approval.submittedAt ? new Date(diffDrawer.approval.submittedAt).toLocaleString() : '-'}
               </Descriptions.Item>
               {diffDrawer.approval.approver && (
-                <Descriptions.Item label="审批人">{diffDrawer.approval.approver}</Descriptions.Item>
+                <Descriptions.Item label={t('release.approver')}>{diffDrawer.approval.approver}</Descriptions.Item>
               )}
               {diffDrawer.approval.approvedAt && (
-                <Descriptions.Item label="审批时间">
+                <Descriptions.Item label={t('release.approveTime')}>
                   {new Date(diffDrawer.approval.approvedAt).toLocaleString()}
                 </Descriptions.Item>
               )}
               {diffDrawer.approval.publisher && (
-                <Descriptions.Item label="上线人">{diffDrawer.approval.publisher}</Descriptions.Item>
+                <Descriptions.Item label={t('release.publisher')}>{diffDrawer.approval.publisher}</Descriptions.Item>
               )}
               {diffDrawer.approval.publishedAt && (
-                <Descriptions.Item label="上线时间">
+                <Descriptions.Item label={t('release.publishTime')}>
                   {new Date(diffDrawer.approval.publishedAt).toLocaleString()}
                 </Descriptions.Item>
               )}
               {diffDrawer.approval.description && (
-                <Descriptions.Item label="变更说明" span={2}>{diffDrawer.approval.description}</Descriptions.Item>
+                <Descriptions.Item label={t('release.changeDescription')} span={2}>{diffDrawer.approval.description}</Descriptions.Item>
               )}
               {diffDrawer.approval.comment && (
-                <Descriptions.Item label="审批意见" span={2}>{diffDrawer.approval.comment}</Descriptions.Item>
+                <Descriptions.Item label={t('release.approvalComment')} span={2}>{diffDrawer.approval.comment}</Descriptions.Item>
               )}
               {diffDrawer.approval.failReason && (
-                <Descriptions.Item label="失败原因" span={2}>
+                <Descriptions.Item label={t('release.failReason')} span={2}>
                   <span style={{ color: '#ff4d4f' }}>{diffDrawer.approval.failReason}</span>
                 </Descriptions.Item>
               )}
@@ -457,42 +459,42 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
             {/* 测试结果摘要 */}
             {diffDrawer.approval.status === 'TESTING' ? (
               <div style={{ marginBottom: 16, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
-                <strong>自动测试</strong><span style={{ marginLeft: 12 }}>执行中，完成后自动进入待审核...</span>
+                <strong>{t('release.autoTest')}</strong><span style={{ marginLeft: 12 }}>{t('release.testRunning')}</span>
               </div>
             ) : diffDrawer.approval.testSummary ? (
               <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 4,
                 background: diffDrawer.approval.testSummary.failedCases > 0 ? '#fff2f0' : '#f6ffed',
                 border: `1px solid ${diffDrawer.approval.testSummary.failedCases > 0 ? '#ffccc7' : '#b7eb8f'}` }}>
-                <strong>自动测试</strong>
+                <strong>{t('release.autoTest')}</strong>
                 <span style={{ marginLeft: 12 }}>
-                  共 {diffDrawer.approval.testSummary.totalCases} 条，
-                  <span style={{ color: '#389e0d' }}>通过 {diffDrawer.approval.testSummary.passedCases}</span>
-                  {diffDrawer.approval.testSummary.failedCases > 0 && (
-                    <span style={{ color: '#cf1322', marginLeft: 8 }}>失败 {diffDrawer.approval.testSummary.failedCases}</span>
-                  )}
+                  {t('release.testTotal', {
+                    total: diffDrawer.approval.testSummary.totalCases,
+                    passed: diffDrawer.approval.testSummary.passedCases,
+                    failed: diffDrawer.approval.testSummary.failedCases,
+                  })}
                 </span>
                 <Button size="small" type="link"
                   onClick={() => window.open(`/admin/autotest/report/${diffDrawer.approval!.testSummary!.runId}`, '_blank')}>
-                  查看报告
+                  {t('release.viewReport')}
                 </Button>
               </div>
             ) : diffDrawer.approval.testRunId ? (
               <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4 }}>
-                <strong>自动测试</strong>
+                <strong>{t('release.autoTest')}</strong>
                 <Button size="small" type="link"
                   onClick={() => window.open(`/admin/autotest/report/${diffDrawer.approval!.testRunId}`, '_blank')}>
-                  查看报告
+                  {t('release.viewReport')}
                 </Button>
               </div>
             ) : (
               <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: 4 }}>
-                <strong>自动测试</strong><span style={{ marginLeft: 12, color: '#999' }}>无用例包，未执行测试</span>
+                <strong>{t('release.autoTest')}</strong><span style={{ marginLeft: 12, color: '#999' }}>{t('release.noTestPack')}</span>
               </div>
             )}
 
             {Object.entries(groupedDiffs).map(([type, items]) => (
               <div key={type} style={{ marginBottom: 16 }}>
-                <strong>{type}（{items.length} 项变更）</strong>
+                <strong>{t('release.itemsChanged', { type, count: items.length })}</strong>
                 <Table<ApprovalDiffItem>
                   size="small"
                   rowKey="id"
@@ -511,7 +513,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                                 <div style={{ marginBottom: 4 }}>
                                   <Tag color={rd.change === 'ADDED' ? 'green' : rd.change === 'DELETED' ? 'red' : 'blue'}
                                     style={{ marginRight: 8 }}>
-                                    {rd.change === 'ADDED' ? '新增' : rd.change === 'DELETED' ? '删除' : '修改'}
+                                    {rd.change === 'ADDED' ? t('release.changeAdded') : rd.change === 'DELETED' ? t('release.changeDeleted') : t('release.changeModified')}
                                   </Tag>
                                   <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{rd.rule}</span>
                                 </div>
@@ -519,9 +521,9 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                                   <table style={{ marginLeft: 24, fontSize: 12, borderCollapse: 'collapse' }}>
                                     <thead>
                                       <tr style={{ color: '#999' }}>
-                                        <td style={{ padding: '2px 12px 2px 0' }}>字段</td>
-                                        <td style={{ padding: '2px 12px 2px 0' }}>变更前</td>
-                                        <td style={{ padding: '2px 12px 2px 0' }}>变更后</td>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>{t('release.field')}</td>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>{t('release.before')}</td>
+                                        <td style={{ padding: '2px 12px 2px 0' }}>{t('release.after')}</td>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -541,22 +543,22 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                                 )}
                               </div>
                             ))}
-                            {rules.length === 0 && <span style={{ color: '#999' }}>无具体变动</span>}
+                            {rules.length === 0 && <span style={{ color: '#999' }}>{t('release.noSpecificChange')}</span>}
                           </div>
                         );
-                      } catch { return <span style={{ color: '#999' }}>解析失败</span>; }
+                      } catch { return <span style={{ color: '#999' }}>{t('release.parseFailed')}</span>; }
                     },
                   }}
                   columns={[
-                    { title: '组件', dataIndex: 'componentName', ellipsis: true },
-                    { title: '变更', dataIndex: 'changeType', width: 70,
-                      render: (t: string) => {
-                        const m = CHANGE_TYPE_MAP[t];
-                        return m ? <Tag color={m.color}>{m.label}</Tag> : t;
+                    { title: t('release.component'), dataIndex: 'componentName', ellipsis: true },
+                    { title: t('release.change'), dataIndex: 'changeType', width: 70,
+                      render: (v: string) => {
+                        const m = CHANGE_TYPE_MAP[v];
+                        return m ? <Tag color={m.color}>{t(m.label)}</Tag> : v;
                       },
                     },
                     {
-                      title: '规则变动', width: 200,
+                      title: t('release.ruleChange'), width: 200,
                       render: (_: any, r: ApprovalDiffItem) => {
                         if (!r.details) return '-';
                         try {
@@ -565,10 +567,10 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
                           const mod = rules.filter(x => x.change === 'MODIFIED').length;
                           const del = rules.filter(x => x.change === 'DELETED').length;
                           const parts: string[] = [];
-                          if (added) parts.push(`${added}新增`);
-                          if (mod) parts.push(`${mod}修改`);
-                          if (del) parts.push(`${del}删除`);
-                          return parts.length > 0 ? <span style={{ fontSize: 13 }}>{parts.join('、')}</span> : '-';
+                          if (added) parts.push(t('release.changeCount', { count: added, type: t('release.changeAdded') }));
+                          if (mod) parts.push(t('release.changeCount', { count: mod, type: t('release.changeModified') }));
+                          if (del) parts.push(t('release.changeCount', { count: del, type: t('release.changeDeleted') }));
+                          return parts.length > 0 ? <span style={{ fontSize: 13 }}>{parts.join(t('release.comma'))}</span> : '-';
                         } catch { return '-'; }
                       },
                     },
@@ -578,7 +580,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
             ))}
 
             {diffDrawer.diffs.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#999', padding: 24 }}>无变更</div>
+              <div style={{ textAlign: 'center', color: '#999', padding: 24 }}>{t('release.noChange')}</div>
             )}
           </>
         )}

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EditorView, lineNumbers as cmLineNumbers } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { xml } from '@codemirror/lang-xml';
@@ -160,6 +161,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
   activeFilePath,
   onFileSelect,
 }) => {
+  const { t } = useTranslation();
   const [treeFiles, setTreeFiles] = useState<RepositoryFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,12 +237,12 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
       const projectNode = (root.children ?? []).find(c => c.type === 'project');
       setTreeFiles(projectNode ? [projectNode] : root.children ?? []);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '加载失败';
+      const msg = e instanceof Error ? e.message : t('console.loadTreeFailed');
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [projectName]);
+  }, [projectName, t]);
 
   const fetched = useRef(false);
   useEffect(() => {
@@ -406,11 +408,11 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
           setControlledExpandedKeys(prev => [...new Set([...prev, expandKey])]);
         }
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : '操作失败';
+        const msg = e instanceof Error ? e.message : t('console.loadTreeFailed');
         message.error(msg);
       }
     },
-    [loadTree],
+    [loadTree, t],
   );
 
   // ─── 新建文件 ─────────────────────────────────────────────────
@@ -418,10 +420,10 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
   const handleCreateFile = useCallback(() => {
     if (!contextNode || !newFileName.trim() || !newFileType) return;
     const path = `${contextNode.fullPath}/${newFileName.trim()}.${newFileType}`;
-    afterOp(() => consoleApi.createFile(path, newFileType), '文件已创建');
+    afterOp(() => consoleApi.createFile(path, newFileType), t('console.fileCreated'));
     setCreateFileOpen(false);
     setNewFileName('');
-  }, [contextNode, newFileName, newFileType, afterOp]);
+  }, [contextNode, newFileName, newFileType, afterOp, t]);
 
   // ─── 新建文件夹 ───────────────────────────────────────────────
 
@@ -431,10 +433,10 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     const parentKey = `${contextNode.type}:${contextNode.fullPath}:${contextNode.name}`;
     // 推断 folderType：如果在分类 lib 上创建，type 就是 folderType；如果在已有 folder 上创建，继承其 folderType
     const folderType = contextNode.type === 'folder' ? (contextNode.folderType ?? contextNode.type) : contextNode.type;
-    afterOp(() => consoleApi.createFolder(fullFolderName, folderType), '文件夹已创建', parentKey);
+    afterOp(() => consoleApi.createFolder(fullFolderName, folderType), t('console.folderCreated'), parentKey);
     setCreateFolderOpen(false);
     setNewFolderName('');
-  }, [contextNode, newFolderName, afterOp]);
+  }, [contextNode, newFolderName, afterOp, t]);
 
   // ─── 删除 ─────────────────────────────────────────────────────
 
@@ -442,18 +444,18 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     if (!contextNode) return;
     const folder = isFolder(contextNode);
     Modal.confirm({
-      title: `确认删除 "${contextNode.name}"？`,
-      content: folder ? '将删除文件夹及其所有内容' : undefined,
-      okText: '删除',
+      title: `${t('common.confirm')}${t('common.delete')} "${contextNode.name}"？`,
+      content: folder ? t('console.deleteFolderContent') : undefined,
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: '取消',
+      cancelText: t('common.cancel'),
       onOk: () =>
         afterOp(
           () => consoleApi.deleteFile(contextNode.fullPath),
-          '已删除',
+          t('console.deleted'),
         ),
     });
-  }, [contextNode, afterOp]);
+  }, [contextNode, afterOp, t]);
 
   // ─── 重命名 ───────────────────────────────────────────────────
 
@@ -463,28 +465,28 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     const newPath = `${parent}/${renameName.trim()}${renameExt}`;
     afterOp(
       () => consoleApi.fileRename(contextNode.fullPath, newPath),
-      '已重命名',
+      t('console.renamed'),
     );
     setRenameOpen(false);
     setRenameName('');
     setRenameExt('');
-  }, [contextNode, renameName, renameExt, afterOp]);
+  }, [contextNode, renameName, renameExt, afterOp, t]);
 
   // ─── 右键菜单（按节点 type 区分，与原 iframe action.js 一致） ────
 
   /** 文件节点通用菜单 (buildFileContextMenu)，与 ruleuler-console-js 一致 */
   function buildFileMenu(): MenuProps['items'] {
     return [
-      { key: 'viewSource', label: '查看源码' },
-      { key: 'viewVersions', label: '查看版本信息' },
-      { key: 'dependency', label: '依赖分析' },
+      { key: 'viewSource', label: t('console.viewSource') },
+      { key: 'viewVersions', label: t('console.versionInfo') },
+      { key: 'dependency', label: t('console.dependencyAnalysis') },
       { type: 'divider' },
-      { key: 'delete', label: '删除文件', danger: true },
-      { key: 'rename', label: '修改文件名' },
-      { key: 'copy', label: '复制文件' },
-      { key: 'cut', label: '剪切文件' },
-      { key: 'lock', label: '锁定文件' },
-      { key: 'unlock', label: '解锁文件' },
+      { key: 'delete', label: t('console.menuDeleteFile'), danger: true },
+      { key: 'rename', label: t('console.menuRenameFile') },
+      { key: 'copy', label: t('console.menuCopyFile') },
+      { key: 'cut', label: t('console.menuCutFile') },
+      { key: 'lock', label: t('console.menuLockFile') },
+      { key: 'unlock', label: t('console.menuUnlockFile') },
     ];
   }
 
@@ -492,45 +494,45 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
   function buildFullMenu(isFolderNode: boolean, folderType: string | null): MenuProps['items'] {
     const ft = folderType ?? 'all';
     const items: MenuProps['items'] = [
-      { key: 'createFolder', label: isFolderNode ? '添加子目录' : '添加目录' },
+      { key: 'createFolder', label: isFolderNode ? t('console.menuAddSubDir') : t('console.menuAddDir') },
     ];
     if (ft === 'all' || ft === 'lib') {
       items.push(
-        { key: 'createFile:vl.xml', label: '添加变量库' },
-        { key: 'createFile:cl.xml', label: '添加常量库' },
-        { key: 'createFile:pl.xml', label: '添加参数库' },
-        { key: 'createFile:al.xml', label: '添加动作库' },
+        { key: 'createFile:vl.xml', label: t('console.menuAddVarLib') },
+        { key: 'createFile:cl.xml', label: t('console.menuAddConstLib') },
+        { key: 'createFile:pl.xml', label: t('console.menuAddParamLib') },
+        { key: 'createFile:al.xml', label: t('console.menuAddActionLib') },
       );
     }
     if (ft === 'all' || ft === 'ruleLib') {
       items.push(
-        { key: 'createFile:rs.xml', label: '添加向导式决策集' },
-        { key: 'createFile:ul', label: '添加脚本式决策集' },
-        { key: 'createFile:rea.xml', label: '添加表达式助手决策集' },
+        { key: 'createFile:rs.xml', label: t('console.menuAddRuleSet') },
+        { key: 'createFile:ul', label: t('console.menuAddScriptRuleSet') },
+        { key: 'createFile:rea.xml', label: t('console.menuAddRea') },
       );
     }
     if (ft === 'all' || ft === 'decisionTableLib') {
-      items.push({ key: 'createFile:dt.xml', label: '添加决策表' });
+      items.push({ key: 'createFile:dt.xml', label: t('console.menuAddDecisionTable') });
     }
     if (ft === 'all' || ft === 'decisionTreeLib') {
-      items.push({ key: 'createFile:dtree.xml', label: '添加决策树' });
+      items.push({ key: 'createFile:dtree.xml', label: t('console.menuAddDecisionTree') });
     }
     if (ft === 'all' || ft === 'scorecardLib') {
-      items.push({ key: 'createFile:sc', label: '添加评分卡' });
+      items.push({ key: 'createFile:sc', label: t('console.menuAddScorecard') });
     }
     if (ft === 'all' || ft === 'flowLib') {
-      items.push({ key: 'createFile:rl.xml', label: '添加决策流' });
+      items.push({ key: 'createFile:rl.xml', label: t('console.menuAddFlow') });
     }
     if (isFolderNode) {
       items.push(
         { type: 'divider' },
-        { key: 'delete', label: '删除', danger: true },
-        { key: 'rename', label: '修改目录名' },
-        { key: 'lock', label: '锁定目录' },
-        { key: 'unlock', label: '解锁目录' },
+        { key: 'delete', label: t('common.delete'), danger: true },
+        { key: 'rename', label: t('console.menuRenameDir') },
+        { key: 'lock', label: t('console.menuLockDir') },
+        { key: 'unlock', label: t('console.menuUnlockDir') },
       );
     }
-    items.push({ key: 'paste', label: '粘贴文件' });
+    items.push({ key: 'paste', label: t('console.menuPasteFile') });
     return items;
   }
 
@@ -541,8 +543,8 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
         return []; // 单项目模式下不需要 root 菜单
       case 'project':
         return [
-          { key: 'rename', label: '修改项目名称' },
-          { key: 'delete', label: '删除项目', danger: true },
+          { key: 'rename', label: t('console.menuRenameProject') },
+          { key: 'delete', label: t('console.menuDeleteProject'), danger: true },
         ];
       case 'resource':
         return []; // 无菜单
@@ -550,44 +552,44 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
         return []; // 知识包无菜单
       case 'lib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:vl.xml', label: '添加变量库' },
-          { key: 'createFile:cl.xml', label: '添加常量库' },
-          { key: 'createFile:pl.xml', label: '添加参数库' },
-          { key: 'createFile:al.xml', label: '添加动作库' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:vl.xml', label: t('console.menuAddVarLib') },
+          { key: 'createFile:cl.xml', label: t('console.menuAddConstLib') },
+          { key: 'createFile:pl.xml', label: t('console.menuAddParamLib') },
+          { key: 'createFile:al.xml', label: t('console.menuAddActionLib') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'ruleLib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:rs.xml', label: '添加向导式决策集' },
-          { key: 'createFile:ul', label: '添加脚本式决策集' },
-          { key: 'createFile:rea.xml', label: '添加表达式助手决策集' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:rs.xml', label: t('console.menuAddRuleSet') },
+          { key: 'createFile:ul', label: t('console.menuAddScriptRuleSet') },
+          { key: 'createFile:rea.xml', label: t('console.menuAddRea') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'decisionTableLib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:dt.xml', label: '添加决策表' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:dt.xml', label: t('console.menuAddDecisionTable') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'decisionTreeLib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:dtree.xml', label: '添加决策树' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:dtree.xml', label: t('console.menuAddDecisionTree') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'flowLib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:rl.xml', label: '添加决策流' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:rl.xml', label: t('console.menuAddFlow') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'scorecardLib':
         return [
-          { key: 'createFolder', label: '添加目录' },
-          { key: 'createFile:sc', label: '添加评分卡' },
-          { key: 'paste', label: '粘贴文件' },
+          { key: 'createFolder', label: t('console.menuAddDir') },
+          { key: 'createFile:sc', label: t('console.menuAddScorecard') },
+          { key: 'paste', label: t('console.menuPasteFile') },
         ];
       case 'all':
         return buildFullMenu(false, null);
@@ -596,13 +598,13 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
       case 'ul':
         // ul 文件：去掉"查看源码"（原来 splice(0,1)），与 ruleuler-console-js 一致
         return [
-          { key: 'viewVersions', label: '查看版本信息' },
-          { key: 'delete', label: '删除文件', danger: true },
-          { key: 'rename', label: '修改文件名' },
-          { key: 'copy', label: '复制文件' },
-          { key: 'cut', label: '剪切文件' },
-          { key: 'lock', label: '锁定文件' },
-          { key: 'unlock', label: '解锁文件' },
+          { key: 'viewVersions', label: t('console.versionInfo') },
+          { key: 'delete', label: t('console.menuDeleteFile'), danger: true },
+          { key: 'rename', label: t('console.menuRenameFile') },
+          { key: 'copy', label: t('console.menuCopyFile') },
+          { key: 'cut', label: t('console.menuCutFile') },
+          { key: 'lock', label: t('console.menuLockFile') },
+          { key: 'unlock', label: t('console.menuUnlockFile') },
         ];
       default:
         // 所有其他文件类型：rule, rea, action, parameter, constant, variable,
@@ -653,20 +655,20 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
         }
         case 'copy':
           clipboardRef.current = contextNode ? { file: contextNode, mode: 'copy' } : null;
-          message.info('已复制，请在目标目录右键粘贴');
+          message.info(t('console.copied'));
           break;
         case 'cut':
           clipboardRef.current = contextNode ? { file: contextNode, mode: 'cut' } : null;
-          message.info('已剪切，请在目标目录右键粘贴');
+          message.info(t('console.cut'));
           break;
         case 'lock':
           if (contextNode) {
-            afterOp(() => consoleApi.lockFile(contextNode.fullPath), '已锁定');
+            afterOp(() => consoleApi.lockFile(contextNode.fullPath), t('console.locked'));
           }
           break;
         case 'unlock':
           if (contextNode) {
-            afterOp(() => consoleApi.unlockFile(contextNode.fullPath), '已解锁');
+            afterOp(() => consoleApi.unlockFile(contextNode.fullPath), t('console.unlocked'));
           }
           break;
         case 'viewSource':
@@ -674,7 +676,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
             consoleApi.fileSource(contextNode.fullPath).then((content) => {
               setSourceContent(content);
               setSourceOpen(true);
-            }).catch(() => message.error('获取源码失败'));
+            }).catch(() => message.error(t('console.getSourceFailed')));
           }
           break;
         case 'viewVersions':
@@ -682,7 +684,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
             consoleApi.fileVersions(contextNode.fullPath).then((list) => {
               setVersionList(list);
               setVersionsOpen(true);
-            }).catch(() => message.error('获取版本信息失败'));
+            }).catch(() => message.error(t('console.getVersionFailed')));
           }
           break;
         case 'dependency':
@@ -694,35 +696,35 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
         case 'paste': {
           const clip = clipboardRef.current;
           if (!clip) {
-            message.warning('没有文件可供粘贴');
+            message.warning(t('console.noFileToPaste'));
             break;
           }
           if (!contextNode) break;
           const targetDir = contextNode.fullPath;
           const newFullPath = `${targetDir}/${clip.file.name}`;
           if (clip.file.fullPath === newFullPath) {
-            message.warning('目录未改变，不能进行此操作');
+            message.warning(t('console.noFileToPaste'));
             break;
           }
-          const action = clip.mode === 'cut' ? '移动' : '复制';
+          const action = clip.mode === 'cut' ? t('console.confirmMove') : t('console.copiedDone');
           Modal.confirm({
-            title: `确认${action}`,
-            content: `${action}文件【${clip.file.name}】到【${targetDir}】？`,
-            okText: '确认',
-            cancelText: '取消',
+            title: `${t('common.confirm')}${action}`,
+            content: `${action}${clip.file.name} → ${targetDir}？`,
+            okText: t('common.confirm'),
+            cancelText: t('common.cancel'),
             onOk: () => {
               const op = clip.mode === 'cut'
                 ? () => consoleApi.fileRename(clip.file.fullPath, newFullPath)
                 : () => consoleApi.copyFile(clip.file.fullPath, newFullPath);
               clipboardRef.current = null;
-              afterOp(op, `已${action}`);
+              afterOp(op, clip.mode === 'cut' ? t('console.moved') : t('console.copiedDone'));
             },
           });
           break;
         }
       }
     },
-    [contextNode, handleDelete],
+    [contextNode, handleDelete, afterOp, t],
   );
 
   // ─── 渲染 ─────────────────────────────────────────────────────
@@ -731,7 +733,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     return (
       <Result
         status="error"
-        title="加载资源树失败"
+        title={t('console.loadTreeFailed')}
         subTitle={error}
         extra={
           <Button
@@ -739,7 +741,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
             icon={<ReloadOutlined />}
             onClick={loadTree}
           >
-            重试
+            {t('common.retry')}
           </Button>
         }
       />
@@ -757,7 +759,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
         .compact-tree .ant-tree-list-holder-inner { gap: 0 !important; }
       `}</style>
       <Input.Search
-        placeholder="搜索文件名..."
+        placeholder={t('console.searchFiles')}
         allowClear
         onChange={(e) => setSearchValue(e.target.value)}
         style={{ marginBottom: 8, padding: '0 4px' }}
@@ -799,12 +801,12 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
 
       {/* 新建文件 Modal */}
       <Modal
-        title="新建文件"
+        title={t('console.newFile')}
         open={createFileOpen}
         onOk={handleCreateFile}
         onCancel={() => setCreateFileOpen(false)}
-        okText="创建"
-        cancelText="取消"
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Select
@@ -812,13 +814,13 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
             onChange={setNewFileType}
             options={FILE_TYPE_OPTIONS}
             style={{ width: '100%' }}
-            placeholder="选择文件类型"
+            placeholder={t('console.selectFileType')}
             disabled={fileTypeLocked}
           />
           <Input
             value={newFileName}
             onChange={(e) => setNewFileName(e.target.value)}
-            placeholder="输入文件名（不含后缀）"
+            placeholder={t('console.enterFileName')}
             onPressEnter={handleCreateFile}
           />
         </div>
@@ -826,36 +828,36 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
 
       {/* 新建文件夹 Modal */}
       <Modal
-        title="新建文件夹"
+        title={t('console.newFolder')}
         open={createFolderOpen}
         onOk={handleCreateFolder}
         onCancel={() => setCreateFolderOpen(false)}
-        okText="创建"
-        cancelText="取消"
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
       >
         <Input
           value={newFolderName}
           onChange={(e) => setNewFolderName(e.target.value)}
-          placeholder="输入文件夹名"
+          placeholder={t('console.enterFolderName')}
           onPressEnter={handleCreateFolder}
         />
       </Modal>
 
       {/* 重命名 Modal */}
       <Modal
-        title="重命名"
+        title={t('console.rename')}
         open={renameOpen}
         onOk={handleRename}
         onCancel={() => setRenameOpen(false)}
-        okText="确认"
-        cancelText="取消"
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label>名称</label>
+          <label>{t('common.name')}</label>
           <Input
             value={renameName}
             onChange={(e) => setRenameName(e.target.value)}
-            placeholder="输入新名称"
+            placeholder={t('console.enterNewName')}
             onPressEnter={handleRename}
             addonAfter={renameExt || undefined}
           />
@@ -864,7 +866,7 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
 
       {/* 查看源码 Modal */}
       <Modal
-        title="查看源码"
+        title={t('console.viewSource')}
         open={sourceOpen}
         onCancel={() => setSourceOpen(false)}
         footer={null}
@@ -876,14 +878,14 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
 
       {/* 查看版本信息 Modal */}
       <Modal
-        title="版本信息"
+        title={t('console.versionInfo')}
         open={versionsOpen}
         onCancel={() => setVersionsOpen(false)}
         footer={null}
         width={600}
       >
         {versionList.length === 0 ? (
-          <p>暂无版本信息</p>
+          <p>{t('console.noVersionInfo')}</p>
         ) : (
           <div style={{ maxHeight: 400, overflow: 'auto' }}>
             {versionList.map((v, i) => (

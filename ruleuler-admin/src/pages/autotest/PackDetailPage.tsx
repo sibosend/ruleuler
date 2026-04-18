@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Table, Tag, Progress, Button, Card, message, Space, Divider,
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { getPackDetail, loadTestRuns, getRunStatus, updateBaseline } from '../../api/autotest';
 
 interface CaseItem {
@@ -42,6 +43,7 @@ const PackDetailPage: React.FC = () => {
   const { name, packId } = useParams<{ name: string; packId: string }>();
   const navigate = useNavigate();
   const numericPackId = Number(packId);
+  const { t, i18n } = useTranslation();
 
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [runs, setRuns] = useState<RunItem[]>([]);
@@ -64,11 +66,11 @@ const PackDetailPage: React.FC = () => {
       const allRuns: RunItem[] = (runsRes.data?.data ?? runsRes.data ?? []);
       setRuns(allRuns.filter((r: RunItem) => r.packId === numericPackId));
     } catch {
-      message.error('加载用例包详情失败');
+      message.error(t('autotest.loadDetailFailed'));
     } finally {
       setLoading(false);
     }
-  }, [name, packId, numericPackId]);
+  }, [name, packId, numericPackId, t]);
 
   const fetched = useRef(false);
   useEffect(() => {
@@ -114,28 +116,28 @@ const PackDetailPage: React.FC = () => {
   const handleSetBaseline = async (runId: number) => {
     try {
       await updateBaseline(runId);
-      message.success('已设为 Baseline');
+      message.success(t('autotest.baselineSet'));
       fetchData();
     } catch {
-      message.error('设置 Baseline 失败');
+      message.error(t('autotest.baselineSetFailed'));
     }
   };
 
-  const caseColumns = [
-    { title: '用例名称', dataIndex: 'caseName', key: 'caseName', width: 200 },
+  const caseColumns = useMemo(() => [
+    { title: t('autotest.caseName'), dataIndex: 'caseName', key: 'caseName', width: 200 },
     {
-      title: '输入数据', dataIndex: 'inputData', key: 'inputData',
+      title: t('autotest.inputData'), dataIndex: 'inputData', key: 'inputData',
       render: (v: string) => <span title={v}>{truncJson(v)}</span>,
     },
     {
-      title: '预期类型', dataIndex: 'expectedType', key: 'expectedType', width: 100,
+      title: t('autotest.expectedType'), dataIndex: 'expectedType', key: 'expectedType', width: 100,
       render: (v: string) => <Tag color={v === 'HIT' ? 'green' : 'orange'}>{v}</Tag>,
     },
-    { title: '翻转条件', dataIndex: 'flippedCondition', key: 'flippedCondition', width: 200 },
-    { title: '测试目的', dataIndex: 'testPurpose', key: 'testPurpose', width: 200 },
-  ];
+    { title: t('autotest.flippedCondition'), dataIndex: 'flippedCondition', key: 'flippedCondition', width: 200 },
+    { title: t('autotest.testPurpose'), dataIndex: 'testPurpose', key: 'testPurpose', width: 200 },
+  ], [t, i18n.language]);
 
-  const runColumns = [
+  const runColumns = useMemo(() => [
     { title: 'Run ID', dataIndex: 'id', key: 'id', width: 80,
       render: (v: number, r: RunItem) => (
         <Space size={4}>
@@ -145,25 +147,25 @@ const PackDetailPage: React.FC = () => {
       ),
     },
     {
-      title: '运行类型', dataIndex: 'runType', key: 'runType', width: 100,
+      title: t('autotest.runType'), dataIndex: 'runType', key: 'runType', width: 100,
       render: (v: string) => (
-        <Tag color={v === 'regression' ? 'blue' : 'cyan'}>{v === 'regression' ? '回归' : '冒烟'}</Tag>
+        <Tag color={v === 'regression' ? 'blue' : 'cyan'}>{v === 'regression' ? t('autotest.regression') : t('autotest.smoke')}</Tag>
       ),
     },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 120,
+      title: t('common.status'), dataIndex: 'status', key: 'status', width: 120,
       render: (v: string) => {
         const m: Record<string, { color: string; text: string }> = {
-          running: { color: 'processing', text: '运行中' },
-          completed: { color: 'success', text: '完成' },
-          failed: { color: 'error', text: '失败' },
+          running: { color: 'processing', text: t('autotest.running') },
+          completed: { color: 'success', text: t('autotest.completed') },
+          failed: { color: 'error', text: t('monitoring.failed') },
         };
         const c = m[v] ?? { color: 'default', text: v };
         return <Tag color={c.color}>{c.text}</Tag>;
       },
     },
     {
-      title: '一致率', key: 'passRate', width: 120,
+      title: t('autotest.consistencyRate'), key: 'passRate', width: 120,
       render: (_: unknown, r: RunItem) => {
         if (r.status === 'running') {
           const pct = r.totalCases > 0 ? Math.round(r.executedCases / r.totalCases * 100) : 0;
@@ -174,39 +176,39 @@ const PackDetailPage: React.FC = () => {
       },
     },
     {
-      title: '开始时间', dataIndex: 'startedAt', key: 'startedAt', width: 180,
+      title: t('autotest.startTime'), dataIndex: 'startedAt', key: 'startedAt', width: 180,
       render: (v: number) => v ? fmt(v) : '-',
     },
     {
-      title: '操作', key: 'action', width: 120,
+      title: t('common.operation'), key: 'action', width: 120,
       render: (_: unknown, r: RunItem) => {
         if (r.status !== 'completed' || r.baselineRunId == null) return null;
         return (
           <Button size="small" onClick={(e) => { e.stopPropagation(); handleSetBaseline(r.id); }}>
-            设为 Baseline
+            {t('autotest.setBaseline')}
           </Button>
         );
       },
     },
-  ];
+  ], [t, i18n.language, handleSetBaseline]);
 
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>{t('common.back')}</Button>
         <span style={{ fontSize: 16, fontWeight: 500 }}>{packName || `用例包 #${packId}`}</span>
       </Space>
 
-      <Card title="用例列表" size="small" style={{ marginBottom: 16 }}>
+      <Card title={t('autotest.caseList')} size="small" style={{ marginBottom: 16 }}>
         <Table columns={caseColumns} dataSource={cases} rowKey="id" loading={loading}
-          size="small" pagination={{ pageSize: 10, showTotal: t => `共 ${t} 条` }} />
+          size="small" pagination={{ pageSize: 10, showTotal: total => t('common.total', { count: total }) }} />
       </Card>
 
       <Divider />
 
-      <Card title="历史运行" size="small">
+      <Card title={t('autotest.historyRun')} size="small">
         <Table columns={runColumns} dataSource={runs} rowKey="id" loading={loading}
-          size="small" pagination={{ pageSize: 10, showTotal: t => `共 ${t} 条` }}
+          size="small" pagination={{ pageSize: 10, showTotal: total => t('common.total', { count: total }) }}
           onRow={(record) => ({
             style: { cursor: 'pointer' },
             onClick: () => navigate(`/projects/${name}/autotest/run/${record.id}`),

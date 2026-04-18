@@ -5,6 +5,8 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import type { RuleState } from '../types';
 import type { LibraryData } from '../lib/expressionParser';
 import ExpressionArea from './ExpressionArea';
@@ -26,7 +28,7 @@ function buildPropertyMenuItems(
       key: 'salience',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          优先级
+          {i18n.t('rea.priority')}
           <InputNumber
             size="small"
             style={{ width: 80 }}
@@ -45,7 +47,7 @@ function buildPropertyMenuItems(
       key: 'enabled',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          启用
+          {i18n.t('rea.enabled')}
           <Switch
             size="small"
             checked={rule.properties.enabled !== false}
@@ -62,7 +64,7 @@ function buildPropertyMenuItems(
       key: 'debug',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          调试
+          {i18n.t('rea.debug')}
           <Switch
             size="small"
             checked={rule.properties.debug === true}
@@ -79,7 +81,7 @@ function buildPropertyMenuItems(
       key: 'loop',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          循环
+          {i18n.t('rea.loop')}
           <Switch
             size="small"
             checked={rule.properties.loop === true}
@@ -96,6 +98,8 @@ function buildPropertyMenuItems(
 }
 
 const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }) => {
+  const { t } = useTranslation();
+
   return (
     <div
       style={{
@@ -126,18 +130,18 @@ const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }
         <Space size={4}>
           <Dropdown menu={{ items: buildPropertyMenuItems(rule, onUpdate) }} trigger={['click']}>
             <Button size="small" icon={<SettingOutlined />}>
-              属性
+              {t('rea.properties')}
             </Button>
           </Dropdown>
 
           <Popconfirm
-            title="确认删除此规则？"
+            title={t('rea.confirmDeleteRule')}
             onConfirm={() => onDelete(rule.id)}
-            okText="删除"
-            cancelText="取消"
+            okText={t('common.delete')}
+            cancelText={t('common.cancel')}
           >
             <Button size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('common.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -145,7 +149,7 @@ const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }
 
       {/* 三个表达式区域 */}
       <ExpressionArea
-        label="如果"
+        label={t('rea.if')}
         type="condition"
         value={rule.conditionText}
         hasError={rule.conditionError}
@@ -154,7 +158,7 @@ const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }
         helpUrl="/admin/docs/rea-expression"
       />
       <ExpressionArea
-        label="那么"
+        label={t('rea.then')}
         type="action"
         value={rule.actionText}
         hasError={rule.actionError}
@@ -162,7 +166,7 @@ const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }
         libraries={libraries}
       />
       <ExpressionArea
-        label="否则"
+        label={t('rea.else')}
         type="else"
         value={rule.elseText}
         hasError={rule.elseError}

@@ -3,6 +3,7 @@ import { Table, Select, DatePicker, Tag, Space, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import { fetchExecutions } from '../../api/monitoring';
@@ -24,6 +25,7 @@ interface Execution {
 const defaultRange: [Dayjs, Dayjs] = [dayjs().subtract(1, 'day'), dayjs()];
 
 const ExecutionLogPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -60,7 +62,7 @@ const ExecutionLogPage: React.FC = () => {
         // URL没指定project时默认选第一个
         if (!project && list.length > 0) setProject(list[0]);
       })
-      .catch(() => message.error('加载项目列表失败'));
+      .catch(() => message.error(t('monitoring.loadProjectsFailed')));
   }, []);
 
   // 项目变更时加载知识包
@@ -103,7 +105,7 @@ const ExecutionLogPage: React.FC = () => {
       setData(Array.isArray(result?.records) ? result.records : Array.isArray(result) ? result : []);
       setTotal(result?.total ?? (Array.isArray(result) ? result.length : 0));
     } catch {
-      message.error('加载执行记录失败');
+      message.error(t('monitoring.loadExecutionsFailed'));
     } finally {
       setLoading(false);
     }
@@ -124,41 +126,41 @@ const ExecutionLogPage: React.FC = () => {
 
   const columns: ColumnsType<Execution> = useMemo(() => [
     {
-      title: '执行ID', dataIndex: 'execution_id', key: 'execution_id', width: 120,
+      title: t('monitoring.execId'), dataIndex: 'execution_id', key: 'execution_id', width: 120,
       render: (v: string) => <span title={v}>{v.slice(0, 8)}...</span>,
     },
-    { title: '执行时间', dataIndex: 'exec_time', key: 'exec_time', width: 180 },
-    { title: '项目', dataIndex: 'project', key: 'project', width: 140 },
-    { title: '知识包', dataIndex: 'package_id', key: 'package_id', width: 160 },
+    { title: t('monitoring.execTime'), dataIndex: 'exec_time', key: 'exec_time', width: 180 },
+    { title: t('monitoring.project'), dataIndex: 'project', key: 'project', width: 140 },
+    { title: t('monitoring.package'), dataIndex: 'package_id', key: 'package_id', width: 160 },
     { title: 'Flow', dataIndex: 'flow_id', key: 'flow_id', width: 140 },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 90,
+      title: t('monitoring.status'), dataIndex: 'status', key: 'status', width: 90,
       render: (v: string) => (
-        <Tag color={v === 'success' ? 'green' : 'red'}>{v === 'success' ? '成功' : '失败'}</Tag>
+        <Tag color={v === 'success' ? 'green' : 'red'}>{v === 'success' ? t('monitoring.success') : t('monitoring.failed')}</Tag>
       ),
     },
     {
-      title: '灰度', dataIndex: 'grayscale_bucket', key: 'grayscale_bucket', width: 80,
+      title: t('monitoring.grayscale'), dataIndex: 'grayscale_bucket', key: 'grayscale_bucket', width: 80,
       render: (v: string) => v === 'GRAY'
         ? <Tag color="purple">GRAY</Tag>
         : <Tag color="default">BASE</Tag>,
     },
     {
-      title: '耗时(ms)', dataIndex: 'exec_ms', key: 'exec_ms', width: 100,
+      title: t('monitoring.durationMs'), dataIndex: 'exec_ms', key: 'exec_ms', width: 100,
       sorter: (a, b) => a.exec_ms - b.exec_ms,
     },
     {
-      title: '变量数', dataIndex: 'var_count', key: 'var_count', width: 90,
+      title: t('monitoring.varCountLabel'), dataIndex: 'var_count', key: 'var_count', width: 90,
       sorter: (a, b) => a.var_count - b.var_count,
     },
-  ], []);
+  ], [i18n.language]);
 
   return (
     <div>
       <Space wrap style={{ marginBottom: 12 }}>
         <Select
           style={{ width: 180 }}
-          placeholder="选择项目"
+          placeholder={t('common.selectProject')}
           allowClear
           value={project}
           onChange={(v) => { setProject(v); setPage(1); }}
@@ -166,7 +168,7 @@ const ExecutionLogPage: React.FC = () => {
         />
         <Select
           style={{ width: 220 }}
-          placeholder="选择知识包"
+          placeholder={t('common.selectPackage')}
           allowClear
           value={packageId}
           onChange={(v) => { setPackageId(v); setPage(1); }}
@@ -192,7 +194,7 @@ const ExecutionLogPage: React.FC = () => {
           current: page,
           pageSize,
           total,
-          showTotal: (t) => `共 ${t} 条记录`,
+          showTotal: (total) => t('common.totalRecords', { count: total }),
           showSizeChanger: true,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); },
         }}

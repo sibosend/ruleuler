@@ -2,6 +2,7 @@ import React from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { login } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -9,6 +10,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = React.useState(false);
+  const { t } = useTranslation();
 
   // iframe 内打开登录页时，让顶层窗口跳转
   if (window.top && window.top !== window) {
@@ -23,7 +25,7 @@ const Login: React.FC = () => {
       setAuth(res.data.token, res.data.user);
       navigate('/', { replace: true });
     } catch {
-      message.error('登录失败，请检查用户名和密码');
+      message.error(t('login.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -31,17 +33,17 @@ const Login: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
-      <Card title="RulEuler Admin 登录" style={{ width: 400 }}>
+      <Card title={t('login.title')} style={{ width: 400 }}>
         <Form onFinish={onFinish} autoComplete="off">
-          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" />
+          <Form.Item name="username" rules={[{ required: true, message: t('login.enterUsername') }]}>
+            <Input prefix={<UserOutlined />} placeholder={t('login.username')} />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+          <Form.Item name="password" rules={[{ required: true, message: t('login.enterPassword') }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder={t('login.password')} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
-              登录
+              {t('login.title')}
             </Button>
           </Form.Item>
         </Form>

@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Table, Button, Modal, Input, Space, Popconfirm, Upload, message } from 'antd';
 import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, SettingOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { loadProjects, createProject, deleteProject, exportProject, importProject } from '@/api/project';
+import { useTranslation } from 'react-i18next';
 import type { UploadProps } from 'antd';
 
 interface ProjectItem {
@@ -11,11 +12,12 @@ interface ProjectItem {
   [key: string]: unknown;
 }
 
-export function formatStorageType(value: unknown): string {
-  return value === 'db' ? '数据库' : 'JCR';
+export function formatStorageType(value: unknown, t: (key: string) => string): string {
+  return value === 'db' ? t('project.storageDb') : t('project.storageJcr');
 }
 
 const ProjectList: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,7 +35,7 @@ const ProjectList: React.FC = () => {
       const list = Array.isArray(data) ? data : (data?.data ?? []);
       setProjects(list.map((item: string | ProjectItem) => typeof item === 'string' ? { name: item } : item));
     } catch {
-      message.error('加载项目列表失败');
+      message.error(t('project.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -46,16 +48,16 @@ const ProjectList: React.FC = () => {
   }, []);
 
   const handleCreate = async () => {
-    if (!newName.trim()) { message.warning('请输入项目名'); return; }
+    if (!newName.trim()) { message.warning(t('project.enterProjectName')); return; }
     setCreating(true);
     try {
       await createProject(newName.trim(), 'db');
-      message.success('创建成功');
+      message.success(t('project.createSuccess'));
       setModalOpen(false);
       setNewName('');
       fetchProjects();
     } catch {
-      message.error('创建失败');
+      message.error(t('project.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -64,10 +66,10 @@ const ProjectList: React.FC = () => {
   const handleDelete = async (name: string) => {
     try {
       await deleteProject(name);
-      message.success('删除成功');
+      message.success(t('project.deleteSuccess'));
       fetchProjects();
     } catch {
-      message.error('删除失败');
+      message.error(t('project.deleteFailed'));
     }
   };
 
@@ -81,7 +83,7 @@ const ProjectList: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      message.error('导出失败');
+      message.error(t('project.exportFailed'));
     }
   };
 
@@ -90,42 +92,42 @@ const ProjectList: React.FC = () => {
     beforeUpload: async (file) => {
       try {
         await importProject(file);
-        message.success('导入成功');
+        message.success(t('project.importSuccess'));
         fetchProjects();
       } catch {
-        message.error('导入失败');
+        message.error(t('project.importFailed'));
       }
       return false;
     },
   };
 
-  const columns = [
-    { title: '项目名称', dataIndex: 'name', key: 'name', render: (name: string) => <a onClick={() => navigate(`/console/${name}`)}>{name}</a> },
-    { title: '存储方式', dataIndex: 'storageType', key: 'storageType', render: (value: unknown) => formatStorageType(value) },
+  const columns = useMemo(() => [
+    { title: t('project.projectName'), dataIndex: 'name', key: 'name', render: (name: string) => <a onClick={() => navigate(`/console/${name}`)}>{name}</a> },
+    { title: t('project.storageType'), dataIndex: 'storageType', key: 'storageType', render: (value: unknown) => formatStorageType(value, t) },
     {
-      title: '操作', key: 'action', width: 360,
+      title: t('common.operation'), key: 'action', width: 360,
       render: (_: unknown, record: ProjectItem) => (
         <Space>
-          <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport(record.name)}>导出</Button>
-          <Button size="small" icon={<SettingOutlined />} onClick={() => navigate(`/projects/${record.name}/client-config`)}>客户端配置</Button>
-          <Button size="small" icon={<ExperimentOutlined />} onClick={() => navigate(`/projects/${record.name}/autotest`)}>测试记录</Button>
-          <Popconfirm title="确认删除该项目？" onConfirm={() => handleDelete(record.name)}>
-            <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+          <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport(record.name)}>{t('common.export')}</Button>
+          <Button size="small" icon={<SettingOutlined />} onClick={() => navigate(`/projects/${record.name}/client-config`)}>{t('project.clientConfigBtn')}</Button>
+          <Button size="small" icon={<ExperimentOutlined />} onClick={() => navigate(`/projects/${record.name}/autotest`)}>{t('project.testRecordsBtn')}</Button>
+          <Popconfirm title={t('project.confirmDeleteProject')} onConfirm={() => handleDelete(record.name)}>
+            <Button size="small" danger icon={<DeleteOutlined />}>{t('common.delete')}</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ];
+  ], [i18n.language, navigate, t]);
 
   return (
     <>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>创建项目</Button>
-        <Upload {...uploadProps}><Button icon={<UploadOutlined />}>导入项目</Button></Upload>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>{t('project.createProject')}</Button>
+        <Upload {...uploadProps}><Button icon={<UploadOutlined />}>{t('project.importProject')}</Button></Upload>
       </Space>
       <Table rowKey="name" columns={columns} dataSource={projects} loading={loading} />
-      <Modal title="创建项目" open={modalOpen} onOk={handleCreate} confirmLoading={creating} onCancel={() => setModalOpen(false)}>
-        <Input placeholder="项目名称" value={newName} onChange={(e) => setNewName(e.target.value)} />
+      <Modal title={t('project.createProject')} open={modalOpen} onOk={handleCreate} confirmLoading={creating} onCancel={() => setModalOpen(false)}>
+        <Input placeholder={t('project.projectName')} value={newName} onChange={(e) => setNewName(e.target.value)} />
       </Modal>
     </>
   );

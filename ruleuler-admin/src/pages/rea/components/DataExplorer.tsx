@@ -1,6 +1,8 @@
 import React from 'react';
 import { Tree, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import type { DataNode } from 'antd/es/tree';
 import type { LibraryData } from '../lib/expressionParser';
 
@@ -15,7 +17,7 @@ export function buildRefText(
   category: string,
   name: string,
 ): string {
-  if (kind === 'parameter') return `参数.${name}`;
+  if (kind === 'parameter') return `${i18n.t('rea.paramLabel')}.${name}`;
   return `${category}.${name}`;
 }
 
@@ -43,22 +45,23 @@ export function buildTreeData(libs: LibraryData): DataNode[] {
   if (libs.parameters.length > 0) {
     nodes.push({
       key: 'param-root',
-      title: '参数',
+      title: i18n.t('rea.paramLabel'),
       selectable: false,
       children: libs.parameters.map((p) => ({
         key: `param-${p.name}`,
         title: `${p.label || p.name} (${p.type || 'String'})`,
         isLeaf: true,
-        _meta: { kind: 'parameter' as const, category: '参数', name: p.name },
+        _meta: { kind: 'parameter' as const, category: i18n.t('rea.paramLabel'), name: p.name },
       })) as DataNode[],
     });
   }
 
   return nodes;
-}
+};
 
 
 const DataExplorer: React.FC<DataExplorerProps> = ({ libraries, onInsert }) => {
+  const { t } = useTranslation();
   const treeData = buildTreeData(libraries);
 
   return (
@@ -83,7 +86,7 @@ const DataExplorer: React.FC<DataExplorerProps> = ({ libraries, onInsert }) => {
                 onInsert(buildRefText(meta.kind, meta.category, meta.name));
               }}
             >
-              插入
+              {t('rea.insert')}
             </Button>
           </span>
         );

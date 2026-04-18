@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, Spin, Row, Col } from 'antd';
 import { Line } from '@ant-design/charts';
+import { useTranslation } from 'react-i18next';
 import { fetchIntradayTrend, type IntradayTrendPoint } from '../../../api/monitoring';
 import { transformToChartData, type ChartDataPoint } from './intradayChartUtils';
 
@@ -17,6 +18,7 @@ const IntradayChart: React.FC<IntradayChartProps> = ({
   autoRefresh = false,
   refreshInterval = 60000,
 }) => {
+  const { t, i18n } = useTranslation();
   const [data, setData] = useState<IntradayTrendPoint[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -46,13 +48,13 @@ const IntradayChart: React.FC<IntradayChartProps> = ({
   const chartData = useMemo(() => transformToChartData(data), [data]);
 
   const execVolumeData = useMemo(
-    () => chartData.filter(d => d.metric === '执行量'),
-    [chartData]
+    () => chartData.filter(d => d.metric === t('monitoring.execVolume')),
+    [chartData, i18n.language]
   );
 
   const rateData = useMemo(
-    () => chartData.filter(d => d.metric === '异常率' || d.metric === '错误率'),
-    [chartData]
+    () => chartData.filter(d => d.metric === t('monitoring.outlierRate') || d.metric === t('monitoring.errorRate')),
+    [chartData, i18n.language]
   );
 
   const commonConfig = {
@@ -73,12 +75,12 @@ const IntradayChart: React.FC<IntradayChartProps> = ({
     <Spin spinning={loading}>
       <Row gutter={16}>
         <Col span={12}>
-          <Card size="small" title="当日执行量走势（实线）vs 昨日（虚线）">
+          <Card size="small" title={t('monitoring.intradayVolumeChart')}>
             <Line data={execVolumeData} {...commonConfig} />
           </Card>
         </Col>
         <Col span={12}>
-          <Card size="small" title="当日异常率/错误率走势（实线）vs 昨日（虚线）">
+          <Card size="small" title={t('monitoring.intradayAnomalyChart')}>
             <Line
               data={rateData}
               {...commonConfig}

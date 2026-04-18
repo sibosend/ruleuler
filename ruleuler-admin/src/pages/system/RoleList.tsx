@@ -3,6 +3,7 @@ import { Table, Button, Modal, Form, Input, Space, Popconfirm, Tree, message } f
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { getRoles, createRole, updateRole, deleteRole, assignRolePermissions, getPermissions } from '@/api/rbac';
 import type { DataNode } from 'antd/es/tree';
+import { useTranslation } from 'react-i18next';
 
 interface RoleItem {
   id: number;
@@ -40,6 +41,7 @@ function buildTree(perms: PermItem[]): DataNode[] {
 }
 
 const RoleList: React.FC = () => {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -57,7 +59,7 @@ const RoleList: React.FC = () => {
       const { data } = await getRoles();
       setRoles(Array.isArray(data) ? data : (data?.data ?? []));
     } catch {
-      message.error('加载角色列表失败');
+      message.error(t('system.loadRolesFailed'));
     } finally {
       setLoading(false);
     }
@@ -87,25 +89,25 @@ const RoleList: React.FC = () => {
     try {
       if (editRole) {
         await updateRole(editRole.id, values);
-        message.success('更新成功');
+        message.success(t('system.updateSuccess'));
       } else {
         await createRole(values);
-        message.success('创建成功');
+        message.success(t('system.createSuccess'));
       }
       setEditOpen(false);
       fetchRoles();
     } catch {
-      message.error(editRole ? '更新失败' : '创建失败');
+      message.error(editRole ? t('system.updateFailed') : t('system.createFailed'));
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
       await deleteRole(id);
-      message.success('删除成功');
+      message.success(t('system.deleteSuccess'));
       fetchRoles();
     } catch {
-      message.error('删除失败');
+      message.error(t('system.deleteFailed'));
     }
   };
 
@@ -119,25 +121,25 @@ const RoleList: React.FC = () => {
     if (!permTarget) return;
     try {
       await assignRolePermissions(permTarget.id, checkedKeys);
-      message.success('权限分配成功');
+      message.success(t('system.permAssignSuccess'));
       setPermOpen(false);
       fetchRoles();
     } catch {
-      message.error('权限分配失败');
+      message.error(t('system.permAssignFailed'));
     }
   };
 
   const columns = [
-    { title: '角色名', dataIndex: 'name', key: 'name' },
-    { title: '描述', dataIndex: 'description', key: 'description' },
+    { title: t('system.roleName'), dataIndex: 'name', key: 'name' },
+    { title: t('system.description'), dataIndex: 'description', key: 'description' },
     {
-      title: '操作', key: 'action', width: 320,
+      title: t('common.operation'), key: 'action', width: 320,
       render: (_: unknown, record: RoleItem) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
-          <Button size="small" icon={<SafetyOutlined />} onClick={() => openAssignPerms(record)}>分配权限</Button>
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
-            <Button size="small" danger icon={<DeleteOutlined />} disabled={record.builtIn === 1}>删除</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>{t('system.editBtn')}</Button>
+          <Button size="small" icon={<SafetyOutlined />} onClick={() => openAssignPerms(record)}>{t('system.assignPerms')}</Button>
+          <Popconfirm title={t('common.confirmDelete')} onConfirm={() => handleDelete(record.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />} disabled={record.builtIn === 1}>{t('common.delete')}</Button>
           </Popconfirm>
         </Space>
       ),
@@ -147,22 +149,22 @@ const RoleList: React.FC = () => {
   return (
     <>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>创建角色</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('system.createRole')}</Button>
       </Space>
       <Table rowKey="id" columns={columns} dataSource={roles} loading={loading} />
 
-      <Modal title={editRole ? '编辑角色' : '创建角色'} open={editOpen} onOk={handleSave} onCancel={() => setEditOpen(false)} destroyOnClose>
+      <Modal title={editRole ? t('system.editRole') : t('system.createRole')} open={editOpen} onOk={handleSave} onCancel={() => setEditOpen(false)} destroyOnClose>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="角色名" rules={[{ required: true, message: '请输入角色名' }]}>
+          <Form.Item name="name" label={t('system.roleName')} rules={[{ required: true, message: t('system.enterRoleName') }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('system.description')}>
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal title={`分配权限 - ${permTarget?.name}`} open={permOpen} onOk={handleAssignPerms} onCancel={() => setPermOpen(false)}>
+      <Modal title={t('system.assignPermsTitle', { name: permTarget?.name })} open={permOpen} onOk={handleAssignPerms} onCancel={() => setPermOpen(false)}>
         <Tree
           checkable
           treeData={permTree}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Table, Tag, Button, Card, Modal, Statistic, message, Space, Select, Row, Col, Upload,
@@ -7,6 +7,7 @@ import type { RcFile } from 'antd/es/upload';
 import {
   PlayCircleOutlined, HistoryOutlined, ThunderboltOutlined, ArrowLeftOutlined, UploadOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { listPacks, listPackages, generatePack, executeRun, loadTestRuns, importPack } from '../../api/autotest';
 
 interface Pack {
@@ -39,6 +40,7 @@ const PackListPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const packageId = searchParams.get('packageId') ?? undefined;
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   const [knowledgePackages, setKnowledgePackages] = useState<KnowledgePackage[]>([]);
   const [packs, setPacks] = useState<Pack[]>([]);
@@ -72,11 +74,11 @@ const PackListPage: React.FC = () => {
       const list = res.data?.data ?? [];
       setPacks(Array.isArray(list) ? list : []);
     } catch {
-      message.error('加载用例包列表失败');
+      message.error(t('autotest.loadPackListFailed'));
     } finally {
       setLoading(false);
     }
-  }, [name, packageId]);
+  }, [name, packageId, t]);
 
   const fetched = useRef(false);
   useEffect(() => {
@@ -103,14 +105,14 @@ const PackListPage: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!name || !packageId) { message.warning('请先选择知识包'); return; }
+    if (!name || !packageId) { message.warning(t('autotest.selectPackageFirst')); return; }
     setGenerating(true);
     try {
       await generatePack(name, packageId);
-      message.success('用例包生成成功');
+      message.success(t('autotest.generateSuccess'));
       fetchPacks();
     } catch {
-      message.error('用例包生成失败');
+      message.error(t('autotest.generateFailed'));
     } finally {
       setGenerating(false);
     }
@@ -137,22 +139,22 @@ const PackListPage: React.FC = () => {
     setRunLoading(true);
     try {
       await executeRun(selectedPackId, baselineRunId);
-      message.success('测试运行已启动');
+      message.success(t('autotest.runStarted'));
       setRunModalOpen(false);
       navigate(`/projects/${name}/autotest/pack/${selectedPackId}`);
     } catch {
-      message.error('启动运行失败');
+      message.error(t('autotest.runStartFailed'));
     } finally {
       setRunLoading(false);
     }
   };
 
   const handleImport = async (file: RcFile) => {
-    if (!name || !packageId) { message.warning('请先选择知识包'); return false; }
+    if (!name || !packageId) { message.warning(t('autotest.selectPackageFirst')); return false; }
     setImporting(true);
     try {
       await importPack(name, packageId, file);
-      message.success('用例包导入成功');
+      message.success(t('autotest.importSuccess'));
       setImportModalOpen(false);
       fetchPacks();
     } catch {
@@ -166,39 +168,39 @@ const PackListPage: React.FC = () => {
   const totalCases = packs.reduce((s, p) => s + p.totalCases, 0);
   const packCount = packs.length;
 
-  const columns = [
-    { title: '用例包名称', dataIndex: 'packName', key: 'packName' },
+  const columns = useMemo(() => [
+    { title: t('autotest.caseName'), dataIndex: 'packName', key: 'packName' },
     {
-      title: '来源', dataIndex: 'sourceType', key: 'sourceType', width: 100,
+      title: t('autotest.source'), dataIndex: 'sourceType', key: 'sourceType', width: 100,
       render: (v: string) => (
-        <Tag color={v === 'auto' ? 'green' : 'blue'}>{v === 'auto' ? '自动' : '手动'}</Tag>
+        <Tag color={v === 'auto' ? 'green' : 'blue'}>{v === 'auto' ? t('autotest.autoLabel') : t('autotest.manualLabel')}</Tag>
       ),
     },
-    { title: '用例数', dataIndex: 'totalCases', key: 'totalCases', width: 100 },
+    { title: t('autotest.caseCount'), dataIndex: 'totalCases', key: 'totalCases', width: 100 },
     {
-      title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180,
+      title: t('autotest.createTime'), dataIndex: 'createdAt', key: 'createdAt', width: 180,
       render: (v: number) => fmt(v),
     },
     {
-      title: '操作', key: 'actions', width: 200,
+      title: t('common.operation'), key: 'actions', width: 200,
       render: (_: unknown, record: Pack) => (
         <Space>
           <Button type="link" size="small" icon={<PlayCircleOutlined />}
-            onClick={() => openRunModal(record.id)}>运行</Button>
+            onClick={() => openRunModal(record.id)}>{t('autotest.run')}</Button>
           <Button type="link" size="small" icon={<HistoryOutlined />}
-            onClick={() => navigate(`/projects/${name}/autotest/pack/${record.id}`)}>历史运行</Button>
+            onClick={() => navigate(`/projects/${name}/autotest/pack/${record.id}`)}>{t('autotest.historyRun')}</Button>
         </Space>
       ),
     },
-  ];
+  ], [t, i18n.language, name, navigate]);
 
   return (
     <div>
       <Space style={{ marginBottom: 8 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>{t('common.back')}</Button>
         <Select
           style={{ width: 240 }}
-          placeholder="全部知识包"
+          placeholder={t('autotest.allPackages')}
           allowClear
           value={packageId}
           onChange={handlePackageIdChange}
@@ -206,30 +208,30 @@ const PackListPage: React.FC = () => {
         />
         <Button type="primary" icon={<ThunderboltOutlined />}
           loading={generating} onClick={handleGenerate}
-          disabled={!packageId}>生成用例包</Button>
+          disabled={!packageId}>{t('autotest.generatePack')}</Button>
         <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}
-          disabled={!packageId}>导入用例</Button>
+          disabled={!packageId}>{t('autotest.importCases')}</Button>
       </Space>
 
       <Row gutter={12} style={{ marginBottom: 8 }}>
-        <Col span={4}><Card size="small"><Statistic title="用例包数" value={packCount} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="总用例数" value={totalCases} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="自动生成" value={packs.filter(p => p.sourceType === 'auto').length} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="手动导入" value={packs.filter(p => p.sourceType === 'manual').length} /></Card></Col>
+        <Col span={4}><Card size="small"><Statistic title={t('autotest.packCount')} value={packCount} /></Card></Col>
+        <Col span={4}><Card size="small"><Statistic title={t('autotest.totalCases')} value={totalCases} /></Card></Col>
+        <Col span={4}><Card size="small"><Statistic title={t('autotest.autoGenerated')} value={packs.filter(p => p.sourceType === 'auto').length} /></Card></Col>
+        <Col span={4}><Card size="small"><Statistic title={t('autotest.manualImport')} value={packs.filter(p => p.sourceType === 'manual').length} /></Card></Col>
       </Row>
 
       <Table columns={columns} dataSource={packs} rowKey="id" loading={loading}
-        size="small" pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }} />
+        size="small" pagination={{ pageSize: 20, showTotal: (total) => t('common.total', { count: total }) }} />
 
-      <Modal title="执行测试运行" open={runModalOpen} onOk={handleRun}
-        onCancel={() => setRunModalOpen(false)} confirmLoading={runLoading} okText="开始运行">
-        <p>选择 baseline 运行（可选，不选则本次作为 baseline）：</p>
-        <Select style={{ width: '100%' }} placeholder="不选择 = 本次作为 baseline"
+      <Modal title={t('autotest.execTestRun')} open={runModalOpen} onOk={handleRun}
+        onCancel={() => setRunModalOpen(false)} confirmLoading={runLoading} okText={t('autotest.run')}>
+        <p>{t('autotest.selectBaseline')}</p>
+        <Select style={{ width: '100%' }} placeholder={t('autotest.noBaseline')}
           allowClear value={baselineRunId} onChange={setBaselineRunId}
           options={runOptions.map(r => ({ label: `Run #${r.id} - ${fmt(r.startedAt)}`, value: r.id }))} />
       </Modal>
 
-      <Modal title="手动导入用例包" open={importModalOpen}
+      <Modal title={t('autotest.manualImportTitle')} open={importModalOpen}
         onCancel={() => setImportModalOpen(false)} footer={null}>
         <Upload.Dragger
           accept=".csv,.json"
@@ -238,8 +240,8 @@ const PackListPage: React.FC = () => {
           beforeUpload={handleImport}
           disabled={importing}
         >
-          <p className="ant-upload-text">{importing ? '导入中...' : '点击或拖拽 CSV/JSON 文件到此处'}</p>
-          <p className="ant-upload-hint">支持 .csv 和 .json 格式</p>
+          <p className="ant-upload-text">{importing ? t('autotest.uploading') : t('autotest.uploadHint')}</p>
+          <p className="ant-upload-hint">{t('autotest.uploadFormat')}</p>
         </Upload.Dragger>
       </Modal>
     </div>

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { message } from 'antd';
 import { useAuthStore } from '@/stores/authStore';
+import i18n from '@/i18n';
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -28,9 +29,9 @@ request.interceptors.response.use(
       const msg =
         (error.response?.data as { message?: string })?.message ??
         error.message;
-      message.error(msg || '请求失败');
+      message.error(msg || i18n.t('api.requestFailed'));
     } else {
-      message.error('网络连接失败');
+      message.error(i18n.t('api.networkError'));
     }
     return Promise.reject(error);
   },

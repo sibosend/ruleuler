@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tabs } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { LibraryData } from '../lib/expressionParser';
 import DataExplorer from './DataExplorer';
 import Examples from './Examples';
@@ -17,6 +18,8 @@ const AssistPanel: React.FC<AssistPanelProps> = ({
   libraries,
   onInsert,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div style={{ display: expanded ? 'block' : 'none' }}>
       <Tabs
@@ -24,12 +27,12 @@ const AssistPanel: React.FC<AssistPanelProps> = ({
         items={[
           {
             key: 'data',
-            label: '数据浏览',
+            label: t('rea.dataExplorer'),
             children: <DataExplorer libraries={libraries} onInsert={onInsert} />,
           },
           {
             key: 'examples',
-            label: '示例模式',
+            label: t('rea.exampleMode'),
             children: <Examples type={type} onInsert={onInsert} />,
           },
         ]}

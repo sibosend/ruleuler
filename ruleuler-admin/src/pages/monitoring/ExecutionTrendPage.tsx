@@ -3,6 +3,7 @@ import { Card, Select, Radio, Row, Col, Spin, DatePicker, Statistic, Table, Tag,
 import { ArrowUpOutlined, ArrowDownOutlined, WarningOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/charts';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { loadProjects } from '../../api/project';
 import { listPackages } from '../../api/autotest';
 import {
@@ -27,6 +28,7 @@ interface DateVariable {
 }
 
 const ExecutionTrendPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [projects, setProjects] = useState<string[]>([]);
   const [packages, setPackages] = useState<{ id: string; name: string }[]>([]);
   const [project, setProject] = useState<string>();
@@ -137,24 +139,24 @@ const ExecutionTrendPage: React.FC = () => {
 
   const execVolumeData = useMemo(
     () => dailyTrend.flatMap(d => [
-      { date: d.stat_date, value: d.total_executions, type: '总执行量' },
-      { date: d.stat_date, value: d.missing_executions, type: '缺失量' },
-      { date: d.stat_date, value: d.error_executions, type: '错误量' },
+      { date: d.stat_date, value: d.total_executions, type: t('monitoring.totalExecVolume') },
+      { date: d.stat_date, value: d.missing_executions, type: t('monitoring.missingVolume') },
+      { date: d.stat_date, value: d.error_executions, type: t('monitoring.errorVolume') },
     ]),
-    [dailyTrend]
+    [dailyTrend, i18n.language]
   );
 
   const rateTrendData = useMemo(
     () => dailyTrend.flatMap(d => [
-      { date: d.stat_date, value: +(d.anomaly_rate * 100).toFixed(2), type: '异常率(%)' },
-      { date: d.stat_date, value: +(d.error_rate * 100).toFixed(2), type: '错误率(%)' },
+      { date: d.stat_date, value: +(d.anomaly_rate * 100).toFixed(2), type: t('monitoring.anomalyRatePercent') },
+      { date: d.stat_date, value: +(d.error_rate * 100).toFixed(2), type: t('monitoring.errorRatePercent') },
     ]),
-    [dailyTrend]
+    [dailyTrend, i18n.language]
   );
 
   const intradayChartData = useMemo(() => transformToChartData(intradayTrend), [intradayTrend]);
-  const intradayExecData = useMemo(() => intradayChartData.filter(d => d.metric === '执行量'), [intradayChartData]);
-  const intradayRateData = useMemo(() => intradayChartData.filter(d => d.metric === '异常率' || d.metric === '错误率'), [intradayChartData]);
+  const intradayExecData = useMemo(() => intradayChartData.filter(d => d.metric === t('monitoring.execVolume')), [intradayChartData, i18n.language]);
+  const intradayRateData = useMemo(() => intradayChartData.filter(d => d.metric === t('monitoring.outlierRate') || d.metric === t('monitoring.errorRate')), [intradayChartData, i18n.language]);
 
   const commonConfig = {
     xField: 'date', yField: 'value', colorField: 'type', height: 250,
@@ -176,81 +178,81 @@ const ExecutionTrendPage: React.FC = () => {
       const vc = parts[0] ?? '';
       const vn = parts.slice(1).join(':');
       if (drift.top_value_changed && drift.has_baseline) {
-        alerts.push({ varCategory: vc, varName: vn, type: '主值变更', detail: `${drift.baselineTopValue} → ${drift.currentTopValue}` });
+        alerts.push({ varCategory: vc, varName: vn, type: t('monitoring.topValueChange'), detail: `${drift.baselineTopValue} → ${drift.currentTopValue}` });
       }
       if (drift.enum_drift && drift.has_baseline) {
-        alerts.push({ varCategory: vc, varName: vn, type: '分布偏移', detail: `频率分布发生显著变化` });
+        alerts.push({ varCategory: vc, varName: vn, type: t('monitoring.distributionDrift'), detail: t('monitoring.freqDistChanged') });
       }
     }
     return alerts;
-  }, [dateDriftMap]);
+  }, [dateDriftMap, i18n.language]);
 
-  const varColumns = [
-    { title: '类别', dataIndex: 'var_category', key: 'var_category', width: 100 },
-    { title: '变量名', dataIndex: 'var_name', key: 'var_name', width: 140 },
-    { title: '类型', dataIndex: 'var_type', key: 'var_type', width: 80 },
-    { title: '请求数', dataIndex: 'sample_count', key: 'sample_count', width: 80 },
-    { title: '缺失率', dataIndex: 'missing_rate', key: 'missing_rate', width: 80,
+  const varColumns = useMemo(() => [
+    { title: t('monitoring.category'), dataIndex: 'var_category', key: 'var_category', width: 100 },
+    { title: t('monitoring.varName'), dataIndex: 'var_name', key: 'var_name', width: 140 },
+    { title: t('monitoring.type'), dataIndex: 'var_type', key: 'var_type', width: 80 },
+    { title: t('monitoring.requestCount'), dataIndex: 'sample_count', key: 'sample_count', width: 80 },
+    { title: t('monitoring.missingRate'), dataIndex: 'missing_rate', key: 'missing_rate', width: 80,
       render: (v: number | null) => v != null ? `${(v * 100).toFixed(1)}%` : '-' },
-    { title: '均值', dataIndex: 'mean', key: 'mean', width: 100,
+    { title: t('monitoring.mean'), dataIndex: 'mean', key: 'mean', width: 100,
       render: (v: number | null) => v != null ? v.toFixed(2) : '-' },
     { title: 'Min/Max', key: 'minmax', width: 120,
       render: (_: any, r: DateVariable) => (r.min_val_num != null && r.max_val_num != null)
         ? `${r.min_val_num} / ${r.max_val_num}` : '-' },
-    { title: '错误率', dataIndex: 'error_rate', key: 'error_rate', width: 80,
+    { title: t('monitoring.errorRate'), dataIndex: 'error_rate', key: 'error_rate', width: 80,
       render: (v: number | null) => v != null ? `${(v * 100).toFixed(1)}%` : '-' },
-    { title: 'DoD均值', dataIndex: 'dod_mean_pct', key: 'dod_mean_pct', width: 90,
+    { title: t('monitoring.dodMean'), dataIndex: 'dod_mean_pct', key: 'dod_mean_pct', width: 90,
       render: (v: number | null) => {
         if (v == null) return '-';
         const color = v > 0 ? '#cf1322' : v < 0 ? '#3f8600' : undefined;
         return <span style={{ color }}>{v >= 0 ? '+' : ''}{v.toFixed(1)}%</span>;
       }},
-    { title: '告警', dataIndex: 'alert_flags', key: 'alert_flags', width: 160,
+    { title: t('monitoring.alert'), dataIndex: 'alert_flags', key: 'alert_flags', width: 160,
       render: (v: string | null, r: DateVariable) => {
         const driftKey = `${r.var_category}:${r.var_name}`;
         const drift = dateDriftMap[driftKey];
         return (
           <Space size={4} wrap>
             {v && <Tag icon={<WarningOutlined />} color="error">{v}</Tag>}
-            {drift && !drift.has_baseline && <Tag color="default">无基准</Tag>}
-            {drift?.enum_drift && <Tag color="warning">分布偏移</Tag>}
-            {drift?.top_value_changed && <Tag color="error">主值变更</Tag>}
+            {drift && !drift.has_baseline && <Tag color="default">{t('monitoring.noBaseline')}</Tag>}
+            {drift?.enum_drift && <Tag color="warning">{t('monitoring.distributionDrift')}</Tag>}
+            {drift?.top_value_changed && <Tag color="error">{t('monitoring.topValueChange')}</Tag>}
             {!v && (!drift || (!drift.enum_drift && !drift.top_value_changed && drift.has_baseline !== false)) && '-'}
           </Space>
         );
       }},
-  ];
+  ], [dateDriftMap, i18n.language]);
 
-  const alertColumns = [
-    { title: '类别', dataIndex: 'varCategory', width: 100 },
-    { title: '变量名', dataIndex: 'varName', width: 140 },
-    { title: '告警类型', dataIndex: 'type', width: 100,
-      render: (v: string) => <Tag color={v === '主值变更' ? 'error' : 'warning'}>{v}</Tag> },
-    { title: '详情', dataIndex: 'detail', width: 200 },
-  ];
+  const alertColumns = useMemo(() => [
+    { title: t('monitoring.category'), dataIndex: 'varCategory', width: 100 },
+    { title: t('monitoring.varName'), dataIndex: 'varName', width: 140 },
+    { title: t('monitoring.alertType'), dataIndex: 'type', width: 100,
+      render: (v: string) => <Tag color={v === t('monitoring.topValueChange') ? 'error' : 'warning'}>{v}</Tag> },
+    { title: t('monitoring.detail'), dataIndex: 'detail', width: 200 },
+  ], [i18n.language]);
 
   return (
     <div style={{ padding: 24 }}>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Row gutter={16} align="middle">
           <Col>
-            <Select style={{ width: 180 }} placeholder="选择项目" value={project} onChange={setProject}
+            <Select style={{ width: 180 }} placeholder={t('common.selectProject')} value={project} onChange={setProject}
               options={projects.map(p => ({ label: p, value: p }))} />
           </Col>
           <Col>
-            <Select style={{ width: 220 }} placeholder="选择知识包" value={packageId} onChange={setPackageId}
+            <Select style={{ width: 220 }} placeholder={t('common.selectPackage')} value={packageId} onChange={setPackageId}
               options={packages.map(p => ({ label: `${p.name} (${p.id})`, value: p.id }))} />
           </Col>
           <Col>
             <Radio.Group value={days} onChange={e => setDays(e.target.value)}>
-              <Radio.Button value={7}>近7天</Radio.Button>
-              <Radio.Button value={14}>近14天</Radio.Button>
-              <Radio.Button value={30}>近30天</Radio.Button>
+              <Radio.Button value={7}>{t('monitoring.last7d')}</Radio.Button>
+              <Radio.Button value={14}>{t('monitoring.last14d')}</Radio.Button>
+              <Radio.Button value={30}>{t('monitoring.last30d')}</Radio.Button>
             </Radio.Group>
           </Col>
           <Col>
             <DatePicker
-              placeholder="选择日期查看详情"
+              placeholder={t('monitoring.selectDateDetail')}
               value={selectedDate ? dayjs(selectedDate) : null}
               onChange={(_, ds) => setSelectedDate(typeof ds === 'string' ? ds : null)}
               allowClear
@@ -262,7 +264,7 @@ const ExecutionTrendPage: React.FC = () => {
       <Spin spinning={loading}>
         <Row gutter={16}>
           <Col span={14}>
-            <Card size="small" title="日执行量走势">
+            <Card size="small" title={t('monitoring.dailyExecVolume')}>
               <Line
                 data={execVolumeData}
                 {...commonConfig}
@@ -276,7 +278,7 @@ const ExecutionTrendPage: React.FC = () => {
             </Card>
           </Col>
           <Col span={10}>
-            <Card size="small" title="日异常率/错误率走势">
+            <Card size="small" title={t('monitoring.dailyAnomalyRate')}>
               <Line data={rateTrendData} {...commonConfig} />
             </Card>
           </Col>
@@ -290,7 +292,7 @@ const ExecutionTrendPage: React.FC = () => {
               <Col span={6}>
                 <Card size="small">
                   <Statistic
-                    title="总执行量"
+                    title={t('monitoring.totalExec')}
                     value={daySummary.totalExec}
                     suffix={daySummary.dodChange != null ? (
                       <span style={{ fontSize: 14, color: daySummary.dodChange >= 0 ? '#cf1322' : '#3f8600' }}>
@@ -303,31 +305,31 @@ const ExecutionTrendPage: React.FC = () => {
               </Col>
               <Col span={6}>
                 <Card size="small">
-                  <Statistic title="错误率" value={daySummary.errorRate} precision={2} suffix="%" />
+                  <Statistic title={t('monitoring.errorRate')} value={daySummary.errorRate} precision={2} suffix="%" />
                 </Card>
               </Col>
               <Col span={6}>
                 <Card size="small">
-                  <Statistic title="异常率(缺失)" value={daySummary.anomalyRate} precision={2} suffix="%" />
+                  <Statistic title={t('monitoring.anomalyMissingRate')} value={daySummary.anomalyRate} precision={2} suffix="%" />
                 </Card>
               </Col>
               <Col span={6}>
                 <Card size="small">
-                  <Statistic title="峰值时段" value={daySummary.peakWindow || '-'} />
+                  <Statistic title={t('monitoring.peakWindow')} value={daySummary.peakWindow || '-'} />
                 </Card>
               </Col>
             </Row>
           )}
 
-          <Card size="small" title={`${selectedDate} 分时走势`} style={{ marginTop: 16 }}>
+          <Card size="small" title={`${selectedDate} ${t('monitoring.intradayTrend')}`} style={{ marginTop: 16 }}>
             <Row gutter={16}>
               <Col span={12}>
-                <Card size="small" title="执行量">
+                <Card size="small" title={t('monitoring.execVolume')}>
                   <Line data={intradayExecData} {...intradayConfig} />
                 </Card>
               </Col>
               <Col span={12}>
-                <Card size="small" title="异常率/错误率">
+                <Card size="small" title={t('monitoring.anomalyErrorRate')}>
                   <Line data={intradayRateData} {...intradayConfig} colorField="metric" />
                 </Card>
               </Col>
@@ -336,7 +338,7 @@ const ExecutionTrendPage: React.FC = () => {
 
           {/* 变量分布表 */}
           {dateVariables.length > 0 && (
-            <Card size="small" title={`${selectedDate} 变量分布`} style={{ marginTop: 16 }}>
+            <Card size="small" title={`${selectedDate} ${t('monitoring.varDistribution')}`} style={{ marginTop: 16 }}>
               <Table<DateVariable>
                 columns={varColumns}
                 dataSource={dateVariables}
@@ -349,7 +351,7 @@ const ExecutionTrendPage: React.FC = () => {
 
           {/* 告警回放 */}
           {alertReplay.length > 0 && (
-            <Card size="small" title={`${selectedDate} 告警回放`} style={{ marginTop: 16 }}>
+            <Card size="small" title={`${selectedDate} ${t('monitoring.alertReplay')}`} style={{ marginTop: 16 }}>
               <Table
                 columns={alertColumns}
                 dataSource={alertReplay}

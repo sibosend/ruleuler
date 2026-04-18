@@ -18,7 +18,7 @@ interface TabState {
 }
 
 export const useTabStore = create<TabState>((set, get) => ({
-  tabs: [{ key: '/', label: '仪表盘', closable: false }],
+  tabs: [{ key: '/', label: 'route.dashboard', closable: false }],
   activeKey: '/',
   refreshMap: {},
 

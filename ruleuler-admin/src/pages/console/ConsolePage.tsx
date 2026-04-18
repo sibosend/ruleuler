@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Result, Button, Empty } from 'antd';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ApartmentOutlined, ProjectOutlined } from '@ant-design/icons';
 import { useTabStore } from '@/stores/tabStore';
 import ResourceTree from './ResourceTree';
@@ -49,6 +50,7 @@ const MIN_TREE_WIDTH = 160;
 const MAX_TREE_WIDTH = 600;
 
 const ConsolePage: React.FC = () => {
+  const { t } = useTranslation();
   const { project } = useParams<{ project: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -98,11 +100,11 @@ const ConsolePage: React.FC = () => {
     return (
       <Result
         icon={<ProjectOutlined style={{ color: '#1890ff' }} />}
-        title="请先选择一个项目"
-        subTitle="2 秒后自动跳转到项目列表…"
+        title={t('console.selectProjectFirst')}
+        subTitle={t('console.autoRedirect')}
         extra={
           <Button type="primary" onClick={() => navigate('/projects')}>
-            前往项目列表
+            {t('console.goToProjectList')}
           </Button>
         }
       />
@@ -121,7 +123,7 @@ const ConsolePage: React.FC = () => {
       const routeKey = buildEditorRoute(parsed.project, parsed.filePath);
       const existing = useTabStore.getState().tabs.find(t => t.key === routeKey);
       if (!existing) {
-        const fileName = parsed.filePath === '__package__' ? '知识包' : (parsed.filePath.split('/').pop() ?? parsed.filePath);
+        const fileName = parsed.filePath === '__package__' ? t('console.knowledgePackage') : (parsed.filePath.split('/').pop() ?? parsed.filePath);
         addTab({ key: routeKey, label: fileName, closable: true });
       } else {
         useTabStore.getState().setActiveKey(routeKey);
@@ -153,7 +155,7 @@ const ConsolePage: React.FC = () => {
       // 知识包：用特殊路由标记
       if (file.type === 'resourcePackage') {
         const route = `/console/${project}/edit/__package__`;
-        addTab({ key: route, label: '知识包', closable: true });
+        addTab({ key: route, label: t('console.knowledgePackage'), closable: true });
         navigate(route);
         return;
       }
@@ -162,7 +164,7 @@ const ConsolePage: React.FC = () => {
       addTab({ key: route, label: fileName, closable: true });
       navigate(route);
     },
-    [project, addTab, navigate],
+    [project, addTab, navigate, t],
   );
 
   // ─── 过滤当前项目的编辑器 tab ─────────────────────────────────
@@ -230,7 +232,7 @@ const ConsolePage: React.FC = () => {
                   setDepDrawerOpen(true);
                 }}
               >
-                依赖分析
+                {t('console.dependencyAnalysis')}
               </Button>
             </div>
           );
@@ -245,7 +247,7 @@ const ConsolePage: React.FC = () => {
               height: '100%',
             }}
           >
-            <Empty description="请从左侧资源树选择文件" />
+            <Empty description={t('console.selectFileFromTree')} />
           </div>
         ) : (
           editorTabs.map((tab) => {
