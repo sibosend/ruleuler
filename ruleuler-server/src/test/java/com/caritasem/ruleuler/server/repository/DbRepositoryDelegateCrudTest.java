@@ -1,5 +1,6 @@
 package com.caritasem.ruleuler.server.repository;
 
+import com.caritasem.ruleuler.server.audit.AuditLogService;
 import com.bstek.urule.console.DefaultUser;
 import com.bstek.urule.console.RepositoryInteceptor;
 import com.bstek.urule.console.User;
@@ -41,6 +42,7 @@ class DbRepositoryDelegateCrudTest extends BaseRepositoryTest {
         when(mockCtx.getBeansOfType(RepositoryInteceptor.class)).thenReturn(Collections.emptyMap());
         when(mockCtx.getBean(PermissionService.class)).thenReturn(ps);
         when(mockCtx.getBean(JdbcTemplate.class)).thenReturn(jdbcTemplate);
+        when(mockCtx.getBean(AuditLogService.class)).thenReturn(mock(AuditLogService.class));
         delegate.setApplicationContext(mockCtx);
 
         DefaultUser u = new DefaultUser();

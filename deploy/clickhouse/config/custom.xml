@@ -1,0 +1,57 @@
+<clickhouse>
+    <!-- 关闭 text_log：占 7.38GB，CPU 杀手 -->
+    <text_log>
+        <database>system</database>
+        <table>text_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <level>warning</level>
+    </text_log>
+
+    <!-- 关闭 trace_log -->
+    <trace_log>
+        <database>system</database>
+        <table>trace_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <enabled>false</enabled>
+    </trace_log>
+
+    <!-- 关闭 processors_profile_log -->
+    <processors_profile_log>
+        <database>system</database>
+        <table>processors_profile_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <enabled>false</enabled>
+    </processors_profile_log>
+
+    <!-- metric_log 降低频率，保留但只记录关键指标 -->
+    <metric_log>
+        <database>system</database>
+        <table>metric_log</table>
+        <flush_interval_milliseconds>30000</flush_interval_milliseconds>
+        <collect_interval_milliseconds>60000</collect_interval_milliseconds>
+    </metric_log>
+
+    <!-- asynchronous_metric_log 降低频率 -->
+    <asynchronous_metric_log>
+        <database>system</database>
+        <table>asynchronous_metric_log</table>
+        <flush_interval_milliseconds>30000</flush_interval_milliseconds>
+        <collect_interval_milliseconds>60000</collect_interval_milliseconds>
+    </asynchronous_metric_log>
+
+    <!-- query_log 保留，但设置 TTL -->
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </query_log>
+
+    <!-- part_log 保留，设置 TTL -->
+    <part_log>
+        <database>system</database>
+        <table>part_log</table>
+        <flush_interval_milliseconds>30000</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </part_log>
+</clickhouse>

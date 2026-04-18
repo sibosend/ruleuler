@@ -2,8 +2,8 @@ package com.caritasem.ruleuler.grayscale;
 
 import com.bstek.urule.runtime.KnowledgePackage;
 import com.bstek.urule.runtime.cache.MemoryKnowledgeCache;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

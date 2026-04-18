@@ -6,8 +6,8 @@ package com.caritasem.ruleuler.server.controller;
 // Validates: Requirements 3.7, 3.8, 9.1, 9.2, 9.3
 
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestCasePack;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import net.jqwik.api.*;
 import net.jqwik.api.Tuple.Tuple2;
 

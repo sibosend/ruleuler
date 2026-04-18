@@ -11,7 +11,8 @@ import com.caritasem.ruleuler.server.approval.model.Approval;
 import com.caritasem.ruleuler.server.approval.model.ApprovalStatus;
 import com.caritasem.ruleuler.server.approval.model.PublishSnapshot;
 import com.caritasem.ruleuler.server.grayscale.model.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.slf4j.Logger;
@@ -411,7 +412,7 @@ public class GrayscaleService {
         if (snapshot == null || snapshot.getSnapshotData() == null) return null;
         try {
             return objectMapper.readValue(snapshot.getSnapshotData(),
-                    new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String, String>>() {});
+                    new TypeReference<LinkedHashMap<String, String>>() {});
         } catch (Exception e) {
             return null;
         }

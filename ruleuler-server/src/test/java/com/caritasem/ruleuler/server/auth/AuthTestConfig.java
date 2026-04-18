@@ -9,6 +9,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableAutoConfiguration
-@ComponentScan(basePackages = "com.caritasem.ruleuler.server.auth")
+@ComponentScan(basePackages = {"com.caritasem.ruleuler.server.auth", "com.caritasem.ruleuler.server.audit"})
 public class AuthTestConfig {
 }

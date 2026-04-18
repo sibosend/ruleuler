@@ -5,7 +5,7 @@ import com.caritasem.ruleuler.dto.RespDTO;
 import com.caritasem.ruleuler.dto.RuleExecutionResult;
 import com.caritasem.ruleuler.service.RuleExecutionService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.context.WebServerApplicationContext;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.InetAddress;

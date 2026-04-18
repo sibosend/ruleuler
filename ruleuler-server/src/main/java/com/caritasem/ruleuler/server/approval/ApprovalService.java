@@ -14,7 +14,8 @@ import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestResultDao;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestRun;
 import com.caritasem.ruleuler.server.approval.model.*;
 import com.caritasem.ruleuler.server.grayscale.SnapshotKnowledgeBuilder;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -316,7 +317,7 @@ public class ApprovalService {
         if (snapshot == null || snapshot.getSnapshotData() == null) return null;
         try {
             return objectMapper.readValue(snapshot.getSnapshotData(),
-                    new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String, String>>() {});
+                    new TypeReference<LinkedHashMap<String, String>>() {});
         } catch (Exception e) {
             return null;
         }

@@ -1,6 +1,6 @@
 package com.caritasem.ruleuler.server.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.caritasem.ruleuler.server.auth.dao.UserDao;
 import com.caritasem.ruleuler.server.auth.entity.Permission;
 import com.caritasem.ruleuler.server.auth.entity.Role;

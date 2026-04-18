@@ -1,7 +1,7 @@
 package com.caritasem.ruleuler.server.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.context.WebServerApplicationContext;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.InetAddress;

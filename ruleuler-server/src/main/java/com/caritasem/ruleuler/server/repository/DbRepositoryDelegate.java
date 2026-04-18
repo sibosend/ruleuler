@@ -45,8 +45,8 @@ import com.bstek.urule.console.servlet.permission.UserPermission;
 import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.approval.DiffCalculator;
 import com.caritasem.ruleuler.server.audit.AuditLogService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Component("dbRepositoryDelegate")
 public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationContextAware {

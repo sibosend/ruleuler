@@ -321,8 +321,8 @@ def send_request(url: str, payload: dict):
     elapsed = time.time() - start
     try:
         data = json.loads(body)
-        if data.get("code") != 200:
-            status = data.get("code", 500)
+        if data.get("status") != 200:
+            status = data.get("status", 500)
     except Exception:
         pass
     return status, elapsed
@@ -380,6 +380,8 @@ def main():
     parser.add_argument("--days", type=int, default=14)
     parser.add_argument("--daily-count", type=int, default=10000,
                         help="基准每日执行次数（工作日），周末自动打折")
+    parser.add_argument("--process", default="gate_allocation_flow",
+                        help="规则流程名（对应 URL 中的 {process} 段）")
     parser.add_argument("--realtime-count", type=int, default=300)
     parser.add_argument("--concurrency", type=int, default=10)
     args = parser.parse_args()
@@ -418,8 +420,7 @@ def main():
         )
 
     if args.mode in ("all", "realtime"):
-        api_url = (f"{args.client}/urule/rest/ruleset/execute"
-                   f"?project={args.project}&id={args.package_id}")
+        api_url = f"{args.client}/process/{args.project}/{args.package_id}/{args.process}"
         simulate_realtime(api_url, args.realtime_count, args.concurrency)
 
     print("完成！可在监控页面查看数据：")
