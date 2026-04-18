@@ -2,11 +2,11 @@
 
 ## 概述
 
-RulEuler MCP Server 集成在 ruleuler-client 模块中，通过 Streamable HTTP 协议暴露两个 MCP Tool，供 AI 助手调用规则引擎。
+RulEuler MCP Server 集成在 ruleuler-client 模块中，基于 Spring AI MCP 框架，通过 Streamable HTTP 协议暴露两个 MCP Tool，供 AI 助手调用规则引擎。
 
 | Tool | 功能 |
 |------|------|
-| `execute_rule` | 执行决策流，传入变量数据，返回决策结果 |
+| `execute_rule` | 执行决策流，传入变量数据，返回决策结果（仅含被规则修改的字段） |
 | `inspect_variables` | 查看知识包的变量定义（类别、名称、关联文件） |
 
 ## 服务端配置
@@ -31,7 +31,14 @@ spring:
         name: ruleuler-mcp-server
         version: 1.0.0
         type: SYNC
+        stdio: false
+        protocol: STREAMABLE
+        annotation-scanner:
+          enabled: true
 ```
+
+- `protocol: STREAMABLE` — 使用 Streamable HTTP 传输协议
+- `annotation-scanner.enabled: true` — 自动扫描 `@McpTool` 注解注册 Tool
 
 ### 端点地址
 
@@ -133,6 +140,79 @@ async def main():
             })
 ```
 
+## Tool 详情
+
+### execute_rule
+
+执行一个 RulEuler 决策流。
+
+**参数：**
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `project` | 是 | 项目名称 |
+| `knowledge` | 是 | 知识包名称 |
+| `process` | 是 | 决策流名称 |
+| `data` | 是 | JSON 输入数据，按变量类别分组，如 `{"FlightInfo":{"aircraft_type":"A380"}}` |
+
+**成功返回：**
+
+```json
+{
+  "status": 200,
+  "executionId": "uuid",
+  "packageId": "project/pkg",
+  "route": "BASE",
+  "data": {"GateResult": {"gate_type": "wide_body", "assigned_gate": "A12"}}
+}
+```
+
+- `route`：灰度路由标记，值为 `BASE`（主版本）或 `GRAY`（灰度版本）
+- `data`：仅包含被规则修改的字段
+
+**失败返回：**
+
+```json
+{"status": 400, "error": "Invalid JSON input: ..."}
+{"status": 400, "error": "未知变量类别: BadCat"}
+{"status": 404, "error": "Knowledge package not found: project/pkg"}
+{"status": 500, "error": "异常信息"}
+```
+
+### inspect_variables
+
+查看知识包的变量定义。
+
+**参数：**
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `project` | 是 | 项目名称 |
+| `packageId` | 是 | 知识包 ID |
+
+**成功返回：**
+
+```json
+{
+  "status": 200,
+  "project": "your_project",
+  "packageId": "your_pkg",
+  "totalVariables": 5,
+  "variables": [
+    {
+      "category": "FlightInfo",
+      "name": "aircraft_type",
+      "fullName": "FlightInfo.aircraft_type",
+      "categoryClass": "com.bstek.urule.model.GeneralEntity",
+      "usedByFiles": ["rule1.xml", "flow1.xml"]
+    }
+  ],
+  "variableCategoryMap": {
+    "FlightInfo": "com.bstek.urule.model.GeneralEntity"
+  }
+}
+```
+
 ## curl 测试
 
 ### 1. 初始化
@@ -181,26 +261,6 @@ curl -X POST http://localhost:16001/mcp \
   }'
 ```
 
-成功返回：
-
-```json
-{
-  "status": 200,
-  "executionId": "uuid",
-  "packageId": "your_project/your_pkg",
-  "route": "BASE",
-  "data": {"GateResult": {"gate_type": "wide_body", "assigned_gate": "A12"}}
-}
-```
-
-失败返回：
-
-```json
-{"status": 400, "error": "Unknown variable category: BadCat"}
-{"status": 404, "error": "Knowledge package not found: project/pkg"}
-{"status": 500, "error": "异常信息"}
-```
-
 ### 4. 查看变量定义
 
 ```bash
@@ -218,27 +278,4 @@ curl -X POST http://localhost:16001/mcp \
       }
     }
   }'
-```
-
-成功返回：
-
-```json
-{
-  "status": 200,
-  "project": "your_project",
-  "packageId": "your_pkg",
-  "totalVariables": 5,
-  "variables": [
-    {
-      "category": "FlightInfo",
-      "name": "aircraft_type",
-      "fullName": "FlightInfo.aircraft_type",
-      "categoryClass": "com.bstek.urule.model.GeneralEntity",
-      "usedByFiles": ["rule1.xml", "flow1.xml"]
-    }
-  ],
-  "variableCategoryMap": {
-    "FlightInfo": "com.bstek.urule.model.GeneralEntity"
-  }
-}
 ```

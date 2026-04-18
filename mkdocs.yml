@@ -43,6 +43,7 @@ nav:
     - 依赖分析: guide/dependency-analysis.md
     - 权限管理: guide/rbac.md
     - 审计日志: guide/audit-log.md
+  - MCP Server 接入: guide/mcp-server.md
   - API 参考:
     - 客户端 API: api/client-api.md
     - 管理端 API: api/server-api.md

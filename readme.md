@@ -171,6 +171,41 @@ curl -X POST http://localhost:16001/inspector/variables/{project}/{packageId}
 
 ---
 
+## MCP Server
+
+ruleuler-client 内置 MCP Server，通过 Streamable HTTP 协议暴露两个 Tool，供 AI 助手直接调用规则引擎：
+
+| Tool | 功能 |
+|------|------|
+| `execute_rule` | 执行决策流，返回决策结果 |
+| `inspect_variables` | 查看知识包变量定义 |
+
+端点：`POST http://localhost:16001/mcp`
+
+配置（`application-dev.yml` 已默认开启）：
+
+```yaml
+ruleuler:
+  mcp:
+    enabled: true
+```
+
+Claude Desktop / Claude Code / Cursor 等客户端配置示例：
+
+```json
+{
+  "mcpServers": {
+    "ruleuler": {
+      "url": "http://localhost:16001/mcp"
+    }
+  }
+}
+```
+
+详细接入指南见 [MCP Server 接入指南](docs/guide/mcp-server.md)。
+
+---
+
 ## 发版
 
 ```bash

@@ -67,6 +67,39 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 | Audit Log | None | Operations playback for configuration & permission changes |
 | Auth | None | JWT |
 
+## MCP Server
+
+ruleuler-client includes a built-in MCP Server exposing two tools via Streamable HTTP for AI assistants:
+
+| Tool | Description |
+|------|-------------|
+| `execute_rule` | Execute a decision flow, return results |
+| `inspect_variables` | Inspect variable definitions of a knowledge package |
+
+Endpoint: `POST http://localhost:16001/mcp`
+
+Configuration (enabled by default in `application-dev.yml`):
+
+```yaml
+ruleuler:
+  mcp:
+    enabled: true
+```
+
+Client configuration (Claude Desktop / Claude Code / Cursor):
+
+```json
+{
+  "mcpServers": {
+    "ruleuler": {
+      "url": "http://localhost:16001/mcp"
+    }
+  }
+}
+```
+
+See [MCP Server Guide](docs/guide/mcp-server.md) for details.
+
 ## Documentation
 
 - [Full Documentation](https://sibosend.github.io/ruleuler/)
