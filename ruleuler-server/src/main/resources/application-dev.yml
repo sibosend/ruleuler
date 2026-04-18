@@ -16,6 +16,11 @@ spring:
       remove-abandoned: true
       remove-abandoned-timeout: 180
 
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
   jackson:
     default-property-inclusion: non_null
 

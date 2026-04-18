@@ -659,10 +659,15 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
                 file.setLockInfo("被" + lockUser + "锁定");
             }
 
-            // 如果文件在子文件夹下，挂到文件夹
+            // 如果文件在子文件夹下，检查文件类型是否匹配父目录 folderType
             String parentPath = path.substring(0, path.lastIndexOf("/"));
             RepositoryFile parentFile = pathMap.get(parentPath);
-            if (parentFile != null) {
+            RepositoryFile targetLib = resolveTargetLib(name, libDir, rulesLib, dtLib, dtreeLib, scLib, flowLib);
+            if (parentFile != null && (targetLib == null || isSameLib(parentFile, targetLib))) {
+                parentFile.addChild(file, false);
+            } else if (targetLib != null) {
+                targetLib.addChild(file, false);
+            } else if (parentFile != null) {
                 parentFile.addChild(file, false);
             } else {
                 // 直接在项目根下的文件，按类型分配到分类 lib
@@ -1006,6 +1011,26 @@ public class DbRepositoryDelegate implements RepositoryDelegate, ApplicationCont
     private static String getOperator() {
         AuthContext.UserInfo user = AuthContext.get();
         return user != null ? user.getUsername() : "system";
+    }
+
+    private RepositoryFile resolveTargetLib(String name, RepositoryFile libDir, RepositoryFile rulesLib,
+                                              RepositoryFile dtLib, RepositoryFile dtreeLib, RepositoryFile scLib, RepositoryFile flowLib) {
+        String nl = name.toLowerCase();
+        if (nl.endsWith(FileType.VariableLibrary.toString()) || nl.endsWith(FileType.ParameterLibrary.toString())
+                || nl.endsWith(FileType.ConstantLibrary.toString()) || nl.endsWith(FileType.ActionLibrary.toString())) return libDir;
+        if (nl.endsWith(FileType.Ruleset.toString()) || nl.endsWith(FileType.UL.toString()) || nl.endsWith(FileType.Rea.toString())) return rulesLib;
+        if (nl.endsWith(FileType.DecisionTable.toString()) || nl.endsWith(FileType.ScriptDecisionTable.toString())) return dtLib;
+        if (nl.endsWith(FileType.DecisionTree.toString())) return dtreeLib;
+        if (nl.endsWith(FileType.Scorecard.toString())) return scLib;
+        if (nl.endsWith(FileType.RuleFlow.toString())) return flowLib;
+        return null;
+    }
+
+    private boolean isSameLib(RepositoryFile folder, RepositoryFile targetLib) {
+        // 向上找 folder 或其祖先是否挂在 targetLib 下
+        Type ft = folder.getFolderType();
+        if (ft == null) return false;
+        return ft.equals(targetLib.getType());
     }
 
     private Type resolveFileType(String name) {

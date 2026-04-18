@@ -69,9 +69,15 @@ public class ProjectController {
     @PostMapping("/import")
     public ApiResult importProject(@RequestParam("file") MultipartFile file,
                                    @RequestParam(value = "overwrite", defaultValue = "true") boolean overwrite) throws Exception {
-        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
-            zis.getNextEntry();
-            repositoryService.importXml(zis, overwrite);
+        byte[] data = file.getBytes();
+        // ZIP magic: PK(0x504B)，否则视为原始文件（JCR XML 或 DBR JSON）
+        if (data.length >= 2 && data[0] == 0x50 && data[1] == 0x4B) {
+            try (ZipInputStream zis = new ZipInputStream(new java.io.ByteArrayInputStream(data))) {
+                zis.getNextEntry();
+                repositoryService.importXml(zis, overwrite);
+            }
+        } else {
+            repositoryService.importXml(new java.io.ByteArrayInputStream(data), overwrite);
         }
         return ApiResult.ok(null);
     }

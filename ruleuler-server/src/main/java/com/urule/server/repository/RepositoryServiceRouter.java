@@ -15,14 +15,23 @@
  ******************************************************************************/
 package com.urule.server.repository;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.dom4j.Document;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 
 import com.caritasem.ruleuler.server.repository.DbRepositoryDelegate;
 import com.caritasem.ruleuler.server.repository.ProjectStorageService;
@@ -49,6 +58,7 @@ public class RepositoryServiceRouter implements RepositoryService, ApplicationCo
     private JcrRepositoryDelegate jcrDelegate;
     private DbRepositoryDelegate dbDelegate;
     private ProjectStorageService projectStorageService;
+    private JdbcTemplate jdbcTemplate;
 
     // ---- 工具方法 ----
 
@@ -234,8 +244,178 @@ public class RepositoryServiceRouter implements RepositoryService, ApplicationCo
 
     @Override
     public void importXml(InputStream inputStream, boolean overwrite) throws Exception {
-        // importXml 没有明确的项目上下文，暂时委托给 jcrDelegate
-        jcrDelegate.importXml(inputStream, overwrite);
+        byte[] data = IOUtils.toByteArray(inputStream);
+        String head = new String(data, 0, Math.min(data.length, 1), StandardCharsets.UTF_8).trim();
+
+        if (head.equals("[")) {
+            // DBR JSON 格式
+            dbDelegate.importXml(new ByteArrayInputStream(data), overwrite);
+        } else if (head.equals("<")) {
+            // JCR system view XML → 转 DBR
+            convertJcrXmlToDb(data, overwrite);
+        } else {
+            throw new IllegalArgumentException("无法识别的导入文件格式");
+        }
+    }
+
+    private void convertJcrXmlToDb(byte[] xmlData, boolean overwrite) throws Exception {
+        // 去掉命名空间前缀，避免 dom4j 命名空间解析问题
+        String xml = new String(xmlData, StandardCharsets.UTF_8);
+        xml = xml.replaceAll("<(/?)sv:", "<$1").replaceAll("<(/?)jcr:", "<$1")
+                .replaceAll("<(/?)nt:", "<$1").replaceAll("<(/?)mix:", "<$1").replaceAll("<(/?)rep:", "<$1");
+
+        Document doc = DocumentHelper.parseText(xml);
+        Element root = doc.getRootElement();
+        String rootNodeName = root.attributeValue("name");
+        String projectName = rootNodeName;
+
+        List<Map<String, Object>> records = new ArrayList<>();
+        parseJcrNode(root, "/" + projectName, projectName, records);
+
+        // 写入数据库
+        for (Map<String, Object> rec : records) {
+            String path = (String) rec.get("path");
+            if (overwrite) {
+                jdbcTemplate.update("DELETE FROM ruleuler_rule_file WHERE path=?", path);
+            }
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM ruleuler_rule_file WHERE path=?", Integer.class, path);
+            if (count != null && count > 0) {
+                continue;
+            }
+            jdbcTemplate.update(
+                    "INSERT INTO ruleuler_rule_file(project,path,name,is_dir,content,create_user,update_user,company_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    rec.get("project"), rec.get("path"), rec.get("name"), rec.get("is_dir"),
+                    rec.get("content"), rec.get("create_user"), rec.get("update_user"),
+                    rec.get("company_id"), rec.get("created_at"), rec.get("updated_at"));
+        }
+
+        // 为目录推断 folder_type：根据子文件扩展名判定分类
+        inferFolderTypes(projectName);
+
+        // 注册为 DB 存储
+        StorageType existing = projectStorageService.getStorageTypeOrNull(projectName);
+        if (existing == null) {
+            projectStorageService.register(projectName, StorageType.DB);
+        }
+    }
+
+    private void inferFolderTypes(String project) {
+        String projectPath = "/" + project;
+
+        // 按深度倒序处理（深→浅），跳过项目根目录，每个目录只看直接子文件
+        List<Map<String, Object>> dirs = jdbcTemplate.queryForList(
+                "SELECT path FROM ruleuler_rule_file WHERE project=? AND is_dir=1 AND path != ? AND (folder_type IS NULL OR folder_type='') ORDER BY LENGTH(path) DESC",
+                project, projectPath);
+
+        for (Map<String, Object> row : dirs) {
+            String dirPath = (String) row.get("path");
+            // 只看直接子文件（排除更深层的文件）
+            List<String> childNames = jdbcTemplate.queryForList(
+                    "SELECT name FROM ruleuler_rule_file WHERE project=? AND path LIKE ? AND is_dir=0 AND path NOT LIKE ?",
+                    String.class, project, dirPath + "/%", dirPath + "/%/%");
+            String folderType = resolveFolderType(childNames);
+            if (folderType != null) {
+                jdbcTemplate.update("UPDATE ruleuler_rule_file SET folder_type=? WHERE path=?", folderType, dirPath);
+            }
+        }
+
+        // 剩余无 folder_type 的目录，从已有 folder_type 的祖先继承（浅→深）
+        List<Map<String, Object>> remaining = jdbcTemplate.queryForList(
+                "SELECT path FROM ruleuler_rule_file WHERE project=? AND is_dir=1 AND path != ? AND (folder_type IS NULL OR folder_type='') ORDER BY path",
+                project, projectPath);
+        for (Map<String, Object> row : remaining) {
+            String dirPath = (String) row.get("path");
+            String parent = dirPath;
+            while (true) {
+                int idx = parent.lastIndexOf("/");
+                if (idx <= 0) break;
+                parent = parent.substring(0, idx);
+                try {
+                    String pt = jdbcTemplate.queryForObject(
+                            "SELECT folder_type FROM ruleuler_rule_file WHERE path=? AND folder_type IS NOT NULL AND folder_type != ''",
+                            String.class, parent);
+                    if (pt != null) {
+                        jdbcTemplate.update("UPDATE ruleuler_rule_file SET folder_type=? WHERE path=?", pt, dirPath);
+                        break;
+                    }
+                } catch (org.springframework.dao.EmptyResultDataAccessException ignored) {}
+            }
+        }
+    }
+
+    private String resolveFolderType(List<String> childNames) {
+        int lib = 0, rule = 0, dt = 0, dtree = 0, sc = 0, flow = 0;
+        for (String name : childNames) {
+            String nl = name.toLowerCase();
+            // 只统计直接子文件（跳过子目录下的文件）
+            if (nl.endsWith(".vl.xml") || nl.endsWith(".cl.xml") || nl.endsWith(".pl.xml") || nl.endsWith(".al.xml")) lib++;
+            else if (nl.endsWith(".rs.xml") || nl.endsWith(".ul") || nl.endsWith(".rea.xml")) rule++;
+            else if (nl.endsWith(".dt.xml") || nl.endsWith(".dts.xml")) dt++;
+            else if (nl.endsWith(".dtree.xml")) dtree++;
+            else if (nl.endsWith(".sc")) sc++;
+            else if (nl.endsWith(".rl.xml")) flow++;
+        }
+        // 混合类型取最多的，单一类型直接返回
+        if (dtree > 0 && dtree >= dt && dtree >= rule && dtree >= flow && dtree >= sc && dtree >= lib) return "decisionTreeLib";
+        if (dt > 0 && dt >= dtree && dt >= rule && dt >= flow && dt >= sc && dt >= lib) return "decisionTableLib";
+        if (flow > 0 && flow >= dtree && flow >= dt && flow >= rule && flow >= sc && flow >= lib) return "flowLib";
+        if (sc > 0 && sc >= dtree && sc >= dt && sc >= rule && flow >= lib) return "scorecardLib";
+        if (rule > 0 && rule >= dtree && rule >= dt && rule >= flow && rule >= sc && rule >= lib) return "ruleLib";
+        if (lib > 0) return "lib";
+        return null;
+    }
+
+    private void parseJcrNode(Element node, String path, String project, List<Map<String, Object>> records) {
+        // 提取属性
+        Map<String, String> props = new HashMap<>();
+        for (Element prop : (List<Element>) node.elements("property")) {
+            String propName = prop.attributeValue("name");
+            if (propName == null || propName.startsWith("jcr:")) continue;
+            String propType = prop.attributeValue("type");
+            Element valueEl = (Element) prop.element("value");
+            if (valueEl != null) {
+                String val = valueEl.getTextTrim();
+                // JCR system view 中 Binary 类型值是 Base64 编码
+                if ("Binary".equals(propType) && val != null && !val.isEmpty()) {
+                    val = new String(java.util.Base64.getDecoder().decode(val), StandardCharsets.UTF_8);
+                    // 内容中的资源引用路径从 jcr: 转 dbr:
+                    val = val.replace("jcr:/", "dbr:/");
+                }
+                props.put(propName, val);
+            }
+        }
+
+        String name = path.contains("/") ? path.substring(path.lastIndexOf("/") + 1) : path;
+        boolean isDir = "true".equals(props.get("_dir"));
+        boolean isFile = "true".equals(props.get("_file"));
+
+        // 有 _file 属性的节点才作为记录（跳过纯 JCR 中间节点）
+        if (isFile) {
+            boolean hasChildNodes = !node.elements("node").isEmpty();
+            boolean dirFlag = isDir || (hasChildNodes && !props.containsKey("_data"));
+
+            Map<String, Object> rec = new HashMap<>();
+            rec.put("project", project);
+            rec.put("path", path);
+            rec.put("name", name);
+            rec.put("is_dir", dirFlag ? 1 : 0);
+            rec.put("content", props.get("_data"));
+            rec.put("create_user", props.getOrDefault("_create_user", "import"));
+            rec.put("update_user", props.getOrDefault("_create_user", "import"));
+            rec.put("company_id", props.get("_company_id"));
+            long ts = System.currentTimeMillis();
+            rec.put("created_at", ts);
+            rec.put("updated_at", ts);
+            records.add(rec);
+        }
+
+        // 递归子节点
+        for (Element child : (List<Element>) node.elements("node")) {
+            String childName = child.attributeValue("name");
+            if (childName == null) continue;
+            parseJcrNode(child, path + "/" + childName, project, records);
+        }
     }
 
     // ---- 项目名路由方法（直接用 project 名查询） ----
@@ -305,5 +485,6 @@ public class RepositoryServiceRouter implements RepositoryService, ApplicationCo
         this.jcrDelegate = ctx.getBean(JcrRepositoryDelegate.class);
         this.dbDelegate = ctx.getBean(DbRepositoryDelegate.class);
         this.projectStorageService = ctx.getBean(ProjectStorageService.class);
+        this.jdbcTemplate = ctx.getBean(JdbcTemplate.class);
     }
 }
