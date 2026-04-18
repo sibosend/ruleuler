@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://sibosend.github.io/ruleuler/guide/rbac/">
+        <link rel="canonical" href="https://sibosend.github.io/ruleuler/guide/dependency-analysis/">
       
       
-        <link rel="prev" href="../dependency-analysis/">
+        <link rel="prev" href="../release-management/">
       
       
-        <link rel="next" href="../audit-log/">
+        <link rel="next" href="../rbac/">
       
       
         
@@ -31,7 +31,7 @@
     
     
       
-        <title>权限管理 - RulEuler 规则引擎</title>
+        <title>依赖分析 - RulEuler 规则引擎</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rbac" class="md-skip">
+        <a href="#_1" class="md-skip">
           跳转至
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              权限管理
+              依赖分析
             
           </span>
         </div>
@@ -729,34 +729,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../dependency-analysis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    依赖分析
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -776,7 +748,7 @@
   <span class="md-ellipsis">
     
   
-    权限管理
+    依赖分析
   
 
     
@@ -794,7 +766,7 @@
   <span class="md-ellipsis">
     
   
-    权限管理
+    依赖分析
   
 
     
@@ -820,7 +792,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         概述
@@ -831,22 +803,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        数据模型
+        核心功能
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="数据模型">
+    <nav class="md-nav" aria-label="核心功能">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rbac_user" class="md-nav__link">
+  <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        用户（rbac_user）
+        1. 自动构建依赖图谱
       
     </span>
   </a>
@@ -854,10 +826,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rbac_role" class="md-nav__link">
+  <a href="#2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        角色（rbac_role）
+        2. 双向血缘追踪
       
     </span>
   </a>
@@ -865,10 +837,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rbac_permission" class="md-nav__link">
+  <a href="#3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        权限（rbac_permission）
+        3. 影响面（受影响的知识包）评估
       
     </span>
   </a>
@@ -881,41 +853,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        权限码规范
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="权限码规范">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        菜单权限
+        操作入口
       
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API 权限
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -923,118 +867,7 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        鉴权机制
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="鉴权机制">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-jwt-jwtauthfilter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. JWT 认证（JwtAuthFilter）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-rbac-rbacpermissionfilter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. RBAC 过滤器（RbacPermissionFilter）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-requirepermission" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 注解鉴权（@RequirePermission）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 前端菜单控制
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        操作流程
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="操作流程">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        创建角色并分配权限
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        创建用户并分配角色
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        典型角色配置示例
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API
+        最佳实践与建议
       
     </span>
   </a>
@@ -1045,6 +878,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    权限管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1447,7 +1308,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         概述
@@ -1458,22 +1319,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        数据模型
+        核心功能
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="数据模型">
+    <nav class="md-nav" aria-label="核心功能">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rbac_user" class="md-nav__link">
+  <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        用户（rbac_user）
+        1. 自动构建依赖图谱
       
     </span>
   </a>
@@ -1481,10 +1342,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rbac_role" class="md-nav__link">
+  <a href="#2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        角色（rbac_role）
+        2. 双向血缘追踪
       
     </span>
   </a>
@@ -1492,10 +1353,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rbac_permission" class="md-nav__link">
+  <a href="#3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        权限（rbac_permission）
+        3. 影响面（受影响的知识包）评估
       
     </span>
   </a>
@@ -1508,41 +1369,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        权限码规范
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="权限码规范">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        菜单权限
+        操作入口
       
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API 权限
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1550,118 +1383,7 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        鉴权机制
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="鉴权机制">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-jwt-jwtauthfilter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. JWT 认证（JwtAuthFilter）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-rbac-rbacpermissionfilter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. RBAC 过滤器（RbacPermissionFilter）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-requirepermission" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 注解鉴权（@RequirePermission）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 前端菜单控制
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        操作流程
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="操作流程">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        创建角色并分配权限
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        创建用户并分配角色
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        典型角色配置示例
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API
+        最佳实践与建议
       
     </span>
   </a>
@@ -1688,336 +1410,37 @@
   
 
 
-<h1 id="rbac">RBAC 权限管理<a class="headerlink" href="#rbac" title="Permanent link">&para;</a></h1>
-<h2 id="_1">概述<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<p>系统采用 RBAC（Role-Based Access Control）模型实现权限控制，支持菜单级和 API 操作级两层鉴权。</p>
-<p>模型关系：<strong>用户 → 角色 → 权限</strong>（多对多）。</p>
+<h1 id="_1">依赖分析<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">概述<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>随着决策项目的不断迭代，资源文件（变量库、规则集、决策树、决策流等）之间会形成错综复杂的依赖网络。当修改某个底层变量或基础规则时，常常难以评估其变更的爆炸半径。</p>
+<p>依赖分析（Dependency Analysis）功能提供了可视化的全局依赖追踪能力，支持正向和反向两种视图，并且能自动推导出所受影响的顶级知识包。</p>
 <hr />
-<h2 id="_2">数据模型<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<h3 id="rbac_user">用户（rbac_user）<a class="headerlink" href="#rbac_user" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>username</td>
-<td>登录名，唯一</td>
-</tr>
-<tr>
-<td>password_hash</td>
-<td>BCrypt 加密密码</td>
-</tr>
-<tr>
-<td>status</td>
-<td>1=启用，0=禁用</td>
-</tr>
-<tr>
-<td>built_in</td>
-<td>1=内置用户，不可删除</td>
-</tr>
-</tbody>
-</table>
-<p>默认内置用户：<code>admin</code>，密码 <code>asdfg@1234</code>。</p>
-<h3 id="rbac_role">角色（rbac_role）<a class="headerlink" href="#rbac_role" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>name</td>
-<td>角色名，唯一</td>
-</tr>
-<tr>
-<td>description</td>
-<td>角色描述</td>
-</tr>
-<tr>
-<td>built_in</td>
-<td>1=内置角色，不可删除</td>
-</tr>
-</tbody>
-</table>
-<p>默认内置角色：<code>admin</code>（超级管理员，拥有所有权限）。</p>
-<h3 id="rbac_permission">权限（rbac_permission）<a class="headerlink" href="#rbac_permission" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>permission_code</td>
-<td>权限码，唯一标识</td>
-</tr>
-<tr>
-<td>name</td>
-<td>权限名称（中文）</td>
-</tr>
-<tr>
-<td>type</td>
-<td><code>menu</code>（菜单权限）或 <code>api</code>（接口权限）</td>
-</tr>
-<tr>
-<td>parent_id</td>
-<td>父权限 ID，支持树形结构</td>
-</tr>
-</tbody>
-</table>
+<h2 id="_3">核心功能<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="1">1. 自动构建依赖图谱<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<p>依赖关系在控制台前端和后端内存中动态提取。提取器会解析不同类型的文件引用特点，建立起以下依赖关系链路：
+- 知识包 -&gt; 组件（决策流/规则/变量库）
+- 决策流 -&gt; 子规则/变量库
+- 规则组件（决策表、规则集等） -&gt; 变量/参数/动作库</p>
+<h3 id="2">2. 双向血缘追踪<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<p>通过依赖分析面板，能清晰查看选定目标文件的完整血缘网络：
+- <strong>上游依赖（它依赖了谁）</strong>：分析出该文件在运行过程中，会直接和间接调用哪些外部规则与变量字典。
+- <strong>下游引用（谁依赖了它）</strong>：列出哪些父级文件（如其它规则集、决策流、大包）引入或依赖了该文件，从而精确告知使用者“修改当前文件会影响谁”。</p>
+<h3 id="3">3. 影响面（受影响的知识包）评估<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<p>在下游引用的基础上，系统会自动向上传导至终点，从而推导出本次文件变更直接威胁的部署层 <strong>知识包 (Knowledge Packages)</strong> 列表，有助于评估发版的测试范围和风险范围。</p>
 <hr />
-<h2 id="_3">权限码规范<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<h3 id="_4">菜单权限<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p>格式：<code>menu:{模块}</code>，控制前端菜单可见性。</p>
-<table>
-<thead>
-<tr>
-<th>权限码</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>menu:dashboard</code></td>
-<td>仪表盘</td>
-</tr>
-<tr>
-<td><code>menu:projects</code></td>
-<td>项目管理</td>
-</tr>
-<tr>
-<td><code>menu:console</code></td>
-<td>规则编辑器</td>
-</tr>
-<tr>
-<td><code>menu:system</code></td>
-<td>系统设置</td>
-</tr>
-<tr>
-<td><code>menu:system:users</code></td>
-<td>用户管理</td>
-</tr>
-<tr>
-<td><code>menu:system:roles</code></td>
-<td>角色管理</td>
-</tr>
-<tr>
-<td><code>menu:monitoring</code></td>
-<td>变量监控</td>
-</tr>
-<tr>
-<td><code>menu:approvals</code></td>
-<td>审批管理</td>
-</tr>
-</tbody>
-</table>
-<h3 id="api">API 权限<a class="headerlink" href="#api" title="Permanent link">&para;</a></h3>
-<p>格式：<code>api:{HTTP方法}:{路径}</code>，控制后端接口访问。</p>
-<table>
-<thead>
-<tr>
-<th>权限码</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>api:GET:/api/rbac/users</code></td>
-<td>查看用户列表</td>
-</tr>
-<tr>
-<td><code>api:POST:/api/rbac/users</code></td>
-<td>创建用户</td>
-</tr>
-<tr>
-<td><code>api:PUT:/api/rbac/users</code></td>
-<td>编辑用户</td>
-</tr>
-<tr>
-<td><code>api:DELETE:/api/rbac/users</code></td>
-<td>删除用户</td>
-</tr>
-<tr>
-<td><code>api:PUT:/api/rbac/users/roles</code></td>
-<td>分配用户角色</td>
-</tr>
-<tr>
-<td><code>api:GET:/api/rbac/roles</code></td>
-<td>查看角色列表</td>
-</tr>
-<tr>
-<td><code>api:POST:/api/rbac/roles</code></td>
-<td>创建角色</td>
-</tr>
-<tr>
-<td><code>api:PUT:/api/rbac/roles</code></td>
-<td>编辑角色</td>
-</tr>
-<tr>
-<td><code>api:DELETE:/api/rbac/roles</code></td>
-<td>删除角色</td>
-</tr>
-<tr>
-<td><code>api:PUT:/api/rbac/roles/permissions</code></td>
-<td>分配角色权限</td>
-</tr>
-<tr>
-<td><code>api:GET:/api/rbac/roles/permissions</code></td>
-<td>查看权限列表</td>
-</tr>
-<tr>
-<td><code>api:GET:/api/monitoring/*</code></td>
-<td>监控数据查询</td>
-</tr>
-<tr>
-<td><code>pack:publish:submit</code></td>
-<td>提交发布审批</td>
-</tr>
-<tr>
-<td><code>pack:publish:approve</code></td>
-<td>审批发布</td>
-</tr>
-</tbody>
-</table>
+<h2 id="_4">操作入口<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>在管理端的编辑器中有两处主要入口可以唤起依赖分析抽屉（DependencyDrawer）：</p>
+<ol>
+<li><strong>资源树右键菜单</strong>：在左侧项目资源列表中，在任意规则文件上点击鼠标右键，选择“依赖分析”。</li>
+<li><strong>编辑器工具栏</strong>：打开并在编辑某一个决策组件时，点击顶部工具栏中的“依赖分析”快捷按钮。</li>
+</ol>
 <hr />
-<h2 id="_5">鉴权机制<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<h3 id="1-jwt-jwtauthfilter">1. JWT 认证（JwtAuthFilter）<a class="headerlink" href="#1-jwt-jwtauthfilter" title="Permanent link">&para;</a></h3>
-<p>所有 <code>/api/**</code> 请求需携带 JWT Token：</p>
+<h2 id="_5">最佳实践与建议<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Header：<code>Authorization: Bearer {token}</code></li>
-<li>或 Cookie：<code>ruleuler_token={token}</code></li>
+<li><strong>排查幽灵依赖</strong>：在打包或发布遇到未找到变量或缺失项时，可通过分析规则的“上游依赖”排查它是否引用的对象已被更名或删除。</li>
+<li><strong>修改前的影响力评估</strong>：在大幅度调整某基础配置/变量之前，先看一眼“下游引用”和“受影响知识包”，评估其兼容性，从而确认是否需要直接做新版本，而不是强制打补丁。</li>
+<li><strong>按需清理冗余</strong>：当一棵规则树或变量组在“下游引用”视图中没有被任何上游调用时，说明它是游离和冗余的代码，可考虑清退下线。</li>
 </ul>
-<p>白名单路径（无需认证）：
-- <code>/api/auth/login</code>
-- <code>/api/auth/register</code>
-- 静态资源路径</p>
-<p>Token 中包含：<code>userId</code>、<code>username</code>、<code>roles</code>。</p>
-<h3 id="2-rbac-rbacpermissionfilter">2. RBAC 过滤器（RbacPermissionFilter）<a class="headerlink" href="#2-rbac-rbacpermissionfilter" title="Permanent link">&para;</a></h3>
-<p>拦截 <code>/api/rbac/**</code> 路径的请求：</p>
-<ol>
-<li><code>admin</code> 角色直接放行</li>
-<li>拥有 <code>*</code> 通配符权限直接放行</li>
-<li>拼接权限码 <code>api:{METHOD}:{normalizedPath}</code>，与用户权限列表匹配</li>
-<li>路径规范化：去掉数字 ID 段（<code>/api/rbac/users/123</code> → <code>/api/rbac/users</code>）</li>
-</ol>
-<h3 id="3-requirepermission">3. 注解鉴权（@RequirePermission）<a class="headerlink" href="#3-requirepermission" title="Permanent link">&para;</a></h3>
-<p>用于非 <code>/api/rbac/</code> 路径的接口，通过 AOP 切面校验：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@RequirePermission</span><span class="p">(</span><span class="s">&quot;pack:publish:submit&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">public</span><span class="w"> </span><span class="n">ApiResult</span><span class="w"> </span><span class="nf">submit</span><span class="p">(...)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
-</code></pre></div>
-<p>校验逻辑：
-1. 检查用户是否已认证
-2. 拥有 <code>*</code> 通配符权限直接放行
-3. 匹配具体权限码</p>
-<h3 id="4">4. 前端菜单控制<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
-<p>前端通过 <code>usePermission</code> hook 判断菜单可见性：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canMonitoring</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">&#39;menu:monitoring&#39;</span><span class="p">);</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canApproval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">&#39;menu:approvals&#39;</span><span class="p">);</span>
-</code></pre></div>
-<p>用户登录后，Token 解析出角色列表，前端据此控制菜单渲染和操作按钮显示。</p>
-<hr />
-<h2 id="_6">操作流程<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<h3 id="_7">创建角色并分配权限<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
-<ol>
-<li>系统设置 → 角色管理 → 新建角色</li>
-<li>选择角色 → 分配权限（勾选菜单权限和 API 权限）</li>
-<li>保存</li>
-</ol>
-<h3 id="_8">创建用户并分配角色<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
-<ol>
-<li>系统设置 → 用户管理 → 新建用户</li>
-<li>填写用户名和密码</li>
-<li>选择用户 → 分配角色（可多选）</li>
-<li>保存</li>
-</ol>
-<h3 id="_9">典型角色配置示例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
-<p><strong>规则开发者</strong>：
-- <code>menu:dashboard</code>、<code>menu:projects</code>、<code>menu:console</code>
-- <code>pack:publish:submit</code>（可提交发布）</p>
-<p><strong>审批人</strong>：
-- <code>menu:dashboard</code>、<code>menu:approvals</code>
-- <code>pack:publish:approve</code>（可审批）</p>
-<p><strong>运维人员</strong>：
-- <code>menu:dashboard</code>、<code>menu:monitoring</code>
-- <code>api:GET:/api/monitoring/*</code>（可查看监控数据）</p>
-<p><strong>管理员</strong>：
-- 使用内置 <code>admin</code> 角色，自动拥有所有权限</p>
-<hr />
-<h2 id="api_1">API<a class="headerlink" href="#api_1" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>路径</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GET</td>
-<td><code>/api/rbac/users</code></td>
-<td>用户列表（支持 keyword/roleId 筛选）</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/rbac/users</code></td>
-<td>创建用户</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/rbac/users/{id}</code></td>
-<td>编辑用户</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td><code>/api/rbac/users/{id}</code></td>
-<td>删除用户</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/rbac/users/{id}/roles</code></td>
-<td>分配用户角色</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/rbac/roles</code></td>
-<td>角色列表</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/rbac/roles</code></td>
-<td>创建角色</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/rbac/roles/{id}</code></td>
-<td>编辑角色</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td><code>/api/rbac/roles/{id}</code></td>
-<td>删除角色</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/rbac/roles/{id}/permissions</code></td>
-<td>分配角色权限</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/rbac/roles/permissions</code></td>
-<td>全部权限列表</td>
-</tr>
-</tbody>
-</table>
 
 
 

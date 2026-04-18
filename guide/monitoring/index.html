@@ -889,7 +889,7 @@
   <a href="#10" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10. 执行记录
+        10. 执行记录与追踪
       
     </span>
   </a>
@@ -1000,6 +1000,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dependency-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依赖分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rbac/" class="md-nav__link">
         
   
@@ -1008,6 +1036,34 @@
     
   
     权限管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    审计日志
   
 
     
@@ -1543,7 +1599,7 @@
   <a href="#10" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10. 执行记录
+        10. 执行记录与追踪
       
     </span>
   </a>
@@ -1795,13 +1851,18 @@
 <li>Period B：版本 B 发布 → 当前</li>
 <li>对比维度：采样量、缺失率、错误率、均值</li>
 </ul>
-<h3 id="10">10. 执行记录<a class="headerlink" href="#10" title="Permanent link">&para;</a></h3>
+<h3 id="10">10. 执行记录与追踪<a class="headerlink" href="#10" title="Permanent link">&para;</a></h3>
 <p>分页查询历史执行记录，按 <code>execution_id</code> 聚合：</p>
 <ul>
 <li>执行时间、耗时、变量数、状态（success / failed）</li>
 <li>支持时间范围筛选</li>
-<li>点击可查看单次执行的全部变量明细</li>
+<li>点击可查看单次执行的全部变量明细（输入/输出值）</li>
 </ul>
+<p><strong>执行追踪（Execution Trace）</strong>：
+在单次执行的详情页中，系统会展示完整的<strong>系统执行追踪路径</strong>：
+- 规则命中节点、流转条件（Condition）
+- 变量的实时赋值（VarAssign）与节点耗时
+- 绕过 debug 设置的特殊记录机制保证日志不丢失，详细追溯每一笔引擎推断动作，底层落盘至 ClickHouse <code>execution_trace_log</code> 表中。</p>
 <h3 id="11">11. 异常记录下钻<a class="headerlink" href="#11" title="Permanent link">&para;</a></h3>
 <p>从变量列表点击告警标记，查看具体异常执行记录：</p>
 <ul>

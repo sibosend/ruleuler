@@ -16,7 +16,7 @@
         <link rel="prev" href="../monitoring/">
       
       
-        <link rel="next" href="../rbac/">
+        <link rel="next" href="../dependency-analysis/">
       
       
         
@@ -875,7 +875,46 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度发布 / A/B 测试
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="灰度发布 / A/B 测试">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度路由策略
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度版本生命周期
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         页面视图
@@ -886,7 +925,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         数据表
@@ -923,6 +962,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dependency-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依赖分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rbac/" class="md-nav__link">
         
   
@@ -931,6 +998,34 @@
     
   
     权限管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    审计日志
   
 
     
@@ -1424,7 +1519,46 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度发布 / A/B 测试
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="灰度发布 / A/B 测试">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度路由策略
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        灰度版本生命周期
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         页面视图
@@ -1435,7 +1569,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         数据表
@@ -1648,7 +1782,27 @@
 <li>失败时记录失败原因，状态置为 PUBLISH_FAILED，支持重试</li>
 </ol>
 <hr />
-<h2 id="_10">页面视图<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="ab">灰度发布 / A/B 测试<a class="headerlink" href="#ab" title="Permanent link">&para;</a></h2>
+<p>在标准全量上线之外，系统还支持灰度发布与 A/B 测试（Gray Release / A/B Testing），能够基于系统分配的系统版本号，把不同规则版本的执行流量进行拆分。</p>
+<p>审批提交时，系统会自动分配<strong>系统版本号</strong>（按 project + packageId 维度递增）。发布时，版本号及其灰度配置会独立推送到 Client 端。执行完毕时，Client 响应的 <code>meta</code> 字段中将带上所命中的知识包系统版本号，便于对不同版本的用户数据进行分组观测与对比。</p>
+<h3 id="_10">灰度路由策略<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>发版时可以选择以下灰度路由（Routing Strategy）机制：</p>
+<ol>
+<li><strong>PERCENTAGE（按比例分配）</strong>：</li>
+<li>基于某一个特定的输入变量（如 <code>userId</code>）进行 Hash 分桶。</li>
+<li>设定分配比例（例如 10% 的请求进入灰度版，90% 走旧版本基线）。</li>
+<li><strong>CONDITION（按条件过滤）</strong>：</li>
+<li>设定精确的路由入场条件。复用了规则引擎内置的 REA 操作符体系（支持 20 种运算符）。</li>
+<li>例如：<code>user_type == "VIP"</code> 或者 <code>age &gt;= 18</code> 的流量路由至灰度版本。</li>
+</ol>
+<h3 id="_11">灰度版本生命周期<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<p>灰度版本运行时，管理员可进行两项操作完成灰度生命周期的闭环：</p>
+<ul>
+<li><strong>全量发布</strong>：灰度期验证通过后，将当前灰度版本（Gray）提升为基线版本（Base），后续所有流量均打到此版本。</li>
+<li><strong>回退（停用）</strong>：如果灰度验证失败，直接停用路由规则退回上一个主版本。</li>
+</ul>
+<hr />
+<h2 id="_12">页面视图<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
 <p>前端提供四个视图，通过路由区分：</p>
 <table>
 <thead>
@@ -1682,7 +1836,7 @@
 </tbody>
 </table>
 <hr />
-<h2 id="_11">数据表<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h2 id="_13">数据表<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
