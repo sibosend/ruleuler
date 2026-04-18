@@ -60,3 +60,5 @@ CLAUDE.md
 # mkdocs build output
 site/
 .claude/
+memo.md
+*.pyc

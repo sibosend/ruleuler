@@ -89,6 +89,11 @@
             <version>1.9.1</version>
             <scope>test</scope>
         </dependency>
+        <!-- MCP Server -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

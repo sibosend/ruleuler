@@ -18,6 +18,20 @@ spring:
       enabled: true
       max-file-size: 1000MB  #单个文件的最大上限
       max-request-size: 1000MB #单个请求的文件总大小上限
+  ai:
+    mcp:
+      server:
+        name: ruleuler-mcp-server
+        version: 1.0.0
+        type: SYNC
+        stdio: false
+        protocol: STREAMABLE
+        annotation-scanner:
+          enabled: true
+
+ruleuler:
+  mcp:
+    enabled: true
 
 log4j2:
   formatMsgNoLookups: true

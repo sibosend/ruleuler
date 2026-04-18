@@ -4,6 +4,9 @@ spring:
   main:
     allow-circular-references: true
 
+ruleuler:
+  mcp:
+    enabled: false
 
 logging:
   file:
