@@ -106,7 +106,15 @@
     "saveSuccess": "保存成功",
     "saveFailed": "保存失败",
     "confirmDelete": "确认删除？",
-    "add": "新增"
+    "add": "新增",
+    "importFormatDesc": "支持的文件格式：",
+    "importFormatZip": ".zip — 项目导出备份文件（推荐）",
+    "importFormatXml": ".xml — XML 项目文件",
+    "importFormatJson": ".json — JSON 项目文件",
+    "importFormatRecommend": "推荐使用本系统导出的 .zip 文件进行导入",
+    "importing": "导入中...",
+    "importDragHint": "点击或拖拽文件到此处导入",
+    "importSupportedExt": "支持 .zip、.xml、.json 格式"
   },
   "console": {
     "selectProjectFirst": "请先选择一个项目",

@@ -63,6 +63,11 @@
         </dependency>
         <dependency>
             <groupId>com.caritasem.ruleuler</groupId>
+            <artifactId>ruleuler-base</artifactId>
+            <version>0.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.caritasem.ruleuler</groupId>
             <artifactId>ruleuler-core</artifactId>
             <version>${urule.version}</version>
             <exclusions>

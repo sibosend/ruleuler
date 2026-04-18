@@ -106,7 +106,15 @@
     "saveSuccess": "Saved successfully",
     "saveFailed": "Save failed",
     "confirmDelete": "Confirm delete?",
-    "add": "Add"
+    "add": "Add",
+    "importFormatDesc": "Supported file formats:",
+    "importFormatZip": ".zip — exported project backup (recommended)",
+    "importFormatXml": ".xml — raw XML project file",
+    "importFormatJson": ".json — raw JSON project file",
+    "importFormatRecommend": "Exported .zip files from this system are recommended for import",
+    "importing": "Importing...",
+    "importDragHint": "Click or drag file here to import",
+    "importSupportedExt": "Supports .zip, .xml, .json"
   },
   "console": {
     "selectProjectFirst": "Please select a project first",

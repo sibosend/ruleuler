@@ -84,29 +84,8 @@ public class RuleExecutionService {
             }
 
             // 合并输出（只返回被规则修改的字段）
-            Map<String, Object> result = new LinkedHashMap<>();
-            Map<String, Object> params = session.getParameters();
-            if (params != null) {
-                result.putAll(params);
-            }
-            for (Map.Entry<String, GeneralEntity> e : entities.entrySet()) {
-                String category = e.getKey();
-                GeneralEntity entity = e.getValue();
-                JSONObject input = body.get(category);
-                Map<String, Object> varOutput = new LinkedHashMap<>();
-                for (Object key : entity.keySet()) {
-                    String k = String.valueOf(key);
-                    Object newVal = entity.get(key);
-                    Object oldVal = input.get(k);
-                    if (oldVal != null && oldVal.equals(newVal)) {
-                        continue;
-                    }
-                    varOutput.put(k, newVal);
-                }
-                if (!varOutput.isEmpty()) {
-                    result.put(category, varOutput);
-                }
-            }
+            Map<String, Object> result = com.caritasem.ruleuler.base.RuleOutputCollector
+                    .collectOutput(session, entities, body);
 
             // 监控 — 成功
             long execMs = System.currentTimeMillis() - startMs;

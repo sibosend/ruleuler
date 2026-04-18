@@ -197,19 +197,9 @@ public class TestExecutor {
                 }
             }
 
-            // 收集输出：参数 + 各 entity 的属性
-            Map<String, Object> output = new LinkedHashMap<>();
-            // 参数输出
-            Map<String, Object> paramOutput = session.getParameters();
-            if (paramOutput != null) output.putAll(paramOutput);
-            // 变量输出（从 entity 中读回）
-            for (Map.Entry<String, GeneralEntity> entityEntry : entities.entrySet()) {
-                String category = entityEntry.getKey();
-                GeneralEntity entity = entityEntry.getValue();
-                for (Object key : entity.keySet()) {
-                    output.put(category + "." + key, entity.get(key));
-                }
-            }
+            // 收集输出：只返回被规则修改过的字段
+            Map<String, Object> output = com.caritasem.ruleuler.base.RuleOutputCollector
+                    .collectOutput(session, entities, categoryVars);
 
             result.setActualOutput(objectMapper.writeValueAsString(output));
             result.setPassed(true);

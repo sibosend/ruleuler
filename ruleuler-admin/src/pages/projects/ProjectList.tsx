@@ -4,7 +4,7 @@ import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, Setting
 import { useNavigate } from 'react-router-dom';
 import { loadProjects, createProject, deleteProject, exportProject, importProject } from '@/api/project';
 import { useTranslation } from 'react-i18next';
-import type { UploadProps } from 'antd';
+
 
 interface ProjectItem {
   name: string;
@@ -87,18 +87,22 @@ const ProjectList: React.FC = () => {
     }
   };
 
-  const uploadProps: UploadProps = {
-    showUploadList: false,
-    beforeUpload: async (file) => {
-      try {
-        await importProject(file);
-        message.success(t('project.importSuccess'));
-        fetchProjects();
-      } catch {
-        message.error(t('project.importFailed'));
-      }
-      return false;
-    },
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      await importProject(file);
+      message.success(t('project.importSuccess'));
+      setImportModalOpen(false);
+      fetchProjects();
+    } catch {
+      message.error(t('project.importFailed'));
+    } finally {
+      setImporting(false);
+    }
+    return false;
   };
 
   const columns = useMemo(() => [
@@ -123,11 +127,26 @@ const ProjectList: React.FC = () => {
     <>
       <Space style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>{t('project.createProject')}</Button>
-        <Upload {...uploadProps}><Button icon={<UploadOutlined />}>{t('project.importProject')}</Button></Upload>
+        <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>{t('project.importProject')}</Button>
       </Space>
       <Table rowKey="name" columns={columns} dataSource={projects} loading={loading} />
       <Modal title={t('project.createProject')} open={modalOpen} onOk={handleCreate} confirmLoading={creating} onCancel={() => setModalOpen(false)}>
         <Input placeholder={t('project.projectName')} value={newName} onChange={(e) => setNewName(e.target.value)} />
+      </Modal>
+      <Modal title={t('project.importProject')} open={importModalOpen} onCancel={() => setImportModalOpen(false)} footer={null} width={480}>
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 8 }}>{t('project.importFormatDesc')}</p>
+          <ul style={{ paddingLeft: 20, margin: 0 }}>
+            <li>{t('project.importFormatZip')}</li>
+            <li>{t('project.importFormatXml')}</li>
+            <li>{t('project.importFormatJson')}</li>
+          </ul>
+          <p style={{ marginTop: 8, color: '#888', fontSize: 13 }}>{t('project.importFormatRecommend')}</p>
+        </div>
+        <Upload.Dragger accept=".zip,.xml,.json" maxCount={1} showUploadList={false} beforeUpload={handleImport} disabled={importing}>
+          <p className="ant-upload-text">{importing ? t('project.importing') : t('project.importDragHint')}</p>
+          <p className="ant-upload-hint">{t('project.importSupportedExt')}</p>
+        </Upload.Dragger>
       </Modal>
     </>
   );
