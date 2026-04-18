@@ -81,10 +81,12 @@ Spring Boot 应用，提供：
 
 | 层 | 技术 |
 |----|------|
-| 后端 | Java 21, Spring Boot, Maven |
+| 后端 | Java 21, Spring Boot 4.x, Maven |
 | 前端（新） | React, TypeScript, Vite, Ant Design |
 | 前端（旧） | React, webpack, bundle.js |
 | 数据库 | MySQL 8.0+ |
+| 时序库 | ClickHouse（规则执行监控） |
+| AI 集成 | Spring AI MCP Server（Streamable HTTP） |
 | 规则引擎 | Rete 算法 |
-| 认证 | JWT |
+| 认证 | JWT + RBAC |
 | 部署 | Docker Compose |

@@ -21,7 +21,7 @@ RulEuler is a fork of URule 2.1.6 (Bstek open-source edition). URule has a solid
 | Area | URule Open Source | RulEuler |
 |------|-------------------|-------|
 | Storage | JCR (Jackrabbit) only | Added MySQL relational storage, per-project selection |
-| Runtime | Spring Boot 2.x | Spring Boot 3.x + JDK 21 |
+| Runtime | Spring Boot 2.x | Spring Boot 4.x + JDK 21 |
 | Admin UI | jQuery + Bootstrap 3 | Added React 18 + Ant Design 5 modern admin |
 | Rule editing | Tedious wizard-only | Added REA text expression editor |
 | Variable definition | Requires Java POJO | GeneralEntity dynamic type, just field name + type |

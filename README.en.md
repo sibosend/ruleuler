@@ -55,7 +55,7 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 | Area | URule | RulEuler |
 |------|-------|-------|
 | Storage | JCR (Jackrabbit) only | Added MySQL storage, per-project selection |
-| Runtime | Spring Boot 2.x | Spring Boot 3.x + JDK 21 |
+| Runtime | Spring Boot 2.x | Spring Boot 4.x + JDK 21 |
 | Admin UI | jQuery + Bootstrap 3 | React 18 + Ant Design 5 |
 | Rule editing | Wizard only | Added REA text expression editor |
 | Variables | Requires Java POJO | GeneralEntity dynamic type |
