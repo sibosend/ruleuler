@@ -40,6 +40,7 @@ nav:
     - 存储模式: guide/storage.md
     - 变量监控: guide/monitoring.md
     - 上线管理: guide/release-management.md
+    - 流量回放: guide/traffic-replay.md
     - 依赖分析: guide/dependency-analysis.md
     - 权限管理: guide/rbac.md
     - 审计日志: guide/audit-log.md

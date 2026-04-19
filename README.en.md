@@ -63,6 +63,7 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 | Auto testing | None | Path coverage + test case batch generation & execution |
 | Variable Monitoring| None | Execution trace paths, PSI/Enum drift, time-series anomaly alerts |
 | Release & Gray | Save directly | Release approval workflow, Gray release (A/B), strict XML diff |
+| Traffic Replay | None | Replay historical requests against current rules, field-level diff, export to test cases |
 | Dependency Analysis| None | Full component upstream/downstream lineage & impact assessment |
 | Audit Log | None | Operations playback for configuration & permission changes |
 | Auth | None | JWT |

@@ -24,8 +24,7 @@ public class AdminStaticConfig implements WebMvcConfigurer {
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         if (staticPath == null || staticPath.isBlank()) return;
-        registry.addRedirectViewController("/admin", "/admin/index.html");
-        registry.addRedirectViewController("/admin/", "/admin/index.html");
+        registry.addRedirectViewController("/admin", "/admin/");
         registry.addRedirectViewController("/favicon.ico", "/admin/favicon.ico");
     }
 
