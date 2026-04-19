@@ -257,6 +257,8 @@
     "change": "变更",
     "ruleChange": "规则变动",
     "changeCount": "{{count}}{{type}}",
+    "grayscaleActiveWarning": "存在进行中的灰度发布",
+    "grayscaleActiveDesc": "该知识包存在进行中的灰度发布(#{{id}})，请先完成灰度（全量发布或回退）后再上线。",
     "comma": "、"
   },
   "grayscale": {

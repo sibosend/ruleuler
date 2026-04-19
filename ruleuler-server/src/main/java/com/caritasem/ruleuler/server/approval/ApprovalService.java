@@ -13,7 +13,9 @@ import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestExecutor;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestResultDao;
 import com.caritasem.ruleuler.console.servlet.respackage.autotest.TestRun;
 import com.caritasem.ruleuler.server.approval.model.*;
+import com.caritasem.ruleuler.server.grayscale.GrayscaleRuleDao;
 import com.caritasem.ruleuler.server.grayscale.SnapshotKnowledgeBuilder;
+import com.caritasem.ruleuler.server.grayscale.model.GrayscaleRule;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
@@ -45,6 +47,7 @@ public class ApprovalService {
     private final TestResultDao testResultDao;
     private final KnowledgePackageService knowledgePackageService;
     private final SnapshotKnowledgeBuilder snapshotBuilder;
+    private final GrayscaleRuleDao grayscaleRuleDao;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
@@ -52,7 +55,8 @@ public class ApprovalService {
                            @Qualifier("urule.testExecutor") TestExecutor testExecutor,
                            @Qualifier("urule.testResultDao") TestResultDao testResultDao,
                            @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
-                           SnapshotKnowledgeBuilder snapshotBuilder) {
+                           SnapshotKnowledgeBuilder snapshotBuilder,
+                           GrayscaleRuleDao grayscaleRuleDao) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
@@ -60,6 +64,7 @@ public class ApprovalService {
         this.testResultDao = testResultDao;
         this.knowledgePackageService = knowledgePackageService;
         this.snapshotBuilder = snapshotBuilder;
+        this.grayscaleRuleDao = grayscaleRuleDao;
     }
 
     // ---- submit ----
@@ -196,8 +201,10 @@ public class ApprovalService {
         if (a.getStatus() != ApprovalStatus.APPROVED && a.getStatus() != ApprovalStatus.PUBLISH_FAILED)
             throw new IllegalArgumentException("审批单状态不允许此操作");
 
-        // 检查是否有灰度规则，有则拒绝直接发布
-        // (灰度规则由 GrayscaleService 管理)
+        GrayscaleRule activeGs = grayscaleRuleDao.findActive(a.getProject(), a.getPackageId());
+        if (activeGs != null) {
+            throw new IllegalArgumentException("该知识包存在进行中的灰度发布(#" + activeGs.getId() + ")，请先完成灰度（全量发布或回退）后再上线");
+        }
 
         try {
             // 加载该审批单对应的快照内容（提交时的版本）

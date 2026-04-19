@@ -27,11 +27,11 @@ function parseRulesFromXml(xmlText: string): RuleState[] {
 
     // 提取属性
     const properties: Record<string, string | boolean | number> = {};
-    const attrNames = ['salience', 'effective-date', 'expires-date', 'enabled', 'debug', 'loop'];
+    const attrNames = ['salience', 'effective-date', 'expires-date', 'enabled', 'debug', 'shadow', 'loop'];
     for (const attr of attrNames) {
       const val = el.getAttribute(attr);
       if (val != null) {
-        if (attr === 'enabled' || attr === 'debug' || attr === 'loop') {
+        if (attr === 'enabled' || attr === 'debug' || attr === 'shadow' || attr === 'loop') {
           properties[attr] = val === 'true';
         } else if (attr === 'salience') {
           properties[attr] = Number(val) || 0;

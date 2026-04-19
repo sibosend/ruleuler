@@ -58,8 +58,10 @@ public class ShadowController {
         params.add(project);
 
         if (packageId != null) {
-            sql.append(" AND package_id = ?");
+            sql.append(" AND package_id IN (?, ?)");
+            String fullPkgId = project + "/" + packageId;
             params.add(packageId);
+            params.add(fullPkgId);
         }
         if (ruleName != null) {
             sql.append(" AND rule_name = ?");

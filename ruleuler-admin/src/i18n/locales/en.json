@@ -257,6 +257,8 @@
     "change": "Change",
     "ruleChange": "Rule Changes",
     "changeCount": "{{count}} {{type}}",
+    "grayscaleActiveWarning": "Active Grayscale Release",
+    "grayscaleActiveDesc": "This package has an active grayscale release (#{{id}}). Please complete the grayscale (full rollout or rollback) before publishing.",
     "comma": ", "
   },
   "grayscale": {

@@ -157,7 +157,7 @@ public class DiffCalculator {
             return extractByAttr(root, "rule", "name");
         }
         if (lower.endsWith(".rea.xml")) {
-            return extractByAttr(root, "rea-item", "name");
+            return extractByAttr(root, "rule", "name");
         }
         if (lower.endsWith(".rl.xml")) {
             return extractByAttr(root, "node", "name");
@@ -318,6 +318,19 @@ public class DiffCalculator {
         Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
                 .parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
         Element root = doc.getDocumentElement();
+
+        // 规则自身属性: shadow, enabled, debug, salience, effective-date, expires-date, loop
+        Set<String> ruleAttrs = Set.of("shadow", "enabled", "debug", "salience", "effective-date", "expires-date", "loop");
+        NamedNodeMap rootAttrs = root.getAttributes();
+        if (rootAttrs != null) {
+            for (int i = 0; i < rootAttrs.getLength(); i++) {
+                Node attr = rootAttrs.item(i);
+                String attrName = attr.getNodeName();
+                if (ruleAttrs.contains(attrName)) {
+                    fields.put(attrName, attr.getNodeValue());
+                }
+            }
+        }
 
         // 条件: <atom op="..."><left var-label="..."/><value content="..."/></atom>
         NodeList atoms = root.getElementsByTagName("atom");

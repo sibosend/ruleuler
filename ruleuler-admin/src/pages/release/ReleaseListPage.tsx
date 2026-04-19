@@ -11,7 +11,7 @@ import {
   publishApproval,
   type ApprovalVO, type ApprovalDiffItem, type RuleDiffDetail, type FieldDiff,
 } from '@/api/approval';
-import { createGrayscaleRule } from '@/api/grayscale';
+import { createGrayscaleRule, listGrayscaleRules } from '@/api/grayscale';
 import { loadProjects } from '@/api/project';
 import { loadProjectLibs, loadXml, type ProjectLibs } from '@/pages/rea/api/reaApi';
 import type { LibraryData } from '@/pages/rea/lib/expressionParser';
@@ -143,6 +143,18 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
 
   const handlePublish = async (id: number) => {
     try {
+      const approval = data.find(a => a.id === id);
+      if (approval) {
+        const gsRes = await listGrayscaleRules({ project: approval.project, packageId: approval.packageId, status: 'ACTIVE' });
+        const gsItems: any[] = gsRes.data?.data?.items ?? gsRes.data?.items ?? [];
+        if (gsItems.length > 0) {
+          Modal.warning({
+            title: t('release.grayscaleActiveWarning'),
+            content: t('release.grayscaleActiveDesc', { id: gsItems[0].id }),
+          });
+          return;
+        }
+      }
       await publishApproval(id);
       message.success(t('release.publishSuccess'));
       fetchData();
