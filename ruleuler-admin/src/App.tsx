@@ -27,6 +27,8 @@ const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/Executio
 const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
 const ShadowPage = React.lazy(() => import('@/pages/shadow/ShadowPage'));
 
+const ReplayPage = React.lazy(() => import('@/pages/replay/ReplayPage'));
+
 const ReleaseListPage = React.lazy(() => import('@/pages/release/ReleaseListPage'));
 const GrayscaleRulePage = React.lazy(() => import('@/pages/release/GrayscaleRulePage'));
 
@@ -96,6 +98,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:projects">
               <Suspense fallback={<div>Loading...</div>}><TestReportPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="projects/:name/replay"
+          element={
+            <AuthorizedRoute permissionCode="menu:projects">
+              <Suspense fallback={<div>Loading...</div>}><ReplayPage /></Suspense>
             </AuthorizedRoute>
           }
         />

@@ -160,7 +160,7 @@ public class DiffCalculator {
             return extractByAttr(root, "rule", "name");
         }
         if (lower.endsWith(".rl.xml")) {
-            return extractByAttr(root, "node", "name");
+            return extractFlowNodes(root);
         }
         if (lower.endsWith(".dtree.xml")) {
             return extractDecisionTreeRules(root);
@@ -192,6 +192,25 @@ public class DiffCalculator {
             }
             sb.append("</row>");
             rules.put("行" + e.getKey(), sb.toString());
+        }
+        return rules;
+    }
+
+    /** 决策流：提取 <rule>/<start>/<end> 节点，按 name 属性分组 */
+    private Map<String, String> extractFlowNodes(Element root) throws Exception {
+        Map<String, String> rules = new LinkedHashMap<>();
+        String[] tags = {"rule", "start", "end"};
+        for (String tag : tags) {
+            NodeList nodes = root.getElementsByTagName(tag);
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Element el = (Element) nodes.item(i);
+                String name = el.getAttribute("name");
+                if (name == null || name.isEmpty()) name = tag + "#" + i;
+                rules.put(name, elementToString(el));
+            }
+        }
+        if (rules.isEmpty()) {
+            return extractByTopChildren(root);
         }
         return rules;
     }
@@ -374,6 +393,26 @@ public class DiffCalculator {
                 if (children.item(j) instanceof Element child && "value".equals(child.getTagName())) {
                     fields.put(varLabel + " =", child.getAttribute("content"));
                 }
+            }
+        }
+
+        // 决策流 node 属性: file, version
+        String fileAttr = root.getAttribute("file");
+        if (!fileAttr.isEmpty()) {
+            fields.put("引用文件", fileAttr);
+        }
+        String verAttr = root.getAttribute("version");
+        if (!verAttr.isEmpty()) {
+            fields.put("版本", verAttr);
+        }
+
+        // 决策流连接: <connection to="..."/>
+        NodeList connections = root.getElementsByTagName("connection");
+        for (int i = 0; i < connections.getLength(); i++) {
+            Element conn = (Element) connections.item(i);
+            String to = conn.getAttribute("to");
+            if (!to.isEmpty()) {
+                fields.put("连接到", to);
             }
         }
 

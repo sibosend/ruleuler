@@ -502,7 +502,6 @@ CREATE TABLE IF NOT EXISTS `ruleuler_grayscale_rule` (
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_active` (`project`,`package_id`,`status`),
   KEY `idx_project_pkg` (`project`,`package_id`),
   KEY `idx_approval` (`approval_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

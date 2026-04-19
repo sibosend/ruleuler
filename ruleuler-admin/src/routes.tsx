@@ -70,6 +70,12 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
+    path: '/projects/:name/replay',
+    label: 'route.trafficReplay',
+    permissionCode: 'menu:projects',
+    hideInMenu: true,
+  },
+  {
     path: '/releases',
     label: 'route.releaseManagement',
     icon: <CloudUploadOutlined />,
