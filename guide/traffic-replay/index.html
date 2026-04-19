@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://sibosend.github.io/ruleuler/deployment/standalone/">
+        <link rel="canonical" href="https://sibosend.github.io/ruleuler/guide/traffic-replay/">
       
       
-        <link rel="prev" href="../docker/">
+        <link rel="prev" href="../release-management/">
       
       
-        <link rel="next" href="../../contributing/">
+        <link rel="next" href="../dependency-analysis/">
       
       
         
@@ -31,7 +31,7 @@
     
     
       
-        <title>独立部署 - RulEuler 规则引擎</title>
+        <title>流量回放 - RulEuler 规则引擎</title>
       
     
     
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              独立部署
+              流量回放
             
           </span>
         </div>
@@ -456,20 +456,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -490,7 +490,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -508,7 +508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/concepts/" class="md-nav__link">
+      <a href="../concepts/" class="md-nav__link">
         
   
   
@@ -536,7 +536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/general-entity/" class="md-nav__link">
+      <a href="../general-entity/" class="md-nav__link">
         
   
   
@@ -564,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/rule-types/" class="md-nav__link">
+      <a href="../rule-types/" class="md-nav__link">
         
   
   
@@ -592,7 +592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/rea-expression/" class="md-nav__link">
+      <a href="../rea-expression/" class="md-nav__link">
         
   
   
@@ -620,7 +620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/autotest/" class="md-nav__link">
+      <a href="../autotest/" class="md-nav__link">
         
   
   
@@ -648,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/storage/" class="md-nav__link">
+      <a href="../storage/" class="md-nav__link">
         
   
   
@@ -676,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/monitoring/" class="md-nav__link">
+      <a href="../monitoring/" class="md-nav__link">
         
   
   
@@ -704,7 +704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/release-management/" class="md-nav__link">
+      <a href="../release-management/" class="md-nav__link">
         
   
   
@@ -729,10 +729,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guide/traffic-replay/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    流量回放
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -748,6 +775,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        工作原理
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        采样策略
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺失变量处理
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        差异比对
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用方式
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="使用方式">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从项目页面进入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从上线管理进入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        操作步骤
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        回放报告
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        导出为测试用例
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        前置条件
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -760,7 +934,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/dependency-analysis/" class="md-nav__link">
+      <a href="../dependency-analysis/" class="md-nav__link">
         
   
   
@@ -788,7 +962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/rbac/" class="md-nav__link">
+      <a href="../rbac/" class="md-nav__link">
         
   
   
@@ -816,7 +990,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/audit-log/" class="md-nav__link">
+      <a href="../audit-log/" class="md-nav__link">
         
   
   
@@ -851,7 +1025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/mcp-server/" class="md-nav__link">
+      <a href="../mcp-server/" class="md-nav__link">
         
   
   
@@ -1071,20 +1245,20 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -1105,7 +1279,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1123,7 +1297,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../docker/" class="md-nav__link">
+      <a href="../../deployment/docker/" class="md-nav__link">
         
   
   
@@ -1148,37 +1322,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    独立部署
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../deployment/standalone/" class="md-nav__link">
         
   
   
@@ -1194,92 +1341,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        前置条件
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. 构建
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. 初始化数据库
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 配置
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 启动
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. 反向代理（可选）
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1349,62 +1410,123 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
+        工作原理
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        采样策略
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺失变量处理
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        差异比对
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用方式
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="使用方式">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从项目页面进入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从上线管理进入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        操作步骤
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        回放报告
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        导出为测试用例
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         前置条件
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. 构建
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. 初始化数据库
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 配置
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 启动
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. 反向代理（可选）
       
     </span>
   </a>
@@ -1431,57 +1553,142 @@
   
 
 
-<h1 id="_1">独立部署<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>不使用 Docker，直接在服务器上运行。</p>
-<h2 id="_2">前置条件<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h1 id="_1">流量回放<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>流量回放用于验证策略变更的影响：从 ClickHouse 历史日志中取出真实请求，用当前版本的知识包重新执行，将结果与原始输出逐字段比对。</p>
+<h2 id="_2">工作原理<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>sequenceDiagram
+    participant CH as ClickHouse 历史日志
+    participant R as 回放引擎
+    participant KP as 当前知识包
+    participant D as Diff 比较器
+
+    R-&gt;&gt;CH: 采样 execution_id 列表
+    loop 每个 execution
+        R-&gt;&gt;CH: 取 input/output 变量行
+        R-&gt;&gt;R: 重建 input（按类别分组）
+        R-&gt;&gt;KP: insert input → startProcess(flowId)
+        KP--&gt;&gt;R: 执行结果（仅变更字段）
+        R-&gt;&gt;D: compare(原始 output, 回放 output)
+        D--&gt;&gt;R: DiffResult（SAME / CHANGED / ADDED）
+    end</code></pre>
+<p>核心流程：</p>
+<ol>
+<li>从 ClickHouse <code>execution_var_log</code> 表采样历史执行 ID</li>
+<li>按 execution_id 取出所有变量行，重建 input 和 original output</li>
+<li>用当前知识包本地执行回放（不走 HTTP，直接 KnowledgeSession）</li>
+<li>回放输出只保留相对于 input 有变更的字段（与日志记录逻辑对齐）</li>
+<li>逐字段比对原始输出和回放输出，生成差异报告</li>
+</ol>
+<h2 id="_3">采样策略<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>依赖</th>
-<th>版本</th>
+<th>策略</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Java</td>
-<td>21+</td>
+<td><code>random</code></td>
+<td>随机采样，适合快速验证</td>
 </tr>
 <tr>
-<td>MySQL</td>
-<td>8.0+</td>
+<td><code>uniform</code></td>
+<td>均匀采样，覆盖时间段内各时段</td>
+</tr>
+<tr>
+<td><code>all</code></td>
+<td>全量回放，适合精确验证</td>
 </tr>
 </tbody>
 </table>
-<h2 id="1">1. 构建<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./build.sh
-</code></pre></div>
-<p>构建产物输出到 <code>dist/</code> 目录。</p>
-<h2 id="2">2. 初始化数据库<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mysql<span class="w"> </span>-u<span class="w"> </span>root<span class="w"> </span>-p<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;CREATE DATABASE IF NOT EXISTS ruleuler_data DEFAULT CHARACTER SET utf8mb4&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mysql<span class="w"> </span>-u<span class="w"> </span>root<span class="w"> </span>-p<span class="w"> </span>ruleuler_data<span class="w"> </span>&lt;<span class="w"> </span>deploy/init.sql
-</code></pre></div>
-<h2 id="3">3. 配置<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<p>通过环境变量配置数据库连接和认证参数，参考 <a href="../../getting-started/configuration/">配置说明</a>。</p>
-<h2 id="4">4. 启动<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># 启动 server 和 client</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>dist/ruleuler-server.jar<span class="w"> </span><span class="p">&amp;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>dist/ruleuler-client.jar<span class="w"> </span><span class="p">&amp;</span>
-</code></pre></div>
-<h2 id="5">5. 反向代理（可选）<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
-<p>生产环境建议使用 Nginx 反向代理：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">server</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">ruleuler.example.com</span><span class="p">;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/admin/</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:16009</span><span class="p">;</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:16001</span><span class="p">;</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">}</span>
-</code></pre></div>
+<h2 id="_4">缺失变量处理<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>历史日志可能缺少部分变量（新增变量、日志丢失等），提供三种策略：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>segment</code></td>
+<td>用变量定义的默认值或类型零值填充，标记为 INCOMPLETE</td>
+</tr>
+<tr>
+<td><code>null</code></td>
+<td>不填充，缺失变量传 null</td>
+</tr>
+<tr>
+<td><code>skip</code></td>
+<td>跳过不完整的请求</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_5">差异比对<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p>比对结果按字段粒度，每个字段标记为：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SAME</td>
+<td>原始值与回放值一致</td>
+</tr>
+<tr>
+<td>CHANGED</td>
+<td>值发生变化</td>
+</tr>
+<tr>
+<td>ADDED</td>
+<td>回放新增了原始没有的字段</td>
+</tr>
+<tr>
+<td>REMOVED</td>
+<td>原始有但回放没有的字段（回放未触发该规则）</td>
+</tr>
+</tbody>
+</table>
+<p>支持数值容差配置（精确匹配 / 绝对容差 / 相对容差），避免浮点精度导致的误报。</p>
+<h2 id="_6">使用方式<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">从项目页面进入<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p>项目详情 → 流量回放，自动关联当前项目和知识包。</p>
+<h3 id="_8">从上线管理进入<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<p>上线管理 → 流量回放，需要先选择项目和知识包。</p>
+<h3 id="_9">操作步骤<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<ol>
+<li>选择知识包、时间范围、采样策略</li>
+<li>点击"创建"启动回放任务</li>
+<li>任务列表实时显示进度</li>
+<li>查看报告：一致率、变量维度差异统计、耗时对比</li>
+<li>查看明细：逐条查看每个请求的 Diff 详情</li>
+<li>导出：将回放结果导出为自动测试用例包，用于后续回归测试</li>
+</ol>
+<h2 id="_10">回放报告<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<p>报告包含：</p>
+<ul>
+<li><strong>概览</strong>：总数、一致数、不一致数、失败数、一致率</li>
+<li><strong>变量维度统计</strong>：每个输出变量的变化次数和变化率，快速定位受影响的字段</li>
+<li><strong>耗时对比</strong>：原始执行 vs 回放执行的平均耗时和 P95 耗时</li>
+</ul>
+<h2 id="_11">导出为测试用例<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>回放结果可以导出为自动测试用例包，支持三种范围：</p>
+<ul>
+<li>全部导出</li>
+<li>仅导出不一致的请求</li>
+<li>仅导出一致的请求</li>
+</ul>
+<p>导出后可在自动测试模块中执行回归测试。</p>
+<h2 id="_12">前置条件<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>ClickHouse 已配置并有历史执行日志（需开启变量监控）</li>
+<li>知识包已发布且可正常加载</li>
+</ul>
 
 
 
