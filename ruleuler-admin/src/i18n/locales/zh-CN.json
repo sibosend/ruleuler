@@ -52,7 +52,8 @@
     "systemSettings": "系统设置",
     "userManagement": "用户管理",
     "roleManagement": "角色管理",
-    "auditLog": "审计日志"
+    "auditLog": "审计日志",
+    "trafficReplay": "流量回放"
   },
   "layout": {
     "logout": "退出登录",
@@ -98,6 +99,9 @@
     "exportFailed": "导出失败",
     "importSuccess": "导入成功",
     "importFailed": "导入失败",
+    "autoTest": "自动测试",
+    "trafficReplay": "流量回放",
+    "simulationTest": "仿真测试",
     "enterRuleEditor": "进入规则编辑器",
     "releaseManagement": "上线管理",
     "configName": "配置名称",
@@ -229,6 +233,11 @@
     "testTotal": "共 {{total}} 条，通过 {{passed}}，失败 {{failed}}",
     "viewReport": "查看报告",
     "noTestPack": "无用例包，未执行测试",
+    "replayTest": "流量回放",
+    "replayRunning": "回放执行中...",
+    "replayTotal": "共 {{total}} 条，一致 {{match}}，不一致 {{mismatch}}，失败 {{errors}}",
+    "replayConsistencyRate": "一致率",
+    "noReplayTask": "未触发流量回放",
     "itemsChanged": "{{type}}（{{count}} 项变更）",
     "noSpecificChange": "无具体变动",
     "parseFailed": "解析失败",

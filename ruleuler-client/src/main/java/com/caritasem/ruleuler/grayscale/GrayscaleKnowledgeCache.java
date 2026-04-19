@@ -84,6 +84,11 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
     @Override
     public KnowledgePackage getKnowledge(String packageId) {
         String norm = normalize(packageId);
+        // 回放等场景跳过灰度路由
+        if (GrayscaleContext.shouldSkipGrayscale()) {
+            GrayscaleContext.markRoutedToGray(false);
+            return delegate.getKnowledge(packageId);
+        }
         GrayscaleRoutingRule rule = routingRules.get(norm);
         if (rule != null) {
             GrayscaleContext.ContextInfo ctx = GrayscaleContext.get();

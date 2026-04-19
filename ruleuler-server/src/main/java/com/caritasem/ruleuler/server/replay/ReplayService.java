@@ -2,6 +2,10 @@ package com.caritasem.ruleuler.server.replay;
 
 import com.bstek.urule.console.repository.ClientConfig;
 import com.bstek.urule.console.repository.RepositoryService;
+import com.bstek.urule.model.library.variable.Variable;
+import com.bstek.urule.model.library.variable.VariableCategory;
+import com.bstek.urule.runtime.KnowledgePackage;
+import com.bstek.urule.runtime.service.KnowledgePackageService;
 import com.caritasem.ruleuler.server.replay.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,24 +32,33 @@ public class ReplayService {
     private final DiffComparator diffComparator;
     private final RepositoryService repositoryService;
     private final ReplayExportService exportService;
+    private final ReplayConfig replayConfig;
+    private final KnowledgePackageService knowledgePackageService;
 
     public ReplayService(ReplayDao replayDao,
                          ReplayClickHouseDao clickHouseDao,
                          RequestReconstructor reconstructor,
                          DiffComparator diffComparator,
                          @Qualifier("urule.repositoryService") RepositoryService repositoryService,
-                         ReplayExportService exportService) {
+                         ReplayExportService exportService,
+                         ReplayConfig replayConfig,
+                         @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService) {
         this.replayDao = replayDao;
         this.clickHouseDao = clickHouseDao;
         this.reconstructor = reconstructor;
         this.diffComparator = diffComparator;
         this.repositoryService = repositoryService;
         this.exportService = exportService;
+        this.replayConfig = replayConfig;
+        this.knowledgePackageService = knowledgePackageService;
     }
 
     public long createAndExecute(TrafficQuery query, ToleranceConfig tolerance) {
         if (query.getProject() == null || query.getPackageId() == null) {
             throw new IllegalArgumentException("project 和 packageId 不能为空");
+        }
+        if (query.getSampleSize() > replayConfig.getMaxSampleSize()) {
+            throw new IllegalArgumentException("采样数量超过上限: " + replayConfig.getMaxSampleSize());
         }
         if (query.getStartTime() == null) {
             query.setStartTime(System.currentTimeMillis() - 86400000L);
@@ -116,6 +129,15 @@ public class ReplayService {
             return;
         }
 
+        ReplayTask task = replayDao.findTaskById(taskId);
+        String missingVarStrategy = task != null ? task.getMissingVarStrategy() : "null";
+
+        // 加载变量定义：category → {varName → Variable}（用于 segment 填充）
+        Map<String, Map<String, Variable>> variableDefs = Collections.emptyMap();
+        if ("segment".equals(missingVarStrategy) && task != null) {
+            variableDefs = loadVariableDefinitions(task.getProject(), task.getPackageId());
+        }
+
         int executed = 0, match = 0, mismatch = 0, errors = 0, incomplete = 0;
 
         for (String executionId : executionIds) {
@@ -130,9 +152,9 @@ public class ReplayService {
                 }
 
                 ReconstructResult reconstruct = reconstructor.reconstruct(
-                        varRows, null, null, "null");
+                        varRows, null, null, missingVarStrategy, variableDefs);
 
-                if ("skip".equals(/* from task's strategy */ "null") && "INCOMPLETE".equals(reconstruct.completenessStatus())) {
+                if ("skip".equals(missingVarStrategy) && "INCOMPLETE".equals(reconstruct.completenessStatus())) {
                     incomplete++;
                     executed++;
                     continue;
@@ -402,5 +424,32 @@ public class ReplayService {
         if (sortedValues.isEmpty()) return 0;
         int idx = (int) Math.ceil(pct / 100.0 * sortedValues.size()) - 1;
         return sortedValues.get(Math.max(0, Math.min(idx, sortedValues.size() - 1)));
+    }
+
+    private Map<String, Map<String, Variable>> loadVariableDefinitions(String project, String packageId) {
+        try {
+            String fullPackageId = project + "/" + packageId;
+            KnowledgePackage kp = knowledgePackageService.buildKnowledgePackage(fullPackageId);
+            if (kp == null || kp.getRete() == null || kp.getRete().getResourceLibrary() == null) {
+                return Collections.emptyMap();
+            }
+            List<VariableCategory> categories = kp.getRete().getResourceLibrary().getVariableCategories();
+            if (categories == null) return Collections.emptyMap();
+
+            Map<String, Map<String, Variable>> result = new LinkedHashMap<>();
+            for (VariableCategory vc : categories) {
+                List<Variable> vars = vc.getVariables();
+                if (vars == null) continue;
+                Map<String, Variable> varMap = new LinkedHashMap<>();
+                for (Variable v : vars) {
+                    varMap.put(v.getName(), v);
+                }
+                result.put(vc.getName(), varMap);
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("加载变量定义失败: project={}, packageId={}: {}", project, packageId, e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 }

@@ -65,5 +65,10 @@ monitoring:
     outlier-rate-max: 0.03
     skewness-abs-max: 2.0
 
+replay:
+  max-concurrent-sessions: 5
+  session-timeout-ms: 30000
+  max-sample-size: 10000
+
 name:
   dev

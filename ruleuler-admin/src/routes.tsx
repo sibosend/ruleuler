@@ -157,6 +157,11 @@ export const routeConfigs: RouteConfig[] = [
         label: 'route.shadowMode',
         permissionCode: 'menu:monitoring',
       },
+      {
+        path: '/monitoring/replay',
+        label: 'route.trafficReplay',
+        permissionCode: 'menu:replay',
+      },
     ],
   },
   {

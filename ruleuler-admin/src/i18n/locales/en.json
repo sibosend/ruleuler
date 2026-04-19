@@ -52,7 +52,8 @@
     "systemSettings": "Settings",
     "userManagement": "Users",
     "roleManagement": "Roles",
-    "auditLog": "Audit Log"
+    "auditLog": "Audit Log",
+    "trafficReplay": "Traffic Replay"
   },
   "layout": {
     "logout": "Logout",
@@ -229,6 +230,11 @@
     "testTotal": "Total: {{total}}, Passed: {{passed}}, Failed: {{failed}}",
     "viewReport": "View Report",
     "noTestPack": "No test pack, tests not executed",
+    "replayTest": "Traffic Replay",
+    "replayRunning": "Replay running...",
+    "replayTotal": "Total: {{total}}, Match: {{match}}, Mismatch: {{mismatch}}, Errors: {{errors}}",
+    "replayConsistencyRate": "Consistency Rate",
+    "noReplayTask": "Traffic replay not triggered",
     "itemsChanged": "{{type}} ({{count}} changes)",
     "noSpecificChange": "No specific changes",
     "parseFailed": "Parse failed",

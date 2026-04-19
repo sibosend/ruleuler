@@ -2,6 +2,7 @@ package com.caritasem.ruleuler.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
@@ -10,6 +11,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import java.util.Arrays;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class ServerApplication {
 
 	public static void main(String[] args) {

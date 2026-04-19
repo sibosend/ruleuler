@@ -28,24 +28,39 @@ public class DiffComparator {
             }
         }
 
-        // replayOutput is flat: category.varName → value (from RuleOutputCollector)
-        for (String key : replayOutput.keySet()) {
+        // replayOutput: 可能是嵌套 (category → {varName → value}) 或 flat (category.varName → value)，统一 flatten
+        Map<String, Object> flatReplay = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : replayOutput.entrySet()) {
+            if (entry.getValue() instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nested = (Map<String, Object>) entry.getValue();
+                for (Map.Entry<String, Object> varEntry : nested.entrySet()) {
+                    String key = entry.getKey() + "." + varEntry.getKey();
+                    flatReplay.put(key, varEntry.getValue());
+                }
+            } else {
+                flatReplay.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        for (String key : flatReplay.keySet()) {
             allKeys.add(key);
         }
 
+        // 只比较两边都有的 key；replay 未返回的 output 字段视为未修改（一致）
         boolean allSame = true;
         for (String key : allKeys) {
             Object oldVal = flatOriginal.get(key);
-            Object newVal = replayOutput.get(key);
+            Object newVal = flatReplay.get(key);
             int dotIdx = key.indexOf('.');
             String category = dotIdx > 0 ? key.substring(0, dotIdx) : key;
             String name = dotIdx > 0 ? key.substring(dotIdx + 1) : key;
 
-            if (!flatOriginal.containsKey(key)) {
+            if (!flatReplay.containsKey(key)) {
+                // replay 未返回此字段 = 未被规则修改，视为一致
+                fields.add(new FieldDiff(category, name, "SAME", oldVal, oldVal));
+            } else if (!flatOriginal.containsKey(key)) {
                 fields.add(new FieldDiff(category, name, "ADDED", null, newVal));
-                allSame = false;
-            } else if (!replayOutput.containsKey(key)) {
-                fields.add(new FieldDiff(category, name, "REMOVED", oldVal, null));
                 allSame = false;
             } else if (valuesEqual(oldVal, newVal, tolerance)) {
                 fields.add(new FieldDiff(category, name, "SAME", oldVal, newVal));

@@ -15,6 +15,7 @@ import ReteDiagramDialog from './ReteDiagramDialog.jsx';
 import FlowDialog from './FlowDialog.jsx';
 import ImportExcelDataDialog from './ImportExcelDataDialog.jsx';
 import BatchTestDialog from './BatchTestDialog.jsx';
+import ReplayDialog from './ReplayDialog.jsx';
 import ChildListDialog from '../../components/grid/component/ChildListDialog.jsx';
 
 class PackageEditor extends Component{
@@ -152,6 +153,20 @@ class PackageEditor extends Component{
                                     window.top.location.href = '/admin/projects/'+encodeURIComponent(p)+'/autotest?packageId='+encodeURIComponent(pkgId);
                                 }}><i className="glyphicon glyphicon-cog"></i> 自动测试</button>
                             </div>
+                            <div className="btn-group btn-group-sm" style={{margin:'2px'}}>
+                                <button className="btn btn-warning" type="button" onClick={()=>{
+                                    if(!this.currentPackage){
+                                        bootbox.alert('请先选择一个知识包！');
+                                        return;
+                                    }
+                                    var p = project.replace(/^\//,'');
+                                    event.eventEmitter.emit(event.OPEN_REPLAY_DIALOG,{
+                                        pkgId: this.currentPackage.id,
+                                        pkgName: this.currentPackage.name || this.currentPackage.id,
+                                        project: p
+                                    });
+                                }}><i className="glyphicon glyphicon-refresh"></i> 流量回放</button>
+                            </div>
                         </div>
 
                         <Grid headers={masterGridHeaders} dispatch={dispatch} rows={masterData} operationConfig={masterGridOperationCol} rowClick={(rowData)=>{
@@ -174,6 +189,7 @@ class PackageEditor extends Component{
                         <Grid headers={slaveGridHeaders} dispatch={dispatch} operationConfig={slaveGridOperationCol} rows={masterRowData.resourceItems || []}></Grid>
                     </div>
                 </Splitter>
+                <ReplayDialog />
             </div>
         );
     }

@@ -73,6 +73,20 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const projectsFetched = useRef(false);
 
+  // TESTING 状态下 5 秒轮询审批详情（更新 autotest + replay 进度）
+  useEffect(() => {
+    if (!diffDrawer.open || !diffDrawer.approval || diffDrawer.approval.status !== 'TESTING') return;
+    const timer = setInterval(async () => {
+      try {
+        const res = await getApprovalDetail(diffDrawer.approval!.id);
+        const detail: ApprovalVO = res.data?.data ?? res.data;
+        setDiffDrawer(prev => ({ ...prev, approval: detail, diffs: detail.diffs ?? prev.diffs }));
+        if (detail.status !== 'TESTING') clearInterval(timer);
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [diffDrawer.open, diffDrawer.approval?.id, diffDrawer.approval?.status]);
+
   // 固定状态筛选
   const fixedStatus = useMemo(() => {
     switch (mode) {
@@ -501,6 +515,49 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
             ) : (
               <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: 4 }}>
                 <strong>{t('release.autoTest')}</strong><span style={{ marginLeft: 12, color: '#999' }}>{t('release.noTestPack')}</span>
+              </div>
+            )}
+
+            {/* 回放结果摘要 */}
+            {diffDrawer.approval.status === 'TESTING' && diffDrawer.approval.replayTaskId ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+                <strong>{t('release.replayTest')}</strong><span style={{ marginLeft: 12 }}>{t('release.replayRunning')}</span>
+              </div>
+            ) : diffDrawer.approval.replaySummary ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 4,
+                background: diffDrawer.approval.replaySummary.mismatchCount > 0 ? '#fff2f0' : '#f6ffed',
+                border: `1px solid ${diffDrawer.approval.replaySummary.mismatchCount > 0 ? '#ffccc7' : '#b7eb8f'}` }}>
+                <strong>{t('release.replayTest')}</strong>
+                <span style={{ marginLeft: 12 }}>
+                  {t('release.replayTotal', {
+                    total: diffDrawer.approval.replaySummary.totalCount,
+                    match: diffDrawer.approval.replaySummary.matchCount,
+                    mismatch: diffDrawer.approval.replaySummary.mismatchCount,
+                    errors: diffDrawer.approval.replaySummary.errorCount,
+                  })}
+                </span>
+                {diffDrawer.approval.replaySummary.totalCount > 0 && (
+                  <span style={{ marginLeft: 8 }}>
+                    {t('release.replayConsistencyRate')}:
+                    {(diffDrawer.approval.replaySummary.matchCount / diffDrawer.approval.replaySummary.totalCount * 100).toFixed(1)}%
+                  </span>
+                )}
+                <Button size="small" type="link"
+                  onClick={() => window.open(`/admin/projects/${diffDrawer.approval!.project}/replay`, '_blank')}>
+                  {t('release.viewReport')}
+                </Button>
+              </div>
+            ) : diffDrawer.approval.replayTaskId ? (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4 }}>
+                <strong>{t('release.replayTest')}</strong>
+                <Button size="small" type="link"
+                  onClick={() => window.open(`/admin/projects/${diffDrawer.approval!.project}/replay`, '_blank')}>
+                  {t('release.viewReport')}
+                </Button>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: 4 }}>
+                <strong>{t('release.replayTest')}</strong><span style={{ marginLeft: 12, color: '#999' }}>{t('release.noReplayTask')}</span>
               </div>
             )}
 

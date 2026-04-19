@@ -24,6 +24,7 @@ public class Approval {
     private Long approvedAt;
     private Long publishedAt;
     private Long testRunId;
+    private Long replayTaskId;
     private String description;  // 变更说明
     private int version;  // 系统版本号
 }

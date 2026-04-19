@@ -85,7 +85,6 @@ export function createReplayTask(data: {
   sampleStrategy?: string;
   sampleSize?: number;
   missingVarStrategy?: string;
-  toleranceConfig?: { mode: string; value: number };
 }) {
   return request.post('/api/replay/tasks', data);
 }

@@ -34,6 +34,16 @@ export interface TestSummary {
   finishedAt: number | null;
 }
 
+export interface ReplaySummary {
+  taskId: number;
+  status: string;
+  totalCount: number;
+  executedCount: number;
+  matchCount: number;
+  mismatchCount: number;
+  errorCount: number;
+}
+
 export interface ApprovalVO {
   id: number;
   project: string;
@@ -50,7 +60,9 @@ export interface ApprovalVO {
   approvedAt: number | null;
   publishedAt: number | null;
   testRunId: number | null;
+  replayTaskId: number | null;
   testSummary?: TestSummary;
+  replaySummary?: ReplaySummary;
   diffs?: ApprovalDiffItem[];
 }
 

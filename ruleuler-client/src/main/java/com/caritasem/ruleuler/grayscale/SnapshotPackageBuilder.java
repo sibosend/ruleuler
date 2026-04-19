@@ -35,7 +35,7 @@ public class SnapshotPackageBuilder {
             for (Map.Entry<String, String> entry : snapshotContent.entrySet()) {
                 String path = entry.getKey();
                 String xml = entry.getValue();
-                if (xml == null || xml.isBlank()) continue;
+                if (path == null || xml == null || xml.isBlank()) continue;
                 String resourcePath = path.startsWith("dbr:") ? path : "dbr:" + path;
                 resources.add(new Resource(xml, resourcePath));
             }

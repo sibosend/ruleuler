@@ -1,5 +1,7 @@
 package com.caritasem.ruleuler.server.replay;
 
+import com.bstek.urule.model.library.Datatype;
+import com.bstek.urule.model.library.variable.Variable;
 import com.caritasem.ruleuler.server.replay.model.ReconstructResult;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ import java.util.*;
 public class RequestReconstructor {
 
     private static final String DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    private static final Random RANDOM = new Random();
 
     public Object restoreValue(String varType, Double valNum, String valStr) {
         if (valNum == null && valStr == null) return null;
@@ -27,14 +30,27 @@ public class RequestReconstructor {
         };
     }
 
+    /**
+     * 兼容旧签名
+     */
     public ReconstructResult reconstruct(
             List<Map<String, Object>> varRows,
             Set<String> expectedCategories,
             Map<String, Map<String, String>> expectedVariables,
             String missingVarStrategy) {
+        return reconstruct(varRows, expectedCategories, expectedVariables, missingVarStrategy, Collections.emptyMap());
+    }
+
+    public ReconstructResult reconstruct(
+            List<Map<String, Object>> varRows,
+            Set<String> expectedCategories,
+            Map<String, Map<String, String>> expectedVariables,
+            String missingVarStrategy,
+            Map<String, Map<String, Variable>> variableDefs) {
 
         Map<String, Object> inputMap = new LinkedHashMap<>();
         Map<String, Object> outputMap = new LinkedHashMap<>();
+        Map<String, String> varTypeMap = new LinkedHashMap<>();
 
         for (Map<String, Object> row : varRows) {
             String ioType = String.valueOf(row.get("io_type"));
@@ -46,6 +62,7 @@ public class RequestReconstructor {
 
             if (varName == null || varName.isEmpty()) continue;
 
+            varTypeMap.put(category + "." + varName, varType);
             Object value = restoreValue(varType, valNum, valStr);
             Map<String, Object> target = "input".equals(ioType) ? inputMap : outputMap;
             String key = category + "." + varName;
@@ -57,6 +74,24 @@ public class RequestReconstructor {
 
         List<String> missingCategories = new ArrayList<>();
         List<String> missingVariables = new ArrayList<>();
+
+        // 补全缺失的 category 和 variable（从变量定义）
+        if ("segment".equals(missingVarStrategy) && !variableDefs.isEmpty()) {
+            for (Map.Entry<String, Map<String, Variable>> catEntry : variableDefs.entrySet()) {
+                String cat = catEntry.getKey();
+                Map<String, Variable> vars = catEntry.getValue();
+                if (!inputByCategory.containsKey(cat)) {
+                    missingCategories.add(cat);
+                    inputByCategory.put(cat, new LinkedHashMap<>());
+                }
+                Map<String, Object> actual = inputByCategory.get(cat);
+                for (Map.Entry<String, Variable> varEntry : vars.entrySet()) {
+                    if (!actual.containsKey(varEntry.getKey())) {
+                        missingVariables.add(cat + "." + varEntry.getKey());
+                    }
+                }
+            }
+        }
 
         if (expectedCategories != null) {
             for (String cat : expectedCategories) {
@@ -81,7 +116,39 @@ public class RequestReconstructor {
             }
         }
 
+        // segment 填充：用变量定义的 defaultValue 或按类型填充零值
+        List<String> filledVariables = new ArrayList<>();
+        if ("segment".equals(missingVarStrategy)) {
+            // 填充 null 值变量
+            for (Map.Entry<String, Map<String, Object>> catEntry : inputByCategory.entrySet()) {
+                String cat = catEntry.getKey();
+                Map<String, Object> vars = catEntry.getValue();
+                List<String> nullKeys = vars.entrySet().stream()
+                        .filter(e -> e.getValue() == null)
+                        .map(Map.Entry::getKey)
+                        .toList();
+                for (String varName : nullKeys) {
+                    Object fillValue = resolveFillValue(cat, varName, varTypeMap, variableDefs);
+                    vars.put(varName, fillValue);
+                    filledVariables.add(cat + "." + varName);
+                }
+            }
+            // 填充缺失变量（不在 varRows 中但在变量定义中的）
+            for (String missingKey : missingVariables) {
+                int dotIdx = missingKey.indexOf('.');
+                String cat = missingKey.substring(0, dotIdx);
+                String varName = missingKey.substring(dotIdx + 1);
+                Map<String, Object> catVars = inputByCategory.get(cat);
+                if (catVars != null && !catVars.containsKey(varName)) {
+                    Object fillValue = resolveFillValue(cat, varName, varTypeMap, variableDefs);
+                    catVars.put(varName, fillValue);
+                    filledVariables.add(missingKey);
+                }
+            }
+        }
+
         String completenessStatus = missingCategories.isEmpty() && missingVariables.isEmpty()
+                && filledVariables.isEmpty()
                 ? "COMPLETE" : "INCOMPLETE";
 
         return new ReconstructResult(
@@ -89,9 +156,75 @@ public class RequestReconstructor {
                 outputByCategory,
                 missingCategories,
                 missingVariables,
-                Collections.emptyList(),
+                filledVariables,
                 completenessStatus
         );
+    }
+
+    /**
+     * 从变量定义获取 defaultValue；无 defaultValue 则按 Datatype 填充类型零值
+     */
+    private Object resolveFillValue(String category, String varName,
+                                     Map<String, String> varTypeMap,
+                                     Map<String, Map<String, Variable>> variableDefs) {
+        // 优先用变量定义的 defaultValue
+        Map<String, Variable> catVars = variableDefs.get(category);
+        if (catVars != null) {
+            Variable var = catVars.get(varName);
+            if (var != null && var.getDefaultValue() != null && !var.getDefaultValue().isEmpty()) {
+                Object converted = convertDefaultValue(var.getType(), var.getDefaultValue());
+                if (converted != null) return converted;
+            }
+            // 用变量定义的 Datatype 填充
+            if (var != null && var.getType() != null) {
+                return fillByDatatype(var.getType());
+            }
+        }
+        // fallback：用 ClickHouse 日志里的 var_type
+        String varType = varTypeMap.get(category + "." + varName);
+        return fillByVarType(varType);
+    }
+
+    private Object convertDefaultValue(Datatype type, String defaultValue) {
+        try {
+            return type.convert(defaultValue);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Object fillByDatatype(Datatype type) {
+        return switch (type) {
+            case Integer -> 0;
+            case Long -> 0L;
+            case Double -> 0.0;
+            case Float -> 0.0f;
+            case BigDecimal -> BigDecimal.ZERO;
+            case Boolean -> false;
+            case String -> "";
+            case Char -> '\0';
+            case Enum -> "";
+            case Date -> new Date();
+            case List -> Collections.emptyList();
+            case Set -> Collections.emptySet();
+            case Map -> Collections.emptyMap();
+            case Object -> "";
+        };
+    }
+
+    private Object fillByVarType(String varType) {
+        if (varType == null) return 0;
+        return switch (varType) {
+            case "Integer" -> 0;
+            case "Long" -> 0L;
+            case "Double" -> 0.0;
+            case "Float" -> 0.0f;
+            case "BigDecimal" -> BigDecimal.ZERO;
+            case "Boolean" -> false;
+            case "String", "Char", "Enum" -> "";
+            case "Date" -> new Date();
+            default -> "";
+        };
     }
 
     private Map<String, Map<String, Object>> groupByCategory(Map<String, Object> flatMap) {

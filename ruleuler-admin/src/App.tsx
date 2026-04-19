@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 const ReaEditorPage = React.lazy(() => import('@/pages/rea/ReaEditorPage'));
 const ReaExpressionDoc = React.lazy(() => import('@/pages/docs/ReaExpressionDoc'));
@@ -8,7 +8,6 @@ import AuthorizedRoute from '@/components/AuthorizedRoute';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import ProjectList from '@/pages/projects/ProjectList';
-import ProjectDetail from '@/pages/projects/ProjectDetail';
 import ClientConfigPage from '@/pages/projects/ClientConfigPage';
 import ConsolePage from '@/pages/console/ConsolePage';
 import UserList from '@/pages/system/UserList';
@@ -31,6 +30,11 @@ const ReplayPage = React.lazy(() => import('@/pages/replay/ReplayPage'));
 
 const ReleaseListPage = React.lazy(() => import('@/pages/release/ReleaseListPage'));
 const GrayscaleRulePage = React.lazy(() => import('@/pages/release/GrayscaleRulePage'));
+
+const ProjectRedirect: React.FC = () => {
+  const { name } = useParams<{ name: string }>();
+  return <Navigate to={`/console/${name}`} replace />;
+};
 
 const App: React.FC = () => (
   <BrowserRouter basename="/admin">
@@ -65,7 +69,7 @@ const App: React.FC = () => (
           path="projects/:name"
           element={
             <AuthorizedRoute permissionCode="menu:projects">
-              <ProjectDetail />
+              <ProjectRedirect />
             </AuthorizedRoute>
           }
         />
@@ -234,6 +238,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:monitoring">
               <Suspense fallback={<div>Loading...</div>}><ShadowPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/replay"
+          element={
+            <AuthorizedRoute permissionCode="menu:replay">
+              <Suspense fallback={<div>Loading...</div>}><ReplayPage /></Suspense>
             </AuthorizedRoute>
           }
         />

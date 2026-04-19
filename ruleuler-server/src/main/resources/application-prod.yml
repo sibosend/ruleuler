@@ -47,3 +47,8 @@ monitoring:
     missing-rate-max: 0.05
     outlier-rate-max: 0.03
     skewness-abs-max: 2.0
+
+replay:
+  max-concurrent-sessions: ${REPLAY_MAX_CONCURRENT_SESSIONS:5}
+  session-timeout-ms: ${REPLAY_SESSION_TIMEOUT_MS:30000}
+  max-sample-size: ${REPLAY_MAX_SAMPLE_SIZE:10000}

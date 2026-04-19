@@ -23,6 +23,9 @@ export const HIDE_IMPORT_EXCEL_DIALOG='hide_import_excel_dialog';
 export const OPEN_BATCH_TEST_DIALOG='open_batch_test_dialog';
 export const HIDE_BATCH_TEST_DIALOG='hide_batch_test_dialog';
 
+export const OPEN_REPLAY_DIALOG='open_replay_dialog';
+export const HIDE_REPLAY_DIALOG='hide_replay_dialog';
+
 export const REFRESH_SIMULATOR_DATA='refresh_simulator_data';
 
 export const eventEmitter = new events.EventEmitter();

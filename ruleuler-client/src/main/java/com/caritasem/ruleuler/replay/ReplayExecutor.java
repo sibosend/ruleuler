@@ -2,6 +2,7 @@ package com.caritasem.ruleuler.replay;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.caritasem.ruleuler.dto.RuleExecutionResult;
+import com.caritasem.ruleuler.grayscale.GrayscaleContext;
 import com.caritasem.ruleuler.service.RuleExecutionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ public class ReplayExecutor {
             json.putAll(entry.getValue());
             body.put(entry.getKey(), json);
         }
+        // 回放不走灰度路由，确保用 base 包执行
+        GrayscaleContext.skipGrayscale();
         return ruleExecutionService.execute(project, packageId, flowId, body);
     }
 }

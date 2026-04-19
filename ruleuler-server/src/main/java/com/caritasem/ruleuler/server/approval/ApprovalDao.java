@@ -32,6 +32,7 @@ public class ApprovalDao {
             .approvedAt(rs.getObject("approved_at") != null ? rs.getLong("approved_at") : null)
             .publishedAt(rs.getObject("published_at") != null ? rs.getLong("published_at") : null)
             .testRunId(rs.getObject("test_run_id") != null ? rs.getLong("test_run_id") : null)
+            .replayTaskId(rs.getObject("replay_task_id") != null ? rs.getLong("replay_task_id") : null)
             .description(rs.getString("description"))
             .version(rs.getInt("version"))
             .build();
@@ -63,8 +64,8 @@ public class ApprovalDao {
         GeneratedKeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(conn -> {
             PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at,test_run_id,description,version) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?,?)", new String[]{"id"});
+                    "INSERT INTO ruleuler_publish_approval (project,package_id,package_name,status,submitter,comment,submitted_at,test_run_id,replay_task_id,description,version) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)", new String[]{"id"});
             ps.setString(1, a.getProject());
             ps.setString(2, a.getPackageId());
             ps.setString(3, a.getPackageName());
@@ -73,8 +74,9 @@ public class ApprovalDao {
             ps.setString(6, a.getComment());
             ps.setLong(7, a.getSubmittedAt());
             ps.setObject(8, a.getTestRunId());
-            ps.setString(9, a.getDescription());
-            ps.setInt(10, a.getVersion());
+            ps.setObject(9, a.getReplayTaskId());
+            ps.setString(10, a.getDescription());
+            ps.setInt(11, a.getVersion());
             return ps;
         }, kh);
         return kh.getKey().longValue();
@@ -131,6 +133,16 @@ public class ApprovalDao {
     public void updateTestResult(Long id, Long testRunId, ApprovalStatus status) {
         jdbc.update("UPDATE ruleuler_publish_approval SET test_run_id=?,status=? WHERE id=?",
                 testRunId, status.name(), id);
+    }
+
+    public void updateAutotestRunId(Long id, Long testRunId) {
+        jdbc.update("UPDATE ruleuler_publish_approval SET test_run_id=? WHERE id=?",
+                testRunId, id);
+    }
+
+    public void updateReplayTaskId(Long id, Long replayTaskId) {
+        jdbc.update("UPDATE ruleuler_publish_approval SET replay_task_id=? WHERE id=?",
+                replayTaskId, id);
     }
 
     // ---- Diff Items ----

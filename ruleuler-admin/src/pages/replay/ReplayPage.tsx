@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Table, Button, Form, Select, DatePicker, InputNumber, Tag, Progress,
+  Table, Button, Select, DatePicker, InputNumber, Tag, Progress, Input,
   Card, Statistic, Row, Col, Drawer, Descriptions, Modal, Space, message,
 } from 'antd';
 import {
   PlayCircleOutlined, ExportOutlined, EyeOutlined,
   CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
-  createReplayTask, listReplayTasks, getReplayTask,
+  createReplayTask, listReplayTasks,
   getReplaySessions, getReplayReport, exportReplayTask,
 } from '@/api/replay';
 import { listPackages } from '@/api/autotest';
@@ -28,6 +28,8 @@ const statusColors: Record<string, string> = {
 const ReplayPage: React.FC = () => {
   const { name } = useParams<{ name: string }>();
   const project = name || '';
+  const [searchParams] = useSearchParams();
+  const preselectedPkg = searchParams.get('packageId') || '';
 
   const [tasks, setTasks] = useState<ReplayTaskVO[]>([]);
   const [total, setTotal] = useState(0);
@@ -36,15 +38,13 @@ const ReplayPage: React.FC = () => {
   const [packages, setPackages] = useState<Array<{ id: string; name: string }>>([]);
 
   // 创建表单
-  const [selectedPkg, setSelectedPkg] = useState<string>();
+  const [selectedPkg, setSelectedPkg] = useState<string>(preselectedPkg);
   const [timeRange, setTimeRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
-    dayjs().subtract(24, 'hour'), dayjs(),
+    dayjs().subtract(7, 'day'), dayjs(),
   ]);
-  const [sampleStrategy, setSampleStrategy] = useState<string>('random');
+  const [sampleStrategy, setSampleStrategy] = useState<string>('all');
   const [sampleSize, setSampleSize] = useState<number>(10000);
-  const [missingStrategy, setMissingStrategy] = useState<string>('null');
-  const [toleranceMode, setToleranceMode] = useState<string>('exact');
-  const [toleranceValue, setToleranceValue] = useState<number>(0);
+  const [missingStrategy, setMissingStrategy] = useState<string>('segment');
 
   // 报告
   const [reportTaskId, setReportTaskId] = useState<number | null>(null);
@@ -72,7 +72,7 @@ const ReplayPage: React.FC = () => {
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listReplayTasks({ project, page, pageSize: 20 });
+      const res = await listReplayTasks({ project, packageId: preselectedPkg || undefined, page, pageSize: 20 });
       setTasks(res.data?.data?.items || []);
       setTotal(res.data?.data?.total || 0);
     } finally {
@@ -112,7 +112,6 @@ const ReplayPage: React.FC = () => {
         sampleStrategy,
         sampleSize,
         missingVarStrategy: missingStrategy,
-        toleranceConfig: { mode: toleranceMode, value: toleranceValue },
       });
       message.success('回放任务已创建');
       setPage(1);
@@ -239,19 +238,19 @@ const ReplayPage: React.FC = () => {
       {/* 创建任务表单 */}
       <Card title="创建回放任务" size="small" style={{ marginBottom: 16 }}>
         <Space wrap>
-          <Select placeholder="选择知识包" style={{ width: 200 }} value={selectedPkg}
-            onChange={setSelectedPkg} options={packages.map((p: any) => ({ label: p.name || p.id, value: p.id }))} />
-          <RangePicker showTime value={timeRange} onChange={(v) => v && setTimeRange(v)} />
+          {preselectedPkg ? (
+            <Input disabled style={{ width: 200 }}
+              value={packages.find((p: any) => p.id === preselectedPkg)?.name || preselectedPkg} />
+          ) : (
+            <Select placeholder="选择知识包" style={{ width: 200 }} value={selectedPkg || undefined}
+              onChange={setSelectedPkg} options={packages.map((p: any) => ({ label: p.name || p.id, value: p.id }))} />
+          )}
+          <RangePicker showTime value={timeRange} onChange={(v) => { if (v && v[0] && v[1]) setTimeRange([v[0], v[1]]); }} />
           <Select value={sampleStrategy} onChange={setSampleStrategy} style={{ width: 120 }}
             options={[{ label: '随机采样', value: 'random' }, { label: '全量', value: 'all' }, { label: '均匀采样', value: 'uniform' }]} />
           <InputNumber min={1} max={10000} value={sampleSize} onChange={(v) => setSampleSize(v || 10000)} style={{ width: 100 }} />
           <Select value={missingStrategy} onChange={setMissingStrategy} style={{ width: 120 }}
-            options={[{ label: '不填充', value: 'null' }, { label: '跳过', value: 'skip' }, { label: '区间填充', value: 'segment' }]} />
-          <Select value={toleranceMode} onChange={setToleranceMode} style={{ width: 100 }}
-            options={[{ label: '精确', value: 'exact' }, { label: '绝对误差', value: 'absolute' }, { label: '相对误差', value: 'relative' }]} />
-          {toleranceMode !== 'exact' && (
-            <InputNumber min={0} step={0.001} value={toleranceValue} onChange={(v) => setToleranceValue(v || 0)} style={{ width: 100 }} />
-          )}
+            options={[{ label: '区间填充', value: 'segment' }, { label: '不填充', value: 'null' }, { label: '跳过', value: 'skip' }]} />
           <Button type="primary" icon={<PlayCircleOutlined />} onClick={handleCreate}>创建</Button>
         </Space>
       </Card>

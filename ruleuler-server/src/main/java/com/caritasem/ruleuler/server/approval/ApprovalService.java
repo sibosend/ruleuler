@@ -16,6 +16,9 @@ import com.caritasem.ruleuler.server.approval.model.*;
 import com.caritasem.ruleuler.server.grayscale.GrayscaleRuleDao;
 import com.caritasem.ruleuler.server.grayscale.SnapshotKnowledgeBuilder;
 import com.caritasem.ruleuler.server.grayscale.model.GrayscaleRule;
+import com.caritasem.ruleuler.server.replay.ReplayService;
+import com.caritasem.ruleuler.server.replay.model.TrafficQuery;
+import com.caritasem.ruleuler.server.replay.model.ToleranceConfig;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
@@ -48,6 +51,7 @@ public class ApprovalService {
     private final KnowledgePackageService knowledgePackageService;
     private final SnapshotKnowledgeBuilder snapshotBuilder;
     private final GrayscaleRuleDao grayscaleRuleDao;
+    private final ReplayService replayService;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
@@ -56,7 +60,8 @@ public class ApprovalService {
                            @Qualifier("urule.testResultDao") TestResultDao testResultDao,
                            @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
                            SnapshotKnowledgeBuilder snapshotBuilder,
-                           GrayscaleRuleDao grayscaleRuleDao) {
+                           GrayscaleRuleDao grayscaleRuleDao,
+                           ReplayService replayService) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
@@ -65,6 +70,7 @@ public class ApprovalService {
         this.knowledgePackageService = knowledgePackageService;
         this.snapshotBuilder = snapshotBuilder;
         this.grayscaleRuleDao = grayscaleRuleDao;
+        this.replayService = replayService;
     }
 
     // ---- submit ----
@@ -122,10 +128,8 @@ public class ApprovalService {
         // 8. 提交时创建快照（内容级，版本已锁定）
         createContentSnapshot(project, packageId, approvalId, currentMap);
 
-        // 8. 异步执行自动测试
-        if (hasTestPack) {
-            runAutoTestAsync(project, packageId, approvalId);
-        }
+        // 8. 异步并行执行自动测试和流量回放
+        runTestsAsync(project, packageId, approvalId, hasTestPack);
 
         approval.setId(approvalId);
         return buildApprovalVo(approval, diffs);
@@ -141,33 +145,76 @@ public class ApprovalService {
     }
 
     /**
-     * 异步执行自动测试，完成后更新审批单状态为 PENDING。
-     * 测试失败不阻塞审批流程，只记录结果。
+     * 异步并行执行自动测试和流量回放。
+     * 两个任务互不依赖，最后完成的线程负责将状态从 TESTING → PENDING。
      */
-    private void runAutoTestAsync(String project, String packageId, Long approvalId) {
-        new Thread(() -> {
-            Long testRunId = null;
-            try {
-                List<TestCasePack> packs = testResultDao.findPacksByPackage(project, packageId);
-                if (packs != null && !packs.isEmpty()) {
-                    TestCasePack latestPack = packs.get(packs.size() - 1);
-                    log.info("审批#{} 异步自动测试开始: packId={}", approvalId, latestPack.getId());
-                    TestRun run = testExecutor.execute(latestPack.getId(), null);
-                    testRunId = run.getId();
-                    log.info("审批#{} 异步自动测试完成: runId={}, passed={}, failed={}",
-                            approvalId, run.getId(), run.getPassedCases(), run.getFailedCases());
-                }
-            } catch (Exception e) {
-                log.warn("审批#{} 异步自动测试执行失败: {}", approvalId, e.getMessage(), e);
-            } finally {
-                // 无论测试成功失败，都流转到 PENDING
+    private void runTestsAsync(String project, String packageId, Long approvalId, boolean hasTestPack) {
+        java.util.concurrent.atomic.AtomicInteger remaining = new java.util.concurrent.atomic.AtomicInteger(0);
+        if (hasTestPack) remaining.incrementAndGet();
+        remaining.incrementAndGet(); // replay 总是执行
+
+        // 线程1：自动测试（保持原有逻辑）
+        if (hasTestPack) {
+            new Thread(() -> {
+                Long testRunId = null;
                 try {
-                    approvalDao.updateTestResult(approvalId, testRunId, ApprovalStatus.PENDING);
+                    List<TestCasePack> packs = testResultDao.findPacksByPackage(project, packageId);
+                    if (packs != null && !packs.isEmpty()) {
+                        TestCasePack latestPack = packs.get(packs.size() - 1);
+                        log.info("审批#{} 异步自动测试开始: packId={}", approvalId, latestPack.getId());
+                        TestRun run = testExecutor.execute(latestPack.getId(), null);
+                        testRunId = run.getId();
+                        log.info("审批#{} 异步自动测试完成: runId={}, passed={}, failed={}",
+                                approvalId, run.getId(), run.getPassedCases(), run.getFailedCases());
+                    }
                 } catch (Exception e) {
-                    log.error("审批#{} 更新测试结果失败", approvalId, e);
+                    log.warn("审批#{} 异步自动测试执行失败: {}", approvalId, e.getMessage(), e);
+                } finally {
+                    try {
+                        approvalDao.updateAutotestRunId(approvalId, testRunId);
+                    } catch (Exception e) {
+                        log.error("审批#{} 更新autotest_run_id失败", approvalId, e);
+                    }
+                    if (remaining.decrementAndGet() == 0) {
+                        tryTransitionToPending(approvalId);
+                    }
+                }
+            }, "approval-autotest-" + approvalId).start();
+        }
+
+        // 线程2：流量回放（新增）
+        new Thread(() -> {
+            Long replayTaskId = null;
+            try {
+                TrafficQuery query = TrafficQuery.defaultForApproval(project, packageId);
+                log.info("审批#{} 异步流量回放开始: project={}, packageId={}", approvalId, project, packageId);
+                long taskId = replayService.createAndExecute(query, ToleranceConfig.exact());
+                replayTaskId = taskId;
+                log.info("审批#{} 异步流量回放任务已创建: taskId={}", approvalId, taskId);
+            } catch (Exception e) {
+                log.warn("审批#{} 异步流量回放失败: {}", approvalId, e.getMessage(), e);
+            } finally {
+                try {
+                    if (replayTaskId != null) {
+                        approvalDao.updateReplayTaskId(approvalId, replayTaskId);
+                    }
+                } catch (Exception e) {
+                    log.error("审批#{} 更新replay_task_id失败", approvalId, e);
+                }
+                if (remaining.decrementAndGet() == 0) {
+                    tryTransitionToPending(approvalId);
                 }
             }
-        }, "approval-test-" + approvalId).start();
+        }, "approval-replay-" + approvalId).start();
+    }
+
+    /** 最后完成的线程将状态从 TESTING → PENDING */
+    private void tryTransitionToPending(Long approvalId) {
+        try {
+            approvalDao.updateStatusOnly(approvalId, ApprovalStatus.PENDING);
+        } catch (Exception e) {
+            log.error("审批#{} 状态流转TESTING→PENDING失败", approvalId, e);
+        }
     }
 
     // ---- approve ----
@@ -496,6 +543,7 @@ public class ApprovalService {
         vo.put("publisher", a.getPublisher());
         vo.put("publishedAt", a.getPublishedAt());
         vo.put("testRunId", a.getTestRunId());
+        vo.put("replayTaskId", a.getReplayTaskId());
         vo.put("description", a.getDescription());
         vo.put("version", a.getVersion());
         if (diffs != null) vo.put("diffs", diffs);
@@ -517,6 +565,26 @@ public class ApprovalService {
                 }
             } catch (Exception e) {
                 log.warn("加载测试结果摘要失败: runId={}", a.getTestRunId(), e);
+            }
+        }
+
+        // 回放结果摘要
+        if (a.getReplayTaskId() != null) {
+            try {
+                com.caritasem.ruleuler.server.replay.model.ReplayTask replayTask = replayService.getTask(a.getReplayTaskId());
+                if (replayTask != null) {
+                    Map<String, Object> replaySummary = new LinkedHashMap<>();
+                    replaySummary.put("taskId", replayTask.getId());
+                    replaySummary.put("status", replayTask.getStatus());
+                    replaySummary.put("totalCount", replayTask.getTotalCount());
+                    replaySummary.put("executedCount", replayTask.getExecutedCount());
+                    replaySummary.put("matchCount", replayTask.getMatchCount());
+                    replaySummary.put("mismatchCount", replayTask.getMismatchCount());
+                    replaySummary.put("errorCount", replayTask.getErrorCount());
+                    vo.put("replaySummary", replaySummary);
+                }
+            } catch (Exception e) {
+                log.warn("加载回放结果摘要失败: taskId={}", a.getReplayTaskId(), e);
             }
         }
         return vo;
