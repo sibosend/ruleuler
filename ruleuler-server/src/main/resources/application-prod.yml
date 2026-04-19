@@ -37,6 +37,7 @@ auth:
   jwt:
     secret: ${AUTH_JWT_SECRET}
     expiration-hours: ${AUTH_JWT_EXPIRATION_HOURS}
+  service-allowed-ips: ${SERVICE_ALLOWED_IPS:127.0.0.1}
 
 monitoring:
   enabled: true

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -21,6 +22,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserDao userDao;
     private final ObjectMapper objectMapper;
+    private final List<String> serviceAllowedIps;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -32,6 +34,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             // 白名单直接放行
             if (isWhitelisted(path)) {
                 filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 服务端点：仅允许白名单 IP
+            if (isServiceEndpoint(path)) {
+                if (IpMatcher.matches(request.getRemoteAddr(), serviceAllowedIps)) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    writeJson(response, 403, "access denied");
+                }
                 return;
             }
 
@@ -92,11 +104,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || "/favicon.ico".equals(path)
                 || path.startsWith("/admin/")
                 || path.startsWith("/urule/res/")
-                || "/urule/loadknowledge".equals(path)
-                || "/urule/knowledge-package-service".equals(path)
                 || path.startsWith("/api/grayscale/active-states")
                 || path.startsWith("/api/grayscale/snapshot")
                 || path.startsWith("/api/grayscale/metrics/report");
+    }
+
+    private boolean isServiceEndpoint(String path) {
+        return "/urule/loadknowledge".equals(path)
+                || "/urule/knowledge-package-service".equals(path);
     }
 
     private String extractToken(HttpServletRequest request) {
