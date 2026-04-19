@@ -210,6 +210,7 @@ const ReplayPage: React.FC = () => {
     {
       title: '一致', key: 'match', width: 70,
       render: (_: unknown, r: ReplaySessionVO) => {
+        if (r.status !== 'success') return '-';
         try {
           const dr = JSON.parse(r.diffResult || '{}');
           return dr.match ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <CloseCircleOutlined style={{ color: '#ff4d4f' }} />;
@@ -218,6 +219,7 @@ const ReplayPage: React.FC = () => {
     },
     { title: '差异字段数', key: 'diffCount', width: 90,
       render: (_: unknown, r: ReplaySessionVO) => {
+        if (r.status !== 'success') return '-';
         try {
           const dr = JSON.parse(r.diffResult || '{}');
           return (dr.fields || []).filter((f: FieldDiffVO) => f.status !== 'SAME').length;
@@ -225,6 +227,10 @@ const ReplayPage: React.FC = () => {
       },
     },
     { title: '耗时(ms)', dataIndex: 'execMs', key: 'execMs', width: 80 },
+    {
+      title: '错误信息', dataIndex: 'errorMessage', key: 'errorMessage', ellipsis: true,
+      render: (v: string | null) => v || '-',
+    },
     {
       title: '操作', key: 'actions', width: 80,
       render: (_: unknown, r: ReplaySessionVO) => (

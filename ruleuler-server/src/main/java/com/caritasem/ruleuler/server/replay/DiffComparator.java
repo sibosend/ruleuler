@@ -10,15 +10,20 @@ import java.util.*;
 @Component
 public class DiffComparator {
 
+    /**
+     * 比较原始输出和回放输出
+     * @param originalOutput category → {varName → value}（从 ClickHouse 日志重建）
+     * @param replayOutput   category → {varName → value}（回放执行结果）
+     */
     public DiffResult compare(
             Map<String, Map<String, Object>> originalOutput,
-            Map<String, Object> replayOutput,
+            Map<String, Map<String, Object>> replayOutput,
             ToleranceConfig tolerance) {
 
         List<FieldDiff> fields = new ArrayList<>();
         Set<String> allKeys = new LinkedHashSet<>();
 
-        // original: category → {varName → value} → flatten to category.varName
+        // flatten: category.varName → value
         Map<String, Object> flatOriginal = new LinkedHashMap<>();
         for (Map.Entry<String, Map<String, Object>> catEntry : originalOutput.entrySet()) {
             for (Map.Entry<String, Object> varEntry : catEntry.getValue().entrySet()) {
@@ -28,26 +33,15 @@ public class DiffComparator {
             }
         }
 
-        // replayOutput: 可能是嵌套 (category → {varName → value}) 或 flat (category.varName → value)，统一 flatten
         Map<String, Object> flatReplay = new LinkedHashMap<>();
-        for (Map.Entry<String, Object> entry : replayOutput.entrySet()) {
-            if (entry.getValue() instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> nested = (Map<String, Object>) entry.getValue();
-                for (Map.Entry<String, Object> varEntry : nested.entrySet()) {
-                    String key = entry.getKey() + "." + varEntry.getKey();
-                    flatReplay.put(key, varEntry.getValue());
-                }
-            } else {
-                flatReplay.put(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, Map<String, Object>> catEntry : replayOutput.entrySet()) {
+            for (Map.Entry<String, Object> varEntry : catEntry.getValue().entrySet()) {
+                String key = catEntry.getKey() + "." + varEntry.getKey();
+                flatReplay.put(key, varEntry.getValue());
+                allKeys.add(key);
             }
         }
 
-        for (String key : flatReplay.keySet()) {
-            allKeys.add(key);
-        }
-
-        // 只比较两边都有的 key；replay 未返回的 output 字段视为未修改（一致）
         boolean allSame = true;
         for (String key : allKeys) {
             Object oldVal = flatOriginal.get(key);

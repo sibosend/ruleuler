@@ -1,10 +1,12 @@
 package com.caritasem.ruleuler.server.replay;
 
-import com.bstek.urule.console.repository.ClientConfig;
 import com.bstek.urule.console.repository.RepositoryService;
+import com.bstek.urule.model.GeneralEntity;
 import com.bstek.urule.model.library.variable.Variable;
 import com.bstek.urule.model.library.variable.VariableCategory;
 import com.bstek.urule.runtime.KnowledgePackage;
+import com.bstek.urule.runtime.KnowledgeSession;
+import com.bstek.urule.runtime.KnowledgeSessionFactory;
 import com.bstek.urule.runtime.service.KnowledgePackageService;
 import com.caritasem.ruleuler.server.replay.model.*;
 import org.slf4j.Logger;
@@ -13,10 +15,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,7 +28,6 @@ public class ReplayService {
     private final ReplayClickHouseDao clickHouseDao;
     private final RequestReconstructor reconstructor;
     private final DiffComparator diffComparator;
-    private final RepositoryService repositoryService;
     private final ReplayExportService exportService;
     private final ReplayConfig replayConfig;
     private final KnowledgePackageService knowledgePackageService;
@@ -39,7 +36,6 @@ public class ReplayService {
                          ReplayClickHouseDao clickHouseDao,
                          RequestReconstructor reconstructor,
                          DiffComparator diffComparator,
-                         @Qualifier("urule.repositoryService") RepositoryService repositoryService,
                          ReplayExportService exportService,
                          ReplayConfig replayConfig,
                          @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService) {
@@ -47,7 +43,6 @@ public class ReplayService {
         this.clickHouseDao = clickHouseDao;
         this.reconstructor = reconstructor;
         this.diffComparator = diffComparator;
-        this.repositoryService = repositoryService;
         this.exportService = exportService;
         this.replayConfig = replayConfig;
         this.knowledgePackageService = knowledgePackageService;
@@ -115,8 +110,15 @@ public class ReplayService {
 
         long taskId = replayDao.insertTask(task);
 
-        // 异步执行
-        new Thread(() -> executeTask(taskId, executionIds, tolerance), "replay-" + taskId).start();
+        // 异步执行（带异常兜底，防止任务卡在 running）
+        new Thread(() -> {
+            try {
+                executeTask(taskId, executionIds, tolerance);
+            } catch (Exception e) {
+                log.error("回放任务异常终止: taskId={}", taskId, e);
+                try { replayDao.updateTaskFinished(taskId, "failed"); } catch (Exception ignored) {}
+            }
+        }, "replay-" + taskId).start();
 
         return taskId;
     }
@@ -138,7 +140,25 @@ public class ReplayService {
             variableDefs = loadVariableDefinitions(task.getProject(), task.getPackageId());
         }
 
+        // 预加载知识包（避免每次 session 重复构建）
+        String project = task != null ? task.getProject() : null;
+        String packageId = task != null ? task.getPackageId() : null;
+        String flowId = task != null ? task.getFlowId() : null;
+        KnowledgePackage knowledgePackage = null;
+        Map<String, String> varCategoryMap = null;
+        if (project != null && packageId != null) {
+            try {
+                String fullPackageId = project + "/" + packageId;
+                knowledgePackage = knowledgePackageService.buildKnowledgePackage(fullPackageId);
+                varCategoryMap = knowledgePackage != null ? knowledgePackage.getVariableCateogoryMap() : null;
+            } catch (Exception e) {
+                log.error("加载知识包失败: {}/{}: {}", project, packageId, e.getMessage());
+            }
+        }
+
         int executed = 0, match = 0, mismatch = 0, errors = 0, incomplete = 0;
+        int batchSize = Math.max(1, executionIds.size() / 20); // 每 5% 批量刷入一次
+        List<ReplaySession> sessionBuffer = new ArrayList<>();
 
         for (String executionId : executionIds) {
             long sessionStart = System.currentTimeMillis();
@@ -147,7 +167,8 @@ public class ReplayService {
                 if (varRows.isEmpty()) {
                     executed++;
                     errors++;
-                    saveErrorSession(taskId, executionId, "无变量数据");
+                    sessionBuffer.add(buildErrorSession(taskId, executionId, "无变量数据"));
+                    flushIfNeeded(sessionBuffer, batchSize);
                     continue;
                 }
 
@@ -170,79 +191,83 @@ public class ReplayService {
                     }
                 }
 
-                // 调用 client 执行回放
-                Map<String, Object> replayResult = callClientReplay(
-                        reconstruct.input(), taskId);
-
-                int execMs = (int) (System.currentTimeMillis() - sessionStart);
-
-                if (replayResult == null || replayResult.containsKey("error")) {
+                // 本地执行回放（不走 HTTP client，直接 KnowledgeSession）
+                if (knowledgePackage == null) {
                     errors++;
-                    saveErrorSession(taskId, executionId,
-                            replayResult != null ? String.valueOf(replayResult.get("error")) : "调用失败");
-                } else {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> replayOutput = (Map<String, Object>) replayResult.get("data");
-
-                    // 比对差异
-                    ToleranceConfig tol = tolerance != null ? tolerance : ToleranceConfig.exact();
-                    DiffResult diff = diffComparator.compare(reconstruct.output(), replayOutput, tol);
-
-                    String diffJson;
-                    try {
-                        diffJson = objectMapper.writeValueAsString(diff);
-                    } catch (Exception e) {
-                        diffJson = "{\"match\":" + diff.match() + "}";
-                    }
-
-                    String inputJson, origOutputJson, replayOutputJson;
-                    try {
-                        inputJson = objectMapper.writeValueAsString(reconstruct.input());
-                        origOutputJson = objectMapper.writeValueAsString(reconstruct.output());
-                        replayOutputJson = objectMapper.writeValueAsString(replayOutput);
-                    } catch (Exception e) {
-                        inputJson = "{}";
-                        origOutputJson = "{}";
-                        replayOutputJson = "{}";
-                    }
-
-                    boolean isMatch = diff.match();
-                    if (isMatch) match++; else mismatch++;
-                    if ("INCOMPLETE".equals(reconstruct.completenessStatus())) incomplete++;
-
-                    // 截断过大 JSON（64KB 限制）
-                    inputJson = truncateJson(inputJson);
-                    origOutputJson = truncateJson(origOutputJson);
-                    replayOutputJson = truncateJson(replayOutputJson);
-
-                    Integer clientExecMs = replayResult.get("execMs") != null
-                            ? ((Number) replayResult.get("execMs")).intValue() : null;
-
-                    ReplaySession session = ReplaySession.builder()
-                            .taskId(taskId)
-                            .originalExecutionId(executionId)
-                            .replayInput(inputJson)
-                            .originalOutput(origOutputJson)
-                            .replayOutput(replayOutputJson)
-                            .diffResult(diffJson)
-                            .completenessStatus(reconstruct.completenessStatus())
-                            .execMs(clientExecMs != null ? clientExecMs : execMs)
-                            .originalExecMs(originalExecMs)
-                            .status("success")
-                            .createdAt(System.currentTimeMillis())
-                            .build();
-                    replayDao.insertSession(session);
+                    sessionBuffer.add(buildErrorSession(taskId, executionId, "知识包加载失败"));
+                    flushIfNeeded(sessionBuffer, batchSize);
+                    continue;
                 }
+
+                Map<String, Map<String, Object>> replayOutput;
+                int execMs;
+                try {
+                    replayOutput = executeReplay(knowledgePackage, varCategoryMap, flowId, reconstruct.input(), reconstruct.output().keySet());
+                    execMs = (int) (System.currentTimeMillis() - sessionStart);
+                } catch (Exception e) {
+                    errors++;
+                    sessionBuffer.add(buildErrorSession(taskId, executionId, "回放执行失败: " + e.getMessage()));
+                    flushIfNeeded(sessionBuffer, batchSize);
+                    continue;
+                }
+
+                // 比对差异
+                ToleranceConfig tol = tolerance != null ? tolerance : ToleranceConfig.exact();
+                DiffResult diff = diffComparator.compare(reconstruct.output(), replayOutput, tol);
+
+                String diffJson;
+                try {
+                    diffJson = objectMapper.writeValueAsString(diff);
+                } catch (Exception e) {
+                    diffJson = "{\"match\":" + diff.match() + "}";
+                }
+
+                String inputJson, origOutputJson, replayOutputJson;
+                try {
+                    inputJson = objectMapper.writeValueAsString(reconstruct.input());
+                    origOutputJson = objectMapper.writeValueAsString(reconstruct.output());
+                    replayOutputJson = objectMapper.writeValueAsString(replayOutput);
+                } catch (Exception e) {
+                    inputJson = "{}";
+                    origOutputJson = "{}";
+                    replayOutputJson = "{}";
+                }
+
+                boolean isMatch = diff.match();
+                if (isMatch) match++; else mismatch++;
+                if ("INCOMPLETE".equals(reconstruct.completenessStatus())) incomplete++;
+
+                // 截断过大 JSON（64KB 限制）
+                inputJson = truncateJson(inputJson);
+                origOutputJson = truncateJson(origOutputJson);
+                replayOutputJson = truncateJson(replayOutputJson);
+
+                sessionBuffer.add(ReplaySession.builder()
+                        .taskId(taskId)
+                        .originalExecutionId(executionId)
+                        .replayInput(inputJson)
+                        .originalOutput(origOutputJson)
+                        .replayOutput(replayOutputJson)
+                        .diffResult(diffJson)
+                        .completenessStatus(reconstruct.completenessStatus())
+                        .execMs(execMs)
+                        .originalExecMs(originalExecMs)
+                        .status("success")
+                        .createdAt(System.currentTimeMillis())
+                        .build());
             } catch (Exception e) {
                 log.warn("回放执行异常: taskId={}, executionId={}: {}", taskId, executionId, e.getMessage());
                 errors++;
-                saveErrorSession(taskId, executionId, e.getMessage());
+                sessionBuffer.add(buildErrorSession(taskId, executionId, e.getMessage()));
             } finally {
                 executed++;
-                replayDao.updateTaskProgress(taskId, executed, match, mismatch, errors, incomplete);
+                flushIfNeeded(sessionBuffer, batchSize);
             }
         }
 
+        // 刷入剩余 session + 最终进度
+        flushSessions(sessionBuffer);
+        replayDao.updateTaskProgress(taskId, executed, match, mismatch, errors, incomplete);
         String finalStatus = executed > 0 && (match + mismatch) > 0 ? "completed" : "failed";
         replayDao.updateTaskFinished(taskId, finalStatus);
     }
@@ -346,61 +371,110 @@ public class ReplayService {
         return null;
     }
 
-    private Map<String, Object> callClientReplay(Map<String, Map<String, Object>> input, long taskId) {
-        try {
-            List<ClientConfig> clients = repositoryService.loadClientConfigs(null);
-            if (clients.isEmpty()) {
-                log.warn("无可用的 client 配置");
-                return Map.of("error", "无可用 client");
-            }
-            String clientUrl = clients.get(0).getClient();
-            if (clientUrl.endsWith("/")) clientUrl = clientUrl.substring(0, clientUrl.length() - 1);
+    /**
+     * 本地执行回放：构建 KnowledgeSession，插入 input 事实，startProcess，取 output
+     * @param outputCategories output 类别名集合，只有这些类别的 entity 会作为结果返回
+     * @return category → {varName → value}，和 reconstruct.output() 格式一致
+     */
+    private Map<String, Map<String, Object>> executeReplay(KnowledgePackage kp,
+                                                            Map<String, String> varCategoryMap,
+                                                            String flowId,
+                                                            Map<String, Map<String, Object>> input,
+                                                            Set<String> outputCategories) {
+        KnowledgeSession session = KnowledgeSessionFactory.newKnowledgeSession(kp);
+        Map<String, GeneralEntity> entities = new LinkedHashMap<>();
 
-            // 先获取 task 信息来构造请求
-            ReplayTask task = replayDao.findTaskById(taskId);
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("project", task.getProject());
-            payload.put("packageId", task.getPackageId());
-            payload.put("flowId", task.getFlowId());
-            payload.put("input", input);
+        for (Map.Entry<String, Map<String, Object>> entry : input.entrySet()) {
+            String category = entry.getKey();
+            String clazz = varCategoryMap != null ? varCategoryMap.get(category) : null;
+            if (clazz == null) {
+                log.warn("回放跳过未知变量类别: {}", category);
+                continue;
+            }
+            GeneralEntity entity = new GeneralEntity(clazz);
+            entity.putAll(entry.getValue());
+            entities.put(category, entity);
+            session.insert(entity);
+        }
 
-            String json = objectMapper.writeValueAsString(payload);
-            URL url = new URL(clientUrl + "/api/replay/execute");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(30000);
-            conn.setDoOutput(true);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(json.getBytes(StandardCharsets.UTF_8));
+        // output 类别的 entity 也需要 insert（规则可能读它们的初始值）
+        if (outputCategories != null) {
+            for (String cat : outputCategories) {
+                if (entities.containsKey(cat)) continue; // 已在 input 中
+                String clazz = varCategoryMap != null ? varCategoryMap.get(cat) : null;
+                if (clazz == null) continue;
+                GeneralEntity entity = new GeneralEntity(clazz);
+                entities.put(cat, entity);
+                session.insert(entity);
             }
-            if (conn.getResponseCode() >= 300) {
-                String err = new String(conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-                return Map.of("error", "HTTP " + conn.getResponseCode() + ": " + err);
+        }
+
+        if (flowId != null && !flowId.isEmpty()) {
+            session.startProcess(flowId);
+        }
+
+        // 只返回 output 类别的 entity，过滤 null 值（和 ClickHouse 日志"只记录非空值"对齐）
+        Map<String, Map<String, Object>> output = new LinkedHashMap<>();
+        if (outputCategories != null) {
+            for (String cat : outputCategories) {
+                GeneralEntity entity = entities.get(cat);
+                if (entity != null) {
+                    Map<String, Object> filtered = filterNullValues(entity);
+                    if (!filtered.isEmpty()) {
+                        output.put(cat, filtered);
+                    }
+                }
             }
-            String resp = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            conn.disconnect();
-            return objectMapper.readValue(resp, java.util.Map.class);
-        } catch (Exception e) {
-            log.warn("调用 client 回放失败: {}", e.getMessage());
-            return Map.of("error", e.getMessage());
+        } else {
+            // fallback：无 output 类别信息时返回全部
+            for (Map.Entry<String, GeneralEntity> entry : entities.entrySet()) {
+                Map<String, Object> filtered = filterNullValues(entry.getValue());
+                if (!filtered.isEmpty()) {
+                    output.put(entry.getKey(), filtered);
+                }
+            }
+        }
+        return output;
+    }
+
+    private Map<String, Object> filterNullValues(Map<String, Object> map) {
+        Map<String, Object> filtered = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> e : map.entrySet()) {
+            if (e.getValue() != null) {
+                filtered.put(e.getKey(), e.getValue());
+            }
+        }
+        return filtered;
+    }
+
+    private ReplaySession buildErrorSession(long taskId, String executionId, String errorMessage) {
+        return ReplaySession.builder()
+                .taskId(taskId)
+                .originalExecutionId(executionId)
+                .status("error")
+                .errorMessage(errorMessage != null && errorMessage.length() > 2000
+                        ? errorMessage.substring(0, 2000) : errorMessage)
+                .createdAt(System.currentTimeMillis())
+                .build();
+    }
+
+    private void flushIfNeeded(List<ReplaySession> buffer, int batchSize) {
+        if (buffer.size() >= batchSize) {
+            flushSessions(buffer);
         }
     }
 
-    private void saveErrorSession(long taskId, String executionId, String errorMessage) {
+    private void flushSessions(List<ReplaySession> buffer) {
+        if (buffer.isEmpty()) return;
         try {
-            replayDao.insertSession(ReplaySession.builder()
-                    .taskId(taskId)
-                    .originalExecutionId(executionId)
-                    .status("error")
-                    .errorMessage(errorMessage != null && errorMessage.length() > 2000
-                            ? errorMessage.substring(0, 2000) : errorMessage)
-                    .createdAt(System.currentTimeMillis())
-                    .build());
+            replayDao.batchInsertSessions(new ArrayList<>(buffer));
         } catch (Exception e) {
-            log.warn("写入错误 session 失败: {}", e.getMessage());
+            log.warn("批量写入 session 失败，降级逐条写入: {}", e.getMessage());
+            for (ReplaySession s : buffer) {
+                try { replayDao.insertSession(s); } catch (Exception ignored) {}
+            }
         }
+        buffer.clear();
     }
 
     private String truncateJson(String json) {
