@@ -242,7 +242,7 @@ const App: React.FC = () => (
           }
         />
         <Route
-          path="monitoring/replay"
+          path="releases/replay"
           element={
             <AuthorizedRoute permissionCode="menu:replay">
               <Suspense fallback={<div>Loading...</div>}><ReplayPage /></Suspense>

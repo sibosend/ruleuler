@@ -76,6 +76,24 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
+    path: '/console',
+    label: 'route.ruleEditor',
+    icon: <CodeOutlined />,
+    permissionCode: 'menu:console',
+  },
+  {
+    path: '/console/:project',
+    label: 'route.ruleEditor',
+    permissionCode: 'menu:console',
+    hideInMenu: true,
+  },
+  {
+    path: '/console/:project/edit/*',
+    label: 'route.ruleEditor',
+    permissionCode: 'menu:console',
+    hideInMenu: true,
+  },
+  {
     path: '/releases',
     label: 'route.releaseManagement',
     icon: <CloudUploadOutlined />,
@@ -97,6 +115,11 @@ export const routeConfigs: RouteConfig[] = [
         permissionCode: 'pack:grayscale:manage',
       },
       {
+        path: '/releases/replay',
+        label: 'route.trafficReplay',
+        permissionCode: 'menu:replay',
+      },
+      {
         path: '/releases/my',
         label: 'route.myApplications',
         permissionCode: 'menu:approvals',
@@ -107,24 +130,6 @@ export const routeConfigs: RouteConfig[] = [
         permissionCode: 'menu:approvals',
       },
     ],
-  },
-  {
-    path: '/console',
-    label: 'route.ruleEditor',
-    icon: <CodeOutlined />,
-    permissionCode: 'menu:console',
-  },
-  {
-    path: '/console/:project',
-    label: 'route.ruleEditor',
-    permissionCode: 'menu:console',
-    hideInMenu: true,
-  },
-  {
-    path: '/console/:project/edit/*',
-    label: 'route.ruleEditor',
-    permissionCode: 'menu:console',
-    hideInMenu: true,
   },
   {
     path: '/monitoring',
@@ -156,11 +161,6 @@ export const routeConfigs: RouteConfig[] = [
         path: '/monitoring/shadow',
         label: 'route.shadowMode',
         permissionCode: 'menu:monitoring',
-      },
-      {
-        path: '/monitoring/replay',
-        label: 'route.trafficReplay',
-        permissionCode: 'menu:replay',
       },
     ],
   },

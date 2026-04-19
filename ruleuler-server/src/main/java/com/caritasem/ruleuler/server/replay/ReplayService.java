@@ -413,25 +413,24 @@ public class ReplayService {
             session.startProcess(flowId);
         }
 
-        // 只返回 output 类别的 entity，过滤 null 值（和 ClickHouse 日志"只记录非空值"对齐）
+        // 只返回 output 类别中相对于 input 有变更的字段
+        // 与 ClickHouse 日志记录逻辑对齐：VarEventProducer 只记录 !Objects.equals(oldVal, newVal) 的字段
         Map<String, Map<String, Object>> output = new LinkedHashMap<>();
-        if (outputCategories != null) {
-            for (String cat : outputCategories) {
-                GeneralEntity entity = entities.get(cat);
-                if (entity != null) {
-                    Map<String, Object> filtered = filterNullValues(entity);
-                    if (!filtered.isEmpty()) {
-                        output.put(cat, filtered);
-                    }
-                }
+        Set<String> cats = outputCategories != null ? outputCategories : entities.keySet();
+        for (String cat : cats) {
+            GeneralEntity entity = entities.get(cat);
+            if (entity == null) continue;
+            Map<String, Object> inputVars = input.get(cat);
+            Map<String, Object> changed = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : entity.entrySet()) {
+                Object newVal = e.getValue();
+                Object oldVal = (inputVars != null) ? inputVars.get(e.getKey()) : null;
+                if (Objects.equals(oldVal, newVal)) continue;
+                if (newVal == null) continue; // null 值不记录
+                changed.put(e.getKey(), newVal);
             }
-        } else {
-            // fallback：无 output 类别信息时返回全部
-            for (Map.Entry<String, GeneralEntity> entry : entities.entrySet()) {
-                Map<String, Object> filtered = filterNullValues(entry.getValue());
-                if (!filtered.isEmpty()) {
-                    output.put(entry.getKey(), filtered);
-                }
+            if (!changed.isEmpty()) {
+                output.put(cat, changed);
             }
         }
         return output;
@@ -440,8 +439,9 @@ public class ReplayService {
     private Map<String, Object> filterNullValues(Map<String, Object> map) {
         Map<String, Object> filtered = new LinkedHashMap<>();
         for (Map.Entry<String, Object> e : map.entrySet()) {
-            if (e.getValue() != null) {
-                filtered.put(e.getKey(), e.getValue());
+            Object v = e.getValue();
+            if (v != null && !"".equals(v)) {
+                filtered.put(e.getKey(), v);
             }
         }
         return filtered;

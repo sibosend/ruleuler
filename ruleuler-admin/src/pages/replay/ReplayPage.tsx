@@ -7,13 +7,14 @@ import {
   PlayCircleOutlined, ExportOutlined, EyeOutlined,
   CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   createReplayTask, listReplayTasks,
   getReplaySessions, getReplayReport, exportReplayTask,
 } from '@/api/replay';
 import { listPackages } from '@/api/autotest';
+import { loadProjects } from '@/api/project';
 import type { ReplayTaskVO, ReplaySessionVO, ReplayReportVO, FieldDiffVO } from '@/api/replay';
 
 const { RangePicker } = DatePicker;
@@ -27,9 +28,14 @@ const statusColors: Record<string, string> = {
 
 const ReplayPage: React.FC = () => {
   const { name } = useParams<{ name: string }>();
-  const project = name || '';
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedPkg = searchParams.get('packageId') || '';
+
+  // project 选择（/monitoring/replay 入口需要手动选）
+  const [projects, setProjects] = useState<string[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>(name || '');
+  const project = name || selectedProject;
 
   const [tasks, setTasks] = useState<ReplayTaskVO[]>([]);
   const [total, setTotal] = useState(0);
@@ -69,7 +75,22 @@ const ReplayPage: React.FC = () => {
   // 轮询
   const pollingRef = useRef<ReturnType<typeof setInterval>>();
 
+  // 无 URL project 参数时加载项目列表
+  const projectsFetched = useRef(false);
+  useEffect(() => {
+    if (name || projectsFetched.current) return;
+    projectsFetched.current = true;
+    loadProjects()
+      .then((res) => {
+        const list: string[] = (res.data?.data ?? []).map((p: { name: string }) => p.name);
+        setProjects(list);
+        if (list.length > 0) setSelectedProject(list[0]!);
+      })
+      .catch(() => {});
+  }, [name]);
+
   const loadTasks = useCallback(async () => {
+    if (!project) return;
     setLoading(true);
     try {
       const res = await listReplayTasks({ project, packageId: preselectedPkg || undefined, page, pageSize: 20 });
@@ -78,16 +99,22 @@ const ReplayPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [project, page]);
+  }, [project, page, preselectedPkg]);
 
-  const loadPackages = useCallback(async () => {
+  const loadPkgs = useCallback(async () => {
+    if (!project) return;
     try {
       const res = await listPackages(project);
       setPackages(res.data?.data || []);
     } catch { /* ignore */ }
   }, [project]);
 
-  useEffect(() => { loadTasks(); loadPackages(); }, [loadTasks, loadPackages]);
+  useEffect(() => { loadTasks(); loadPkgs(); }, [loadTasks, loadPkgs]);
+
+  // project 切换时清空知识包选择
+  useEffect(() => {
+    if (!name) { setSelectedPkg(''); setPackages([]); }
+  }, [selectedProject, name]);
 
   // 轮询运行中任务
   useEffect(() => {
@@ -102,6 +129,7 @@ const ReplayPage: React.FC = () => {
   }, [tasks, loadTasks]);
 
   const handleCreate = async () => {
+    if (!project) { message.warning('请选择项目'); return; }
     if (!selectedPkg) { message.warning('请选择知识包'); return; }
     try {
       await createReplayTask({
@@ -157,7 +185,11 @@ const ReplayPage: React.FC = () => {
     if (!exportTaskId) return;
     try {
       const res = await exportReplayTask(exportTaskId, scope);
-      message.success(`已导出，packId: ${res.data?.data?.packId}`);
+      const packId = res.data?.data?.packId ?? res.data?.packId;
+      message.success('已导出为测试用例包');
+      if (packId && project) {
+        navigate(`/projects/${project}/autotest/pack/${packId}`);
+      }
     } catch (e: any) {
       message.error(e?.response?.data?.message || '导出失败');
     }
@@ -244,6 +276,11 @@ const ReplayPage: React.FC = () => {
       {/* 创建任务表单 */}
       <Card title="创建回放任务" size="small" style={{ marginBottom: 16 }}>
         <Space wrap>
+          {!name && (
+            <Select placeholder="选择项目" style={{ width: 160 }} value={selectedProject || undefined}
+              onChange={(v) => { setSelectedProject(v); setSelectedPkg(''); }}
+              options={projects.map((p) => ({ label: p, value: p }))} />
+          )}
           {preselectedPkg ? (
             <Input disabled style={{ width: 200 }}
               value={packages.find((p: any) => p.id === preselectedPkg)?.name || preselectedPkg} />
