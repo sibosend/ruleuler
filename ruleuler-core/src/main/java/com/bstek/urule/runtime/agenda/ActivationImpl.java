@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2017 Bstek
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License.  You may obtain a copy
  * of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.bstek.urule.action.Action;
 import com.bstek.urule.action.ActionValue;
@@ -36,12 +37,17 @@ import com.bstek.urule.runtime.event.impl.ActivationAfterFiredEventImpl;
 import com.bstek.urule.runtime.event.impl.ActivationBeforeFiredEventImpl;
 import com.bstek.urule.runtime.rete.Context;
 import com.bstek.urule.runtime.rete.EvaluationContext;
+import com.bstek.urule.runtime.shadow.ShadowContext;
+import com.bstek.urule.runtime.shadow.ShadowHitInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Jacky.gao
  * @since 2015年1月2日
  */
 public class ActivationImpl implements Activation{
+	private static final Logger log = LoggerFactory.getLogger(ActivationImpl.class);
 	private boolean processed;
 	private Rule rule;
 	//当前WorkingMemory当中命名变量,为then或else部分可能存在的根据变量引用进行的计算操作作为准备
@@ -67,7 +73,7 @@ public class ActivationImpl implements Activation{
 		if(effectiveDate!=null){
 			if(effectiveDate.getTime()>now.getTime()){
 				return null;
-			}			
+			}
 		}
 		Date expiresDate=rule.getExpiresDate();
 		if(expiresDate!=null){
@@ -75,7 +81,14 @@ public class ActivationImpl implements Activation{
 				return null;
 			}
 		}
-		
+
+		if(rule.getShadow()==Boolean.TRUE){
+			executeShadow(context, session);
+			session.fireEvent(new ActivationAfterFiredEventImpl(this,session));
+			processed=true;
+			return rule;
+		}
+
 		List<Object> matchedObjects=new ArrayList<Object>();
 		matchedObjects.addAll(objectCriteriaMap.keySet());
 		if(rule instanceof LoopRule){
@@ -87,14 +100,14 @@ public class ActivationImpl implements Activation{
 		}else if(rule instanceof ScoreRule){
 			ScoreRule scoreRule=(ScoreRule)rule;
 			scoreRule.execute(context, objectCriteriaMap.keySet(), matchedObjects,variableMap);
-		}else{	
+		}else{
 			Rhs rhs=rule.getRhs();
 			if(rhs!=null){
 				List<Action> actions=rhs.getActions();
 				if(actions!=null){
 					for(Action action:actions){
 						if(rule.getDebug()!=null){
-							action.setDebug(rule.getDebug());							
+							action.setDebug(rule.getDebug());
 						}
 						ActionValue actionValue=action.execute(context,objectCriteriaMap.keySet(),matchedObjects,variableMap);
 						if(actionValue!=null){
@@ -108,15 +121,85 @@ public class ActivationImpl implements Activation{
 		processed=true;
 		return rule;
 	}
+
+	private void executeShadow(Context context, KnowledgeSession session) {
+		Map<GeneralEntity, Map<String, Object>> snapshots = new HashMap<>();
+		for (Object fact : session.getAllFacts()) {
+			if (fact instanceof GeneralEntity) {
+				GeneralEntity entity = (GeneralEntity) fact;
+				snapshots.put(entity, new HashMap<>(entity));
+			}
+		}
+
+		Map<String, Object> inputSnapshot = new HashMap<>();
+		for (Map.Entry<GeneralEntity, Map<String, Object>> e : snapshots.entrySet()) {
+			inputSnapshot.put(e.getKey().getTargetClass(), new HashMap<>(e.getValue()));
+		}
+
+		long startMs = System.currentTimeMillis();
+		String errorMsg = null;
+		try {
+			List<Object> matchedObjects = new ArrayList<>(objectCriteriaMap.keySet());
+			if (rule instanceof LoopRule) {
+				LoopRule loopRule = (LoopRule) rule;
+				loopRule.execute(context, objectCriteriaMap.keySet(), matchedObjects, variableMap);
+			} else if (rule instanceof ScoreRule) {
+				ScoreRule scoreRule = (ScoreRule) rule;
+				scoreRule.execute(context, objectCriteriaMap.keySet(), matchedObjects, variableMap);
+			} else {
+				Rhs rhs = rule.getRhs();
+				if (rhs != null) {
+					List<Action> actions = rhs.getActions();
+					if (actions != null) {
+						for (Action action : actions) {
+							if (rule.getDebug() != null) {
+								action.setDebug(rule.getDebug());
+							}
+							action.execute(context, objectCriteriaMap.keySet(), matchedObjects, variableMap);
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			log.warn("Shadow rule [{}] 执行异常: {}", rule.getName(), e.getMessage());
+			errorMsg = e.getMessage();
+		}
+		long execMs = System.currentTimeMillis() - startMs;
+
+		Map<String, Object> outputSnapshot = new HashMap<>();
+		for (Map.Entry<GeneralEntity, Map<String, Object>> e : snapshots.entrySet()) {
+			GeneralEntity entity = e.getKey();
+			Map<String, Object> before = e.getValue();
+			Map<String, Object> diff = new HashMap<>();
+			for (Map.Entry<String, Object> field : entity.entrySet()) {
+				Object oldVal = before.get(field.getKey());
+				if (!Objects.equals(oldVal, field.getValue())) {
+					diff.put(field.getKey(), field.getValue());
+				}
+			}
+			if (!diff.isEmpty()) {
+				outputSnapshot.put(entity.getTargetClass(), diff);
+			}
+		}
+
+		for (Map.Entry<GeneralEntity, Map<String, Object>> e : snapshots.entrySet()) {
+			GeneralEntity entity = e.getKey();
+			entity.clear();
+			entity.putAll(e.getValue());
+		}
+
+		ShadowContext.addHit(new ShadowHitInfo(rule.getName(), inputSnapshot, outputSnapshot, execMs, errorMsg));
+	}
+
 	public void setObjectCriteriaMap(Map<Object, List<BaseCriteria>> objectCriteriaMap) {
 		this.objectCriteriaMap = objectCriteriaMap;
 	}
-	
+
 	@Override
 	public boolean contain(Object obj) {
 		return objectCriteriaMap.containsKey(obj);
 	}
-	
+
 	@Override
 	public boolean reevaluate(Object obj,EvaluationContext context) {
 		Object key=obj;
@@ -126,7 +209,7 @@ public class ActivationImpl implements Activation{
 		if(!objectCriteriaMap.containsKey(key)){
 			return true;
 		}
-		List<BaseCriteria> list=objectCriteriaMap.get(key);			
+		List<BaseCriteria> list=objectCriteriaMap.get(key);
 		boolean result=false;
 		for(BaseCriteria criteria:list){
 			List<Object> allMatchedObjects=new ArrayList<Object>();
@@ -173,7 +256,7 @@ public class ActivationImpl implements Activation{
 		Integer o1=o.getRule().getSalience();
 		Integer o2=rule.getSalience();
 		if(o1!=null && o2!=null){
-			return o1-o2;			
+			return o1-o2;
 		}else if(o1!=null){
 			return 1;
 		}else if(o2!=null){

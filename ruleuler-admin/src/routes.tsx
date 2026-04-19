@@ -146,6 +146,11 @@ export const routeConfigs: RouteConfig[] = [
         label: 'route.executionLog',
         permissionCode: 'menu:monitoring',
       },
+      {
+        path: '/monitoring/shadow',
+        label: 'route.shadowMode',
+        permissionCode: 'menu:monitoring',
+      },
     ],
   },
   {

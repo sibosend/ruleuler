@@ -84,3 +84,25 @@ PARTITION BY toYYYYMM(created_at)
 ORDER BY (execution_id, seq)
 TTL toDateTime(created_at) + INTERVAL 30 DAY
 SETTINGS index_granularity = 8192;
+
+-- ============================================================
+-- 影子命中日志表：记录 shadow=true 规则的每次执行快照
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS shadow_hit_log (
+    execution_id    String,
+    project         LowCardinality(String),
+    package_id      LowCardinality(String),
+    flow_id         String,
+    rule_name       LowCardinality(String),
+    input_snapshot  String,
+    output_snapshot String,
+    exec_ms         UInt32,
+    error_msg       Nullable(String),
+    created_at      DateTime64(3)
+)
+ENGINE = ReplacingMergeTree(created_at)
+PARTITION BY toYYYYMM(created_at)
+ORDER BY (execution_id, rule_name)
+TTL toDateTime(created_at) + INTERVAL 3 MONTH
+SETTINGS index_granularity = 8192;

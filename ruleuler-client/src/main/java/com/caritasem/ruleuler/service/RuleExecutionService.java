@@ -13,6 +13,9 @@ import com.caritasem.ruleuler.grayscale.GrayscaleKnowledgeCache;
 import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
 import com.caritasem.ruleuler.monitoring.TraceContext;
 import com.caritasem.ruleuler.monitoring.VarEventProducer;
+import com.caritasem.ruleuler.monitoring.ShadowHitLogProducer;
+import com.bstek.urule.runtime.shadow.ShadowContext;
+import com.bstek.urule.runtime.shadow.ShadowHitInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,6 +34,9 @@ public class RuleExecutionService {
 
     @Autowired(required = false)
     private VarEventProducer varEventProducer;
+
+    @Autowired(required = false)
+    private ShadowHitLogProducer shadowHitLogProducer;
 
     @Autowired
     private GrayscaleKnowledgeCache grayscaleCache;
@@ -91,6 +98,22 @@ public class RuleExecutionService {
             long execMs = System.currentTimeMillis() - startMs;
             Boolean routedToGray = GrayscaleContext.wasRoutedToGray();
             String grayscaleBucket = (routedToGray != null && routedToGray) ? "GRAY" : "BASE";
+
+            // 影子命中收集
+            List<ShadowHitInfo> shadowHits = ShadowContext.getHits();
+            List<String> shadowHitNames = shadowHits.stream().map(ShadowHitInfo::getRuleName).toList();
+            if (shadowHitLogProducer != null && !shadowHits.isEmpty()) {
+                try {
+                    shadowHitLogProducer.produce(executionId, project, knowledgePackageId, process, shadowHits);
+                } catch (Exception ex) {
+                    log.warn("影子日志投递异常", ex);
+                }
+            } else if (shadowHitLogProducer == null && !shadowHits.isEmpty()) {
+                for (ShadowHitInfo hit : shadowHits) {
+                    log.warn("Shadow rule [{}] 命中，但监控未启用", hit.getRuleName());
+                }
+            }
+
             if (varEventProducer != null) {
                 try {
                     varEventProducer.produceSuccess(executionId, project, knowledgePackageId, process,
@@ -111,6 +134,9 @@ public class RuleExecutionService {
             meta.put("packageId", knowledgePackageId);
             if (version != null) meta.put("version", version);
             meta.put("route", routedToGray != null && routedToGray ? "GRAY" : "BASE");
+            if (!shadowHitNames.isEmpty()) {
+                meta.put("shadowHits", shadowHitNames);
+            }
 
             return new RuleExecutionResult(200, "ok", result, meta);
 
@@ -137,6 +163,7 @@ public class RuleExecutionService {
             return new RuleExecutionResult(500, e.getMessage(), null, meta);
         } finally {
             GrayscaleContext.clear();
+            ShadowContext.clear();
         }
     }
 }

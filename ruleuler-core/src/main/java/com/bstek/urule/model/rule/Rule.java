@@ -38,6 +38,7 @@ public class Rule implements RuleInfo{
 	private Rhs rhs;
 	private Other other;
 	private Boolean loop;
+	private Boolean shadow;
 	private Boolean loopRule=false;
 	private String remark;
 	
@@ -131,6 +132,12 @@ public class Rule implements RuleInfo{
 	}
 	public void setLoop(Boolean loop) {
 		this.loop = loop;
+	}
+	public Boolean getShadow() {
+		return shadow;
+	}
+	public void setShadow(Boolean shadow) {
+		this.shadow = shadow;
 	}
 	public Boolean isLoopRule() {
 		return loopRule;

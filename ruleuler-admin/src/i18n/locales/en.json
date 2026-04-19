@@ -47,6 +47,7 @@
     "executionTrend": "Execution Trend",
     "periodCompare": "Period Compare",
     "executionLog": "Execution Log",
+    "shadowMode": "Shadow Mode",
     "executionDetail": "Execution Detail",
     "systemSettings": "Settings",
     "userManagement": "Users",
@@ -508,6 +509,7 @@
     "priority": "Priority",
     "enabled": "Enabled",
     "debug": "Debug",
+    "shadow": "Shadow",
     "loop": "Loop",
     "properties": "Properties",
     "confirmDeleteRule": "Delete this rule?",
@@ -536,5 +538,16 @@
   "api": {
     "requestFailed": "Request failed",
     "networkError": "Network connection failed"
+  },
+  "shadow": {
+    "ruleName": "Rule Name",
+    "execMs": "Duration(ms)",
+    "error": "Error",
+    "createdAt": "Hit Time",
+    "ruleNameFilter": "Filter by rule name",
+    "totalExecutions": "Total Executions",
+    "hitCount": "Hit Count",
+    "avgExecMs": "Avg Duration",
+    "errorCount": "Error Count"
   }
 }

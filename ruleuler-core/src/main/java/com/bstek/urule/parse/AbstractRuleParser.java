@@ -68,6 +68,10 @@ public abstract class AbstractRuleParser<T> implements Parser<T> {
 		if(StringUtils.isNotEmpty(loop)){
 			rule.setLoop(Boolean.valueOf(loop));
 		}
+		String shadow=element.attributeValue("shadow");
+		if(StringUtils.isNotEmpty(shadow)){
+			rule.setShadow(Boolean.valueOf(shadow));
+		}
 		rule.setActivationGroup(element.attributeValue("activation-group"));
 		rule.setAgendaGroup(element.attributeValue("agenda-group"));
 		String autoFocus=element.attributeValue("auto-focus");

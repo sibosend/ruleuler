@@ -244,12 +244,9 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
     }
   }, [projectName, t]);
 
-  const fetched = useRef(false);
   useEffect(() => {
-    if (fetched.current) return;
-    fetched.current = true;
     loadTree();
-  }, [loadTree]);
+  }, [projectName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── antd TreeDataNode ─────────────────────────────────────────
 
@@ -318,8 +315,13 @@ const ResourceTree: React.FC<ResourceTreeProps> = ({
   const [controlledExpandedKeys, setControlledExpandedKeys] = useState<React.Key[]>([]);
 
   // 树数据首次加载后，默认展开到分类节点层级（project → resource）
+  const projectNameRef = useRef(projectName);
   const defaultExpanded = useRef(false);
   useEffect(() => {
+    if (projectName !== projectNameRef.current) {
+      projectNameRef.current = projectName;
+      defaultExpanded.current = false;
+    }
     if (defaultExpanded.current || treeFiles.length === 0) return;
     defaultExpanded.current = true;
     const keys: string[] = [];

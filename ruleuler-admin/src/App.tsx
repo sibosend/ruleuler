@@ -25,6 +25,7 @@ const PeriodComparePage = React.lazy(() => import('@/pages/monitoring/PeriodComp
 const ExecutionLogPage = React.lazy(() => import('@/pages/monitoring/ExecutionLogPage'));
 const ExecutionDetailPage = React.lazy(() => import('@/pages/monitoring/ExecutionDetailPage'));
 const ExecutionTrendPage = React.lazy(() => import('@/pages/monitoring/ExecutionTrendPage'));
+const ShadowPage = React.lazy(() => import('@/pages/shadow/ShadowPage'));
 
 const ReleaseListPage = React.lazy(() => import('@/pages/release/ReleaseListPage'));
 const GrayscaleRulePage = React.lazy(() => import('@/pages/release/GrayscaleRulePage'));
@@ -215,6 +216,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:monitoring">
               <Suspense fallback={<div>Loading...</div>}><ExecutionDetailPage /></Suspense>
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="monitoring/shadow"
+          element={
+            <AuthorizedRoute permissionCode="menu:monitoring">
+              <Suspense fallback={<div>Loading...</div>}><ShadowPage /></Suspense>
             </AuthorizedRoute>
           }
         />

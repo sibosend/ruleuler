@@ -31,6 +31,15 @@ public class MonitoringConfig {
     @Value("${monitoring.clickhouse.queue-capacity:50000}")
     private int queueCapacity;
 
+    @Value("${shadow.log.queue-capacity:10000}")
+    private int shadowQueueCapacity;
+
+    @Value("${shadow.log.batch-size:200}")
+    private int shadowBatchSize;
+
+    @Value("${shadow.log.flush-interval-ms:2000}")
+    private long shadowFlushIntervalMs;
+
     @Bean
     public BlockingQueue<VarLogRow> varLogQueue() {
         return new LinkedBlockingQueue<>(queueCapacity);
@@ -66,5 +75,22 @@ public class MonitoringConfig {
     @Bean(initMethod = "start", destroyMethod = "stop")
     public TraceLogFlusher traceLogFlusher() throws SQLException {
         return new TraceLogFlusher(traceLogQueue(), clickHouseDataSource(), batchSize, flushIntervalMs);
+    }
+
+    // ---- 影子命中日志 ----
+
+    @Bean
+    public BlockingQueue<ShadowHitLogRow> shadowHitLogQueue() {
+        return new LinkedBlockingQueue<>(shadowQueueCapacity);
+    }
+
+    @Bean
+    public ShadowHitLogProducer shadowHitLogProducer() {
+        return new ShadowHitLogProducer(shadowHitLogQueue());
+    }
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public ShadowHitLogFlusher shadowHitLogFlusher() throws SQLException {
+        return new ShadowHitLogFlusher(shadowHitLogQueue(), clickHouseDataSource(), shadowBatchSize, shadowFlushIntervalMs);
     }
 }

@@ -31,4 +31,5 @@ public interface RuleInfo {
 	String getActivationGroup();
 	String getAgendaGroup();
 	String getRuleflowGroup();
+	Boolean getShadow();
 }

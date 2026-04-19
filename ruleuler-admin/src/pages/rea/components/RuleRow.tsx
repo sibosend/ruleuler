@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Dropdown, Button, Popconfirm, Space, InputNumber, Switch } from 'antd';
+import { Typography, Dropdown, Button, Popconfirm, Space, InputNumber, Switch, Tag } from 'antd';
 import {
   SettingOutlined,
   DeleteOutlined,
@@ -78,16 +78,16 @@ function buildPropertyMenuItems(
       ),
     },
     {
-      key: 'loop',
+      key: 'shadow',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {i18n.t('rea.loop')}
+          {i18n.t('rea.shadow')}
           <Switch
             size="small"
-            checked={rule.properties.loop === true}
+            checked={rule.properties.shadow === true}
             onChange={(v) =>
               onUpdate(rule.id, {
-                properties: { ...rule.properties, loop: v },
+                properties: { ...rule.properties, shadow: v },
               })
             }
           />
@@ -126,6 +126,9 @@ const RuleRow: React.FC<RuleRowProps> = ({ rule, onUpdate, onDelete, libraries }
         >
           {rule.name}
         </Typography.Text>
+        {rule.properties.shadow === true && (
+          <Tag color="purple">Shadow</Tag>
+        )}
 
         <Space size={4}>
           <Dropdown menu={{ items: buildPropertyMenuItems(rule, onUpdate) }} trigger={['click']}>
