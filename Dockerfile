@@ -36,12 +36,14 @@ WORKDIR /build
 # 先拷所有 pom 下载依赖（缓存层）
 COPY pom.xml .
 COPY ruleuler-core/pom.xml ruleuler-core/
+COPY ruleuler-base/pom.xml ruleuler-base/
 COPY ruleuler-console/pom.xml ruleuler-console/
 COPY ruleuler-server/pom.xml ruleuler-server/
 COPY ruleuler-client/pom.xml ruleuler-client/
 
 # 拷源码
 COPY ruleuler-core ruleuler-core
+COPY ruleuler-base ruleuler-base
 COPY ruleuler-console ruleuler-console
 COPY ruleuler-server ruleuler-server
 COPY ruleuler-client ruleuler-client

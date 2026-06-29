@@ -51,10 +51,7 @@ auth:
   jwt:
     secret: dev-only-secret-key-that-is-at-least-32-bytes!!
     expiration-hours: 24
-  service-allowed-ips:
-    - 127.0.0.1
-    - 0:0:0:0:0:0:0:1
-    - 172.16.0.0/12
+  service-allowed-ips: 127.0.0.1,0:0:0:0:0:0:0:1,::1,172.16.0.0/12
 
 monitoring:
   enabled: true

@@ -1,9 +1,12 @@
 package com.caritasem.ruleuler.server.controller;
 
+import com.bstek.urule.console.DefaultUser;
+import com.bstek.urule.console.User;
 import com.bstek.urule.console.repository.RepositoryService;
 import com.bstek.urule.console.repository.model.RepositoryFile;
 import com.bstek.urule.console.repository.model.ResourcePackage;
 import com.caritasem.ruleuler.server.auth.ApiResult;
+import com.caritasem.ruleuler.server.auth.AuthContext;
 import com.caritasem.ruleuler.server.repository.StorageContext;
 import com.caritasem.ruleuler.server.repository.StorageType;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,14 @@ public class ProjectController {
         this.repositoryService = repositoryService;
     }
 
+    private User currentUser() {
+        AuthContext.UserInfo info = AuthContext.get();
+        DefaultUser u = new DefaultUser();
+        u.setUsername(info.getUsername());
+        u.setAdmin(info.getRoles() != null && info.getRoles().contains("admin"));
+        return u;
+    }
+
     @GetMapping
     public ApiResult list() throws Exception {
         List<RepositoryFile> projects = repositoryService.loadProjects(null);
@@ -41,7 +52,7 @@ public class ProjectController {
         String storageType = body.getOrDefault("storageType", "db");
         StorageContext.set(StorageType.fromString(storageType));
         try {
-            RepositoryFile result = repositoryService.createProject(name, null, true);
+            RepositoryFile result = repositoryService.createProject(name, currentUser(), true);
             return ApiResult.ok(result);
         } finally {
             StorageContext.clear();
@@ -50,7 +61,7 @@ public class ProjectController {
 
     @DeleteMapping("/{name}")
     public ApiResult delete(@PathVariable String name) throws Exception {
-        repositoryService.deleteFile("/" + name, null);
+        repositoryService.deleteFile("/" + name, currentUser());
         return ApiResult.ok(null);
     }
 

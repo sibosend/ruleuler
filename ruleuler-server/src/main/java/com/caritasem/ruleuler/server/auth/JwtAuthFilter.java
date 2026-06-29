@@ -39,7 +39,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             // 服务端点：仅允许白名单 IP
             if (isServiceEndpoint(path)) {
-                if (IpMatcher.matches(request.getRemoteAddr(), serviceAllowedIps)) {
+                String remoteAddr = request.getRemoteAddr();
+                if (IpMatcher.matches(remoteAddr, serviceAllowedIps)) {
                     filterChain.doFilter(request, response);
                 } else {
                     writeJson(response, 403, "access denied");

@@ -5,7 +5,7 @@
 #   ./start.sh dev --server-port 18009 --client-port 18001
 set -e
 
-clear
+# clear
 
 # ─── 解析参数 ─────────────────────────────────────────────────
 ENV="dev"
