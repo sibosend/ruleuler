@@ -520,3 +520,9 @@ CREATE TABLE IF NOT EXISTS `ruleuler_grayscale_metrics` (
   UNIQUE KEY `uk_rule_ver_date` (`rule_id`,`version`,`stat_date`),
   KEY `idx_rule_date` (`rule_id`,`stat_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_migrator_log` (
+  `name` varchar(100) NOT NULL,
+  `ran_at` bigint NOT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

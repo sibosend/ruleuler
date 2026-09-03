@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { loadProjectLibs, loadXml, loadRawXml } from './api/reaApi';
 import { printCondition, printAssignment } from './lib/expressionPrinter';
 import { createDefaultRule } from './lib/ruleUtils';
-import type { LibraryData } from './lib/expressionParser';
+import { extractActionBeans, type LibraryData } from './lib/expressionParser';
 import type { ProjectLibs } from './api/reaApi';
 import type { RuleState, LibraryState } from './types';
 import Toolbar from './components/Toolbar';
@@ -121,8 +121,8 @@ function buildLibraryData(
     }
   }
 
-  void allPaths; // paths used for ordering reference
-  return { variables, parameters };
+  void allPaths;
+  return { variables, parameters, actions: extractActionBeans(libJsonArray) };
 }
 
 // ─── 主组件 ───
@@ -182,7 +182,7 @@ const ReaEditorPage: React.FC = () => {
         ...paths.action,
       ];
 
-      let libData: LibraryData = { variables: [], parameters: [] };
+      let libData: LibraryData = { variables: [], parameters: [], actions: [] };
       if (allLibPaths.length > 0) {
         try {
           const libJsonArray = await loadXml(allLibPaths.join(';'));
@@ -271,7 +271,7 @@ const ReaEditorPage: React.FC = () => {
             rule={rule}
             onUpdate={handleUpdateRule}
             onDelete={handleDeleteRule}
-            libraries={libraries?.data ?? { variables: [], parameters: [] }}
+            libraries={libraries?.data ?? { variables: [], parameters: [], actions: [] }}
           />
         ))
       )}

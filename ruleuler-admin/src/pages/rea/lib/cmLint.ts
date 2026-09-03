@@ -1,13 +1,16 @@
 /**
  * REA 实时语法校验扩展 — 基于 @codemirror/lint
- *
- * 用前端 expressionParser 做本地语法检查，不调后端接口。
- * 用户停止输入 500ms 后校验。
  */
 import { linter, type Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { parseCondition, parseAssignment, ParseError, type LibraryData } from './expressionParser';
+import {
+  parseCondition,
+  parseAssignment,
+  ParseError,
+  type LibraryData,
+  type ParseOptions,
+} from './expressionParser';
 
 export type LintStatus = 'idle' | 'valid' | 'error';
 
@@ -15,6 +18,7 @@ export function reaLintExtension(
   type: 'condition' | 'action' | 'else',
   libs: LibraryData,
   onStatusChange?: (status: LintStatus) => void,
+  options?: ParseOptions,
 ): Extension {
   return linter(
     (view: EditorView): Diagnostic[] => {
@@ -26,9 +30,9 @@ export function reaLintExtension(
 
       try {
         if (type === 'condition') {
-          parseCondition(doc, libs);
+          parseCondition(doc, libs, options);
         } else {
-          parseAssignment(doc, libs);
+          parseAssignment(doc, libs, options);
         }
         onStatusChange?.('valid');
         return [];

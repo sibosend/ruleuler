@@ -2,21 +2,14 @@ package com.caritasem.ruleuler.grayscale;
 
 import java.math.BigDecimal;
 import java.util.*;
+
 /**
- * 轻量 REA script 条件求值器。
- * 输入格式为 REA 文本语法，例如：
- *   FlightInfo.level == "VIP"
- *   FlightInfo.score > 5 AND FlightInfo.type In ("A","B")
- *   FlightInfo.name Contain "test" OR FlightInfo.flag != false
- *
- * 支持 AND / OR 组合，支持括号分组。
+ * 轻量 REA 条件求值器。系统符号全大写。不支持函数。
  */
 public class ConditionEvaluator {
 
-    /** 一元操作符（不需要右侧值） */
     private static final Set<String> UNARY_OPS = Set.of("Null", "NotNull");
 
-    /** 文本操作符 → 内部操作符名 */
     private static final Map<String, String> TEXT_OP_MAP = new HashMap<>();
     static {
         TEXT_OP_MAP.put("==", "Equals");
@@ -25,63 +18,63 @@ public class ConditionEvaluator {
         TEXT_OP_MAP.put(">=", "GreaterThenEquals");
         TEXT_OP_MAP.put("<", "LessThen");
         TEXT_OP_MAP.put("<=", "LessThenEquals");
-        TEXT_OP_MAP.put("Contain", "Contain");
-        TEXT_OP_MAP.put("NotContain", "NotContain");
-        TEXT_OP_MAP.put("In", "In");
-        TEXT_OP_MAP.put("NotIn", "NotIn");
-        TEXT_OP_MAP.put("Match", "Match");
-        TEXT_OP_MAP.put("NotMatch", "NotMatch");
-        TEXT_OP_MAP.put("StartWith", "StartWith");
-        TEXT_OP_MAP.put("NotStartWith", "NotStartWith");
-        TEXT_OP_MAP.put("EndWith", "EndWith");
-        TEXT_OP_MAP.put("NotEndWith", "NotEndWith");
-        TEXT_OP_MAP.put("EqualsIgnoreCase", "EqualsIgnoreCase");
-        TEXT_OP_MAP.put("NotEqualsIgnoreCase", "NotEqualsIgnoreCase");
-        TEXT_OP_MAP.put("Null", "Null");
-        TEXT_OP_MAP.put("NotNull", "NotNull");
+        TEXT_OP_MAP.put("CONTAIN", "Contain");
+        TEXT_OP_MAP.put("NOTCONTAIN", "NotContain");
+        TEXT_OP_MAP.put("IN", "In");
+        TEXT_OP_MAP.put("NOTIN", "NotIn");
+        TEXT_OP_MAP.put("MATCH", "Match");
+        TEXT_OP_MAP.put("NOTMATCH", "NotMatch");
+        TEXT_OP_MAP.put("STARTWITH", "StartWith");
+        TEXT_OP_MAP.put("NOTSTARTWITH", "NotStartWith");
+        TEXT_OP_MAP.put("ENDWITH", "EndWith");
+        TEXT_OP_MAP.put("NOTENDWITH", "NotEndWith");
+        TEXT_OP_MAP.put("EQUALSIGNORECASE", "EqualsIgnoreCase");
+        TEXT_OP_MAP.put("NOTEQUALSIGNORECASE", "NotEqualsIgnoreCase");
+        TEXT_OP_MAP.put("NULL", "Null");
+        TEXT_OP_MAP.put("NOTNULL", "NotNull");
     }
 
-    // ---- public API ----
+    private static final Map<String, String> LEGACY_OP = new HashMap<>();
+    static {
+        LEGACY_OP.put("Contain", "CONTAIN");
+        LEGACY_OP.put("NotContain", "NOTCONTAIN");
+        LEGACY_OP.put("In", "IN");
+        LEGACY_OP.put("NotIn", "NOTIN");
+        LEGACY_OP.put("Match", "MATCH");
+        LEGACY_OP.put("NotMatch", "NOTMATCH");
+        LEGACY_OP.put("StartWith", "STARTWITH");
+        LEGACY_OP.put("Startwith", "STARTWITH");
+        LEGACY_OP.put("NotStartWith", "NOTSTARTWITH");
+        LEGACY_OP.put("NotStartwith", "NOTSTARTWITH");
+        LEGACY_OP.put("EndWith", "ENDWITH");
+        LEGACY_OP.put("Endwith", "ENDWITH");
+        LEGACY_OP.put("NotEndWith", "NOTENDWITH");
+        LEGACY_OP.put("NotEndwith", "NOTENDWITH");
+        LEGACY_OP.put("EqualsIgnoreCase", "EQUALSIGNORECASE");
+        LEGACY_OP.put("NotEqualsIgnoreCase", "NOTEQUALSIGNORECASE");
+        LEGACY_OP.put("Null", "NULL");
+        LEGACY_OP.put("NotNull", "NOTNULL");
+    }
 
-    /**
-     * 评估 REA 条件表达式。
-     * @param expression REA 文本表达式，如 {@code FlightInfo.level == "VIP" AND FlightInfo.score > 5}
-     * @param body       入参 {categoryName: {field: value, ...}, ...}
-     * @return 条件是否满足
-     */
     public static boolean evaluate(String expression, Map<String, Object> body) {
         if (expression == null || expression.isBlank()) return true;
-        try {
-            List<Token> tokens = tokenize(expression);
-            return parseOr(tokens, new int[]{0}, body);
-        } catch (Exception e) {
-            return false;
-        }
+        List<Token> tokens = tokenize(expression);
+        return parseOr(tokens, new int[]{0}, body);
     }
 
-    // ---- tokenizer ----
-
-    private static List<Token> tokenize(String expr) {
-        return tokenizeImpl(expr);
-    }
-
-    private static List<Token> tokenizeImpl(String expr) {
+    public static List<Token> tokenize(String expr) {
         List<Token> tokens = new ArrayList<>();
         int i = 0;
         int len = expr.length();
         while (i < len) {
-            // 跳过空白
             while (i < len && Character.isWhitespace(expr.charAt(i))) i++;
             if (i >= len) break;
 
             char c = expr.charAt(i);
 
-            // 括号 — 先检查是否是 In 列表
             if (c == '(') {
-                // 回溯看前一个 token 是否是 In/NotIn
                 Token prev = tokens.isEmpty() ? null : tokens.get(tokens.size() - 1);
-                if (prev != null && ("In".equals(prev.value) || "NotIn".equals(prev.value))) {
-                    // 读取直到匹配的 )
+                if (prev != null && ("IN".equals(prev.value) || "NOTIN".equals(prev.value))) {
                     int start = i + 1;
                     int depth = 1;
                     i++;
@@ -92,6 +85,8 @@ public class ConditionEvaluator {
                     }
                     String listContent = expr.substring(start, i - 1);
                     tokens.add(new Token(TokenType.LIST, listContent));
+                } else if (prev != null && prev.type == TokenType.VAR) {
+                    throw new IllegalArgumentException("灰度条件不支持函数");
                 } else {
                     tokens.add(new Token(TokenType.LPAREN, "("));
                     i++;
@@ -105,7 +100,6 @@ public class ConditionEvaluator {
                 continue;
             }
 
-            // 比较操作符
             if (c == '=' && i + 1 < len && expr.charAt(i + 1) == '=') {
                 tokens.add(new Token(TokenType.OP, "=="));
                 i += 2;
@@ -129,18 +123,16 @@ public class ConditionEvaluator {
             if (c == '>') { tokens.add(new Token(TokenType.OP, ">")); i++; continue; }
             if (c == '<') { tokens.add(new Token(TokenType.OP, "<")); i++; continue; }
 
-            // 字符串字面量
             if (c == '"' || c == '\'') {
                 char quote = c;
                 int start = i + 1;
                 i++;
                 while (i < len && expr.charAt(i) != quote) i++;
                 tokens.add(new Token(TokenType.STRING, expr.substring(start, i)));
-                i++; // skip closing quote
+                i++;
                 continue;
             }
 
-            // 数字（含负号）
             if (Character.isDigit(c) || (c == '-' && i + 1 < len && Character.isDigit(expr.charAt(i + 1)))) {
                 int start = i;
                 if (c == '-') i++;
@@ -153,7 +145,6 @@ public class ConditionEvaluator {
                 continue;
             }
 
-            // 标识符 / 关键字
             if (Character.isLetter(c) || c == '_') {
                 int start = i;
                 while (i < len && (Character.isLetterOrDigit(expr.charAt(i)) || expr.charAt(i) == '_' || expr.charAt(i) == '.')) {
@@ -164,72 +155,80 @@ public class ConditionEvaluator {
                     tokens.add(new Token(TokenType.AND, word));
                 } else if ("OR".equals(word)) {
                     tokens.add(new Token(TokenType.OR, word));
+                } else if ("TRUE".equals(word) || "FALSE".equals(word)) {
+                    tokens.add(new Token(TokenType.BOOLEAN, "TRUE".equals(word) ? "true" : "false"));
                 } else if ("true".equals(word) || "false".equals(word)) {
-                    tokens.add(new Token(TokenType.BOOLEAN, word));
+                    throw new IllegalArgumentException("请使用 TRUE/FALSE");
                 } else if (TEXT_OP_MAP.containsKey(word)) {
                     tokens.add(new Token(TokenType.OP, word));
+                } else if (LEGACY_OP.containsKey(word)) {
+                    throw new IllegalArgumentException("请使用 " + LEGACY_OP.get(word));
                 } else {
                     tokens.add(new Token(TokenType.VAR, word));
                 }
                 continue;
             }
 
-            // 跳过未知字符
-            i++;
+            throw new IllegalArgumentException("意外的字符: '" + c + "'");
         }
         return tokens;
     }
 
-    // ---- recursive descent parser ----
-
-    /** OR 层（最低优先级） */
     private static boolean parseOr(List<Token> tokens, int[] pos, Map<String, Object> body) {
         boolean result = parseAnd(tokens, pos, body);
         while (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.OR) {
-            pos[0]++; // skip OR
+            pos[0]++;
             boolean right = parseAnd(tokens, pos, body);
             result = result || right;
         }
         return result;
     }
 
-    /** AND 层 */
     private static boolean parseAnd(List<Token> tokens, int[] pos, Map<String, Object> body) {
         boolean result = parseAtom(tokens, pos, body);
         while (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.AND) {
-            pos[0]++; // skip AND
+            pos[0]++;
             boolean right = parseAtom(tokens, pos, body);
             result = result && right;
         }
         return result;
     }
 
-    /** 原子：括号分组 或 单个条件 */
     private static boolean parseAtom(List<Token> tokens, int[] pos, Map<String, Object> body) {
-        if (pos[0] >= tokens.size()) return true;
+        if (pos[0] >= tokens.size()) {
+            throw new IllegalArgumentException("条件表达式不完整");
+        }
 
         Token t = tokens.get(pos[0]);
         if (t.type == TokenType.LPAREN) {
-            pos[0]++; // skip (
+            pos[0]++;
             boolean result = parseOr(tokens, pos, body);
             if (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.RPAREN) {
-                pos[0]++; // skip )
+                pos[0]++;
             }
             return result;
         }
 
-        // 期望: VAR OP (VALUE | LIST)
-        if (t.type != TokenType.VAR) return true; // 容错
+        if (t.type != TokenType.VAR) {
+            throw new IllegalArgumentException("期望变量: " + t.value);
+        }
         String leftPath = t.value;
         pos[0]++;
 
-        if (pos[0] >= tokens.size()) return true;
+        if (pos[0] >= tokens.size() || tokens.get(pos[0]).type == TokenType.AND
+                || tokens.get(pos[0]).type == TokenType.OR
+                || tokens.get(pos[0]).type == TokenType.RPAREN) {
+            Object leftVal = resolveLeft(leftPath, body);
+            return eq(leftVal, "true");
+        }
+
         Token opToken = tokens.get(pos[0]);
-        if (opToken.type != TokenType.OP) return true; // 容错
+        if (opToken.type != TokenType.OP) {
+            throw new IllegalArgumentException("期望操作符");
+        }
         String opName = TEXT_OP_MAP.getOrDefault(opToken.value, opToken.value);
         pos[0]++;
 
-        // 一元操作符
         if (UNARY_OPS.contains(opName)) {
             Object leftVal = resolveLeft(leftPath, body);
             return switch (opName) {
@@ -239,15 +238,15 @@ public class ConditionEvaluator {
             };
         }
 
-        // 取右侧值
-        if (pos[0] >= tokens.size()) return false;
+        if (pos[0] >= tokens.size()) {
+            throw new IllegalArgumentException("期望右侧值");
+        }
         Token rightToken = tokens.get(pos[0]);
         pos[0]++;
 
         Object leftVal = resolveLeft(leftPath, body);
 
         if (rightToken.type == TokenType.LIST) {
-            // In / NotIn 列表
             boolean inResult = inList(leftVal, rightToken.value);
             return "NotIn".equals(opName) != inResult;
         }
@@ -270,13 +269,10 @@ public class ConditionEvaluator {
             case "NotMatch" -> leftVal == null || !leftVal.toString().matches(rightVal);
             case "EqualsIgnoreCase" -> leftVal != null && leftVal.toString().equalsIgnoreCase(rightVal);
             case "NotEqualsIgnoreCase" -> leftVal == null || !leftVal.toString().equalsIgnoreCase(rightVal);
-            default -> false;
+            default -> throw new IllegalArgumentException("未知操作符: " + opName);
         };
     }
 
-    // ---- value resolution ----
-
-    /** 从 body 中按 category.fieldName 取值 */
     @SuppressWarnings("unchecked")
     private static Object resolveLeft(String path, Map<String, Object> body) {
         String[] parts = path.split("\\.", 2);
@@ -286,11 +282,8 @@ public class ConditionEvaluator {
         return null;
     }
 
-    // ---- comparison helpers ----
-
     private static boolean eq(Object left, String right) {
         if (left == null) return right == null || right.isEmpty();
-        // 支持布尔比较
         if (left instanceof Boolean) return left.toString().equals(right);
         return left.toString().equals(right);
     }
@@ -319,11 +312,9 @@ public class ConditionEvaluator {
         return left.toString().endsWith(right);
     }
 
-    /** In 列表：rightStr 为 "item1,item2,item3" 或 "\"A\",\"B\"" */
     private static boolean inList(Object left, String rightStr) {
         if (left == null) return false;
         String leftStr = left.toString();
-        // 解析逗号分隔，去掉引号和空格
         String[] items = rightStr.split(",");
         for (String item : items) {
             String trimmed = item.trim().replaceAll("^\"|\"$|^'|'$", "");
@@ -332,12 +323,10 @@ public class ConditionEvaluator {
         return false;
     }
 
-    // ---- token types ----
-
-    private enum TokenType {
+    public enum TokenType {
         VAR, OP, STRING, NUMBER, BOOLEAN, LIST,
         AND, OR, LPAREN, RPAREN
     }
 
-    private record Token(TokenType type, String value) {}
+    public record Token(TokenType type, String value) {}
 }

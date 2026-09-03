@@ -220,6 +220,8 @@
     "grayscaleRatioDesc": "Distribute traffic randomly by ratio. Distribution is approximately uniform but does not guarantee the same user always hits the same version. For precise routing by business attributes, use \"Condition Match\".",
     "conditionDesc": "Condition expression (REA syntax). Requests matching the condition will be routed to the grayscale version.",
     "conditionPlaceholder": "e.g. FlightInfo.level == \"VIP\" AND FlightInfo.score > 5",
+    "conditionRequired": "Please enter a grayscale condition expression",
+    "conditionLintError": "Condition expression has syntax errors and cannot be saved",
     "grayscaleDescPlaceholder": "Grayscale description (optional)",
     "approvalDetail": "Approval Detail #{{id}}",
     "changeDescription": "Change Description",
@@ -537,10 +539,10 @@
     "exampleMode": "Examples",
     "exampleCondition1": "variable == value",
     "exampleCondition2": "variable > value AND variable < value",
-    "exampleCondition3": "variable In (value1, value2)",
-    "exampleCondition4": "variable Contain value",
+    "exampleCondition3": "variable IN (value1, value2)",
+    "exampleCondition4": "variable CONTAIN value",
     "exampleAction1": "variable = value",
-    "exampleAction2": "variable = variable + value",
+    "exampleAction2": "LISTADD(variable, value)",
     "conditionInputPlaceholder": "e.g. A.score > 5 AND (B.type == \"VIP\" OR level == \"high\")"
   },
   "api": {

@@ -2,12 +2,11 @@
  * expressionPrinter.ts — XML → 文本表达式
  *
  * printCondition: <if>/<and>/<or> XML → 条件文本
- * printAssignment: <then>/<else> XML → 赋值文本
+ * printAssignment: <then>/<else> XML → 赋值/动作文本
  */
 
 import { xmlOpToText } from './operatorMap';
-
-// ─── 类型定义 ───
+import { lookupByMethod, lookupByCommonFunction } from './functionMap';
 
 export interface PrintResult {
   text: string;
@@ -16,14 +15,11 @@ export interface PrintResult {
 
 const ERROR_MARKER = '[不支持的表达式]';
 
-// ─── XML 解析辅助 ───
-
 function parseXmlDoc(xml: string): Document {
   const parser = new DOMParser();
   return parser.parseFromString(xml, 'text/xml');
 }
 
-/** 获取元素的直接子元素（按标签名） */
 function childElements(el: Element, tagName?: string): Element[] {
   const result: Element[] = [];
   for (let i = 0; i < el.children.length; i++) {
@@ -35,18 +31,66 @@ function childElements(el: Element, tagName?: string): Element[] {
   return result;
 }
 
-// ─── Left / Value 格式化 ───
+function formatCallArgsFromParameters(el: Element): { text: string; hasError: boolean } {
+  const params = childElements(el, 'parameter');
+  const parts: string[] = [];
+  let hasError = false;
+  for (const p of params) {
+    const valueEl = p.querySelector(':scope > value');
+    if (!valueEl) {
+      hasError = true;
+      parts.push(ERROR_MARKER);
+      continue;
+    }
+    const v = formatValue(valueEl);
+    if (v.hasError) hasError = true;
+    parts.push(v.text);
+  }
+  return { text: parts.join(', '), hasError };
+}
+
+function formatMethodCall(el: Element, beanAttr: 'bean-name' | 'bean'): { text: string; hasError: boolean } {
+  const bean = el.getAttribute(beanAttr) || '';
+  const method = el.getAttribute('method-name') || '';
+  const fn = lookupByMethod(bean, method);
+  const args = formatCallArgsFromParameters(el);
+  if (fn) {
+    return { text: `${fn.rea}(${args.text})`, hasError: args.hasError };
+  }
+  if (!bean || !method || bean.startsWith('urule.')) {
+    return { text: ERROR_MARKER, hasError: true };
+  }
+  return {
+    text: `${bean.toUpperCase()}.${method.toUpperCase()}(${args.text})`,
+    hasError: args.hasError,
+  };
+}
+
+function formatCommonCall(el: Element): { text: string; hasError: boolean } {
+  const name = el.getAttribute('function-name') || '';
+  const fn = lookupByCommonFunction(name);
+  if (!fn) return { text: ERROR_MARKER, hasError: true };
+  const fp = el.querySelector(':scope > function-parameter');
+  if (!fp) return { text: ERROR_MARKER, hasError: true };
+  const valueEl = fp.querySelector(':scope > value');
+  if (!valueEl) return { text: ERROR_MARKER, hasError: true };
+  const obj = formatValue(valueEl);
+  const prop = fp.getAttribute('property-name');
+  if (fn.needProperty) {
+    if (!prop) return { text: ERROR_MARKER, hasError: true };
+    return { text: `${fn.rea}(${obj.text}, ${prop})`, hasError: obj.hasError };
+  }
+  return { text: `${fn.rea}(${obj.text})`, hasError: obj.hasError };
+}
 
 function formatLeft(el: Element): { text: string; hasError: boolean } {
   const type = el.getAttribute('type') || '';
-  if (type === 'method' || type === 'commonfunction') {
-    return { text: ERROR_MARKER, hasError: true };
-  }
+  if (type === 'method') return formatMethodCall(el, 'bean-name');
+  if (type === 'commonfunction') return formatCommonCall(el);
   if (type === 'parameter') {
     const varName = el.getAttribute('var') || '';
     return { text: varName, hasError: false };
   }
-  // type === 'variable' or default
   const category = el.getAttribute('var-category') || '';
   const varName = el.getAttribute('var') || '';
   return { text: `${category}.${varName}`, hasError: false };
@@ -59,13 +103,11 @@ function isNumeric(s: string): boolean {
 function formatValue(el: Element): { text: string; hasError: boolean } {
   const type = el.getAttribute('type') || '';
 
-  if (type === 'Method' || type === 'CommonFunction') {
-    return { text: ERROR_MARKER, hasError: true };
-  }
+  if (type === 'Method') return formatMethodCall(el, 'bean-name');
+  if (type === 'CommonFunction') return formatCommonCall(el);
 
   if (type === 'Input') {
     const content = el.getAttribute('content') || '';
-    // In/NotIn 列表值：content 中含逗号，用括号包裹
     if (content.includes(',')) {
       const items = content.split(',').map((v) => v.trim());
       const formatted = items
@@ -77,7 +119,7 @@ function formatValue(el: Element): { text: string; hasError: boolean } {
       return { text: content, hasError: false };
     }
     if (content === 'true' || content === 'false') {
-      return { text: content, hasError: false };
+      return { text: content === 'true' ? 'TRUE' : 'FALSE', hasError: false };
     }
     return { text: `"${content}"`, hasError: false };
   }
@@ -99,11 +141,8 @@ function formatValue(el: Element): { text: string; hasError: boolean } {
     return { text: `$${category}.${constName}`, hasError: false };
   }
 
-  // 未知类型
   return { text: ERROR_MARKER, hasError: true };
 }
-
-// ─── 条件格式化 ───
 
 function formatAtom(atom: Element): { text: string; hasError: boolean } {
   const op = atom.getAttribute('op') || '';
@@ -126,7 +165,7 @@ function formatAtom(atom: Element): { text: string; hasError: boolean } {
 }
 
 function formatJunction(el: Element, nested = false): PrintResult {
-  const tag = el.tagName; // 'and' or 'or'
+  const tag = el.tagName;
   const connector = tag === 'and' ? ' AND ' : ' OR ';
   const children = Array.from(el.children);
 
@@ -151,13 +190,9 @@ function formatJunction(el: Element, nested = false): PrintResult {
   }
 
   const text = parts.join(connector);
-  // 嵌套的 junction 加括号
   return { text: nested ? `(${text})` : text, hasError };
 }
 
-/**
- * 将 <if> XML 片段转为条件文本
- */
 export function printCondition(xml: string): PrintResult {
   const trimmed = xml.trim();
   if (!trimmed) return { text: '', hasError: false };
@@ -169,20 +204,16 @@ export function printCondition(xml: string): PrintResult {
     return { text: ERROR_MARKER, hasError: true };
   }
 
-  // 根元素可能是 <if>、<and>、<or>
   let junctionEl: Element | null = null;
 
   if (root.tagName === 'if') {
-    // <if> 内部应有 <and> 或 <or>
     junctionEl =
       root.querySelector(':scope > and') ||
       root.querySelector(':scope > or');
     if (!junctionEl) {
-      // 可能 <if> 直接包含 <atom>（单条件无 junction）
       const atoms = childElements(root, 'atom');
       if (atoms.length > 0) {
-        const result = formatAtom(atoms[0]!);
-        return result;
+        return formatAtom(atoms[0]!);
       }
       return { text: '', hasError: false };
     }
@@ -195,22 +226,20 @@ export function printCondition(xml: string): PrintResult {
   return formatJunction(junctionEl);
 }
 
-// ─── 赋值格式化 ───
-
 function formatVarAssign(el: Element): { text: string; hasError: boolean } {
   const type = el.getAttribute('type') || '';
-  let leftText: string;
-  let hasError = false;
 
   if (type === 'method' || type === 'commonfunction') {
     return { text: ERROR_MARKER, hasError: true };
   }
 
+  let leftText: string;
+  let hasError = false;
+
   if (type === 'parameter') {
     const varName = el.getAttribute('var') || '';
     leftText = varName;
   } else {
-    // variable
     const category = el.getAttribute('var-category') || '';
     const varName = el.getAttribute('var') || '';
     leftText = `${category}.${varName}`;
@@ -227,9 +256,10 @@ function formatVarAssign(el: Element): { text: string; hasError: boolean } {
   return { text: `${leftText} = ${value.text}`, hasError };
 }
 
-/**
- * 将 <then>/<else> XML 片段转为赋值文本
- */
+function formatExecuteMethod(el: Element): { text: string; hasError: boolean } {
+  return formatMethodCall(el, 'bean');
+}
+
 export function printAssignment(xml: string): PrintResult {
   const trimmed = xml.trim();
   if (!trimmed) return { text: '', hasError: false };
@@ -241,7 +271,6 @@ export function printAssignment(xml: string): PrintResult {
     return { text: ERROR_MARKER, hasError: true };
   }
 
-  // root 可能是 <then> 或 <else>，内部包含 <var-assign> 或其他 action
   const children = Array.from(root.children);
 
   if (children.length === 0) {
@@ -256,8 +285,11 @@ export function printAssignment(xml: string): PrintResult {
       const result = formatVarAssign(child);
       if (result.hasError) hasError = true;
       parts.push(result.text);
+    } else if (child.tagName === 'execute-method') {
+      const result = formatExecuteMethod(child);
+      if (result.hasError) hasError = true;
+      parts.push(result.text);
     } else {
-      // 不支持的 action（execute-method, console-print 等）
       hasError = true;
       parts.push(ERROR_MARKER);
     }

@@ -108,7 +108,7 @@ describe('向导式编辑器已知 XML 兼容性', () => {
     const xml = '<if><and><atom op="In"><left var-category="客户" var="level" var-label="等级" datatype="String" type="variable"></left><value content="A,B,C" type="Input"/></atom></and></if>';
     const result = printCondition(xml);
     expect(result.hasError).toBe(false);
-    expect(result.text).toBe('客户.level In ("A", "B", "C")');
+    expect(result.text).toBe('客户.level IN ("A", "B", "C")');
   });
 });
 
@@ -163,8 +163,15 @@ describe('不支持的 XML 结构', () => {
     expect(result.hasError).toBe(true);
   });
 
-  it('<then><execute-method>...</execute-method></then> → hasError: true', () => {
+  it('<then><execute-method> 非内置 bean → 大写自定义名', () => {
     const xml = '<then><execute-method bean="myBean" method-name="doSomething"/></then>';
+    const result = printAssignment(xml);
+    expect(result.hasError).toBe(false);
+    expect(result.text).toBe('MYBEAN.DOSOMETHING()');
+  });
+
+  it('<then><execute-method> 未暴露的 urule 内置 → hasError', () => {
+    const xml = '<then><execute-method bean="urule.loopAction" method-name="breakLoop"/></then>';
     const result = printAssignment(xml);
     expect(result.hasError).toBe(true);
   });
@@ -175,9 +182,9 @@ describe('不支持的 XML 结构', () => {
     expect(result.hasError).toBe(true);
   });
 
-  it('<value type="CommonFunction"> → hasError: true', () => {
-    const xml = '<if><and><atom op="Equals"><left var-category="客户" var="age" var-label="年龄" datatype="Integer" type="variable"></left><value type="CommonFunction" var="calcAge"/></atom></and></if>';
-    const result = printCondition(xml);
+  it('<then><execute-common-function> → hasError: true', () => {
+    const xml = '<then><execute-common-function function-name="UpdateParameter"/></then>';
+    const result = printAssignment(xml);
     expect(result.hasError).toBe(true);
   });
 });

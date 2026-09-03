@@ -23,6 +23,8 @@ export interface ReaConditionInputProps {
   libraries: LibraryData;
   placeholder?: string;
   onLintStatus?: (status: LintStatus) => void;
+  /** 灰度条件必须 false：禁用函数补全和解析 */
+  allowFunctions?: boolean;
 }
 
 const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
@@ -31,6 +33,7 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
   libraries,
   placeholder,
   onLintStatus,
+  allowFunctions = true,
 }) => {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('rea.conditionInputPlaceholder');
@@ -51,8 +54,8 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
         history(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         reaSyntaxHighlighting(),
-        reaAutocompletion('condition', libraries),
-        reaLintExtension('condition', libraries, onLintStatus),
+        reaAutocompletion('condition', libraries, { allowFunctions }),
+        reaLintExtension('condition', libraries, onLintStatus, { allowFunctions }),
         cmPlaceholder(resolvedPlaceholder),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !internalUpdate.current) {
@@ -79,7 +82,7 @@ const ReaConditionInput: React.FC<ReaConditionInputProps> = ({
     const view = new EditorView({ state: startState, parent: containerRef.current });
     viewRef.current = view;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [libraries, resolvedPlaceholder]);
+  }, [libraries, resolvedPlaceholder, allowFunctions]);
 
   useEffect(() => {
     createView();

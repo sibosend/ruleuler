@@ -14,8 +14,9 @@ import {
 import { createGrayscaleRule, listGrayscaleRules } from '@/api/grayscale';
 import { loadProjects } from '@/api/project';
 import { loadProjectLibs, loadXml, type ProjectLibs } from '@/pages/rea/api/reaApi';
-import type { LibraryData } from '@/pages/rea/lib/expressionParser';
+import { parseCondition, ParseError, type LibraryData } from '@/pages/rea/lib/expressionParser';
 import ReaConditionInput from '@/pages/rea/components/ReaConditionInput';
+import type { LintStatus } from '@/pages/rea/lib/cmLint';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/stores/authStore';
 import { useTabStore } from '@/stores/tabStore';
@@ -64,6 +65,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
   const [gsCondition, setGsCondition] = useState('');
   const [gsDescription, setGsDescription] = useState('');
   const [gsLibraries, setGsLibraries] = useState<LibraryData>({ variables: [], parameters: [] });
+  const [gsLintStatus, setGsLintStatus] = useState<LintStatus>('idle');
 
   const canApprove = usePermission('pack:publish:approve');
   const canSubmit = usePermission('pack:publish:submit');
@@ -177,6 +179,23 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
 
   const handleGrayscale = async () => {
     if (!grayscaleModal) return;
+    if (gsStrategy === 'CONDITION') {
+      if (!gsCondition.trim()) {
+        message.error(t('release.conditionRequired'));
+        return;
+      }
+      if (gsLintStatus === 'error') {
+        message.error(t('release.conditionLintError'));
+        return;
+      }
+      try {
+        parseCondition(gsCondition, gsLibraries, { allowFunctions: false });
+      } catch (e) {
+        const msg = e instanceof ParseError ? e.message : String(e);
+        message.error(msg);
+        return;
+      }
+    }
     try {
       await createGrayscaleRule({
         approvalId: grayscaleModal.id,
@@ -201,6 +220,7 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
     setGsPercentage(10);
     setGsCondition('');
     setGsDescription('');
+    setGsLintStatus('idle');
     // 加载审批单所属项目的变量库（灰度弹窗变量提示用）
     try {
       const libs: ProjectLibs = await loadProjectLibs(projectName);
@@ -420,6 +440,8 @@ const ReleaseListPage: React.FC<Props> = ({ mode }) => {
               onChange={setGsCondition}
               libraries={gsLibraries}
               placeholder={t('release.conditionPlaceholder')}
+              allowFunctions={false}
+              onLintStatus={setGsLintStatus}
             />
           </div>
         )}

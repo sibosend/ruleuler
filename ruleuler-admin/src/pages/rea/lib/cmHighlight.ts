@@ -1,17 +1,19 @@
 /**
- * REA 语法高亮扩展 — 基于 StreamLanguage
+ * REA 语法高亮 + 函数怪癖悬浮
  */
 import { StreamLanguage, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { hoverTooltip, type Tooltip } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import type { StringStream } from '@codemirror/language';
-import { ALL_TEXT_OPERATORS } from './operatorMap';
+import { WORD_OPS } from './operatorMap';
+import { FLAT_FUNC_NAMES, FUNC_HINTS, NAMESPACES } from './functionMap';
 
-/** 文字操作符集合（用于快速查找） */
-const WORD_OPS = new Set(ALL_TEXT_OPERATORS.filter((op) => /^[a-zA-Z]/.test(op)));
+const WORD_OP_SET = new Set(WORD_OPS);
+const FUNC_SET = new Set(FLAT_FUNC_NAMES);
+const NS_SET = new Set<string>(NAMESPACES);
 
 interface ReaState {
-  /** 是否在双引号字符串内 */
   inString: boolean;
 }
 
@@ -21,7 +23,6 @@ const reaStreamParser = {
   },
 
   token(stream: StringStream, state: ReaState): string | null {
-    // 字符串续行
     if (state.inString) {
       while (!stream.eol()) {
         if (stream.next() === '"') {
@@ -32,18 +33,16 @@ const reaStreamParser = {
       return 'string';
     }
 
-    // 跳过空白
     if (stream.eatSpace()) return null;
 
     const ch = stream.peek()!;
 
-    // 双引号字符串
     if (ch === '"') {
       stream.next();
       while (!stream.eol()) {
         const c = stream.next();
         if (c === '\\') {
-          stream.next(); // 跳过转义
+          stream.next();
         } else if (c === '"') {
           return 'string';
         }
@@ -52,39 +51,35 @@ const reaStreamParser = {
       return 'string';
     }
 
-    // 数字（含负号开头）
     if (/[0-9]/.test(ch) || (ch === '-' && /[0-9]/.test(stream.string.charAt(stream.pos + 1)))) {
       if (ch === '-') stream.next();
       stream.match(/^[0-9]*\.?[0-9]*/);
       return 'number';
     }
 
-    // 符号操作符：>=, <=, !=, ==, >, <
     if (stream.match(/^(?:>=|<=|!=|==|>|<)/)) {
       return 'operator';
     }
 
-    // 赋值 =
     if (ch === '=') {
       stream.next();
       return 'operator';
     }
 
-    // 点号、分号、括号、逗号 — 标点
-    if ('.;(),'.includes(ch)) {
+    if (';(),.'.includes(ch)) {
       stream.next();
       return 'punctuation';
     }
 
-    // 标识符 / 关键字
     if (stream.match(/^[a-zA-Z_\u4e00-\u9fff][a-zA-Z0-9_\u4e00-\u9fff]*/)) {
       const word = stream.current();
       if (word === 'AND' || word === 'OR') return 'keyword';
-      if (WORD_OPS.has(word)) return 'operator';
+      if (word === 'TRUE' || word === 'FALSE') return 'atom';
+      if (WORD_OP_SET.has(word)) return 'operator';
+      if (FUNC_SET.has(word) || NS_SET.has(word)) return 'keyword';
       return 'variableName';
     }
 
-    // 未知字符，跳过
     stream.next();
     return null;
   },
@@ -92,16 +87,47 @@ const reaStreamParser = {
 
 const reaLanguage = StreamLanguage.define<ReaState>(reaStreamParser);
 
-/** REA 高亮主题（VS Code Dark+ 风格） */
 const reaHighlightStyle = HighlightStyle.define([
-  { tag: tags.variableName, color: '#9cdcfe' },            // 浅蓝 — 标识符
-  { tag: tags.operator, color: '#d4d4d4' },                // 浅灰 — 操作符
-  { tag: tags.string, color: '#ce9178' },                  // 暖橙 — 字符串
-  { tag: tags.keyword, color: '#c586c0', fontWeight: 'bold' }, // 粉紫 — AND/OR
-  { tag: tags.number, color: '#b5cea8' },                  // 浅绿 — 数字
+  { tag: tags.variableName, color: '#9cdcfe' },
+  { tag: tags.operator, color: '#d4d4d4' },
+  { tag: tags.string, color: '#ce9178' },
+  { tag: tags.keyword, color: '#c586c0', fontWeight: 'bold' },
+  { tag: tags.number, color: '#b5cea8' },
+  { tag: tags.atom, color: '#569cd6' },
 ]);
 
-/** 导出：REA 语法高亮扩展 */
+function reaHover(): Extension {
+  return hoverTooltip((view, pos): Tooltip | null => {
+    const word = view.state.sliceDoc(
+      Math.max(0, pos - 32),
+      Math.min(view.state.doc.length, pos + 32),
+    );
+    const offset = Math.min(pos, 32);
+    const local = offset;
+    const re = /[A-Z][A-Z0-9]*/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(word))) {
+      if (local >= m.index && local <= m.index + m[0].length) {
+        const hint = FUNC_HINTS.get(m[0]);
+        if (!hint) return null;
+        const from = pos - local + m.index;
+        return {
+          pos: from,
+          end: from + m[0].length,
+          create() {
+            const dom = document.createElement('div');
+            dom.textContent = hint;
+            dom.style.padding = '4px 8px';
+            dom.style.maxWidth = '360px';
+            return { dom };
+          },
+        };
+      }
+    }
+    return null;
+  });
+}
+
 export function reaSyntaxHighlighting(): Extension {
-  return [reaLanguage, syntaxHighlighting(reaHighlightStyle)];
+  return [reaLanguage, syntaxHighlighting(reaHighlightStyle), reaHover()];
 }

@@ -223,6 +223,8 @@
     "grayscaleRatioDesc": "按请求随机分配流量，比例近似均匀但不保证同一用户始终命中同一版本。如需按业务属性精准路由，请使用「条件匹配」。",
     "conditionDesc": "条件表达式（REA 语法），满足条件的请求路由到灰度版本",
     "conditionPlaceholder": "例: FlightInfo.level == \"VIP\" AND FlightInfo.score > 5",
+    "conditionRequired": "请填写灰度条件表达式",
+    "conditionLintError": "条件表达式有语法错误，无法保存",
     "grayscaleDescPlaceholder": "灰度说明（选填）",
     "approvalDetail": "审批详情 #{{id}}",
     "changeDescription": "变更说明",
@@ -540,10 +542,10 @@
     "exampleMode": "示例模式",
     "exampleCondition1": "变量 == 值",
     "exampleCondition2": "变量 > 值 AND 变量 < 值",
-    "exampleCondition3": "变量 In (值1, 值2)",
-    "exampleCondition4": "变量 Contain 值",
+    "exampleCondition3": "变量 IN (值1, 值2)",
+    "exampleCondition4": "变量 CONTAIN 值",
     "exampleAction1": "变量 = 值",
-    "exampleAction2": "变量 = 变量 + 值",
+    "exampleAction2": "LISTADD(变量, 值)",
     "conditionInputPlaceholder": "例: A.score > 5 AND (B.type == \"VIP\" OR level == \"high\")"
   },
   "api": {

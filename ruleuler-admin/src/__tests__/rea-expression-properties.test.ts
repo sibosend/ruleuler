@@ -12,6 +12,7 @@ import {
 } from '@/pages/rea/lib/expressionParser';
 import { printCondition, printAssignment } from '@/pages/rea/lib/expressionPrinter';
 import { ALL_TEXT_OPERATORS } from '@/pages/rea/lib/operatorMap';
+import { FLAT_FUNC_NAMES, NAMESPACES } from '@/pages/rea/lib/functionMap';
 
 // ─── 辅助：规范化 XML 用于比较（忽略空白差异） ───
 
@@ -25,9 +26,11 @@ function normalizeXml(xml: string): string {
 // ─── 生成器：安全标识符（不与关键字冲突） ───
 
 const KEYWORDS = new Set([
-  'AND', 'OR',
+  'AND', 'OR', 'TRUE', 'FALSE',
   ...ALL_TEXT_OPERATORS,
-  '参数', // 参数是特殊类别名，避免冲突
+  ...FLAT_FUNC_NAMES,
+  ...NAMESPACES,
+  '参数',
 ]);
 
 /** 生成中文标识符（2-4 个汉字），避免关键字冲突 */
@@ -49,7 +52,7 @@ const englishIdent = fc
     ),
   )
   .map(([first, rest]) => first + rest.join(''))
-  .filter((s) => !KEYWORDS.has(s));
+  .filter((s) => !KEYWORDS.has(s) && !KEYWORDS.has(s.toUpperCase()));
 
 /** 混合标识符生成器 */
 const safeIdent = fc.oneof(chineseIdent, englishIdent);
@@ -85,10 +88,10 @@ const numericValue = fc.oneof(intValue, decimalValue);
 // ─── 条件操作符（排除 In/NotIn，它们需要括号列表值） ───
 
 const simpleOps = ALL_TEXT_OPERATORS.filter(
-  (op) => op !== 'In' && op !== 'NotIn',
+  (op) => op !== 'IN' && op !== 'NOTIN',
 );
 const simpleOpArb = fc.constantFrom(...simpleOps);
-const inOpArb = fc.constantFrom('In', 'NotIn');
+const inOpArb = fc.constantFrom('IN', 'NOTIN');
 
 // ─── 生成器：条件表达式文本 + 对应 LibraryData ───
 
