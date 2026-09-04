@@ -627,10 +627,22 @@ function parseInvocation(
         property = parsePropertyName(parser);
       }
     } else {
-      argXmls.push(parser.parseValue(libs));
-      while (parser.peek().type === 'COMMA') {
+      const params = fn.params ?? [];
+      for (let i = 0; ; i++) {
+        if (params[i]?.propertyName) {
+          // 属性名槽位：裸名或字符串字面量，编译成 Input（不当变量/参数引用）
+          const t = parser.peek();
+          if (t.type === 'IDENT' || t.type === 'FUNC' || t.type === 'STRING') {
+            parser.advance();
+            argXmls.push(`<value content="${escapeXml(t.value)}" type="Input"/>`);
+          } else {
+            throw new ParseError('属性名必须是裸名', t.pos);
+          }
+        } else {
+          argXmls.push(parser.parseValue(libs));
+        }
+        if (parser.peek().type !== 'COMMA') break;
         parser.advance();
-        argXmls.push(parser.parseValue(libs));
       }
     }
   }

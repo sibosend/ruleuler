@@ -71,7 +71,8 @@ public class GrayscaleConditionExprMigrator implements ApplicationRunner {
                 updated++;
             }
         }
-        jdbc.update("INSERT INTO ruleuler_migrator_log (name, ran_at) VALUES (?, ?)",
+        // IGNORE：多实例同时启动时不因主键冲突导致启动失败，双跑无害（rewrite 幂等）
+        jdbc.update("INSERT IGNORE INTO ruleuler_migrator_log (name, ran_at) VALUES (?, ?)",
                 MIGRATION_NAME, System.currentTimeMillis());
         log.info("灰度条件大写迁移完成, 更新 {} 条", updated);
     }
@@ -94,7 +95,8 @@ public class GrayscaleConditionExprMigrator implements ApplicationRunner {
 
     private static String emit(MigToken t) {
         return switch (t.type) {
-            case STRING -> '"' + t.value + '"';
+            // STRING 回放原始词素：保留原引号字符，值内含 " 时不损坏
+            case STRING -> t.raw;
             case LIST -> '(' + t.value + ')';
             default -> t.value;
         };
@@ -161,7 +163,7 @@ public class GrayscaleConditionExprMigrator implements ApplicationRunner {
                 int start = i + 1;
                 i++;
                 while (i < len && expr.charAt(i) != quote) i++;
-                tokens.add(new MigToken(MigType.STRING, expr.substring(start, i)));
+                tokens.add(new MigToken(MigType.STRING, expr.substring(start, i), expr.substring(start - 1, i + 1)));
                 i++;
                 continue;
             }
@@ -201,5 +203,9 @@ public class GrayscaleConditionExprMigrator implements ApplicationRunner {
     }
 
     private enum MigType { STRING, LIST, BOOLEAN, OP, OTHER }
-    private record MigToken(MigType type, String value) {}
+    private record MigToken(MigType type, String value, String raw) {
+        MigToken(MigType type, String value) {
+            this(type, value, value);
+        }
+    }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<!-- 引擎全套 bean（KnowledgeBuilder / 内置 ActionBean / parser 等） -->
+	<import resource="classpath:urule-core-context.xml"/>
+
+	<!-- dbr: 路径的资源提供者，测试里用 ThreadLocal 注入 XML 内容 -->
+	<bean class="com.caritasem.ruleuler.grayscale.SnapshotResourceProvider"/>
+
+	<!-- 自定义函数测试 bean（与 rea-function-map.json 里 RISKSERVICE.* 对应） -->
+	<bean id="riskService" class="com.caritasem.ruleuler.rea.ReaTestRiskService"/>
+</beans>

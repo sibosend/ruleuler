@@ -94,6 +94,12 @@
             <version>1.9.3</version>
             <scope>test</scope>
         </dependency>
+        <!-- REA 函数执行测试读 rea-function-map.json -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- MCP Server -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

@@ -19,6 +19,8 @@ export type FuncNamespace = 'STRING' | 'MATH' | 'DATE' | 'LIST' | 'MAP';
 export interface FuncParam {
   name: string;
   type: string;
+  /** 该参数是属性名（LISTSORT/LISTRETRIVE 第二参）：编译成 Input 字符串，不当变量/参数引用 */
+  propertyName?: boolean;
 }
 
 export interface BuiltinFunc {
@@ -286,12 +288,12 @@ const PAIRS: BuiltinFunc[] = [
   ], { nsName: 'EMPTY' }),
   m('LISTSORT', 'LIST', 'both', 'List', LIST, 'List集合', 'sort', '集合排序', [
     { name: '集合对象', type: 'List' },
-    { name: '属性名', type: 'String' },
+    { name: '属性名', type: 'String', propertyName: true },
     { name: '排序方式', type: 'String' },
   ], { nsName: 'SORT' }),
   m('LISTRETRIVE', 'LIST', 'value', 'List', LIST, 'List集合', 'retrive', '抽取集合属性', [
     { name: '集合对象', type: 'List' },
-    { name: '属性名', type: 'String' },
+    { name: '属性名', type: 'String', propertyName: true },
   ], { nsName: 'RETRIVE', hint: '引擎方法名拼写为 retrive' }),
   m('MAPGET', 'MAP', 'value', 'Object', MAP, 'Map集合', 'get', '从Map中取值', [
     { name: 'Map对象', type: 'Map' },

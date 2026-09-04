@@ -1,5 +1,5 @@
 /**
- * REA UDF：函数映射、大小写、round-trip
+ * REA 函数调用：函数映射、大小写、round-trip
  */
 import { describe, it, expect } from 'vitest';
 import {

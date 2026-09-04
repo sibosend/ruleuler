@@ -144,6 +144,13 @@ SUM(Order.items.amount)                  # 第二参是属性名，不要写成�
 
 `LISTRETRIVE` 对应引擎方法 `retrive`（拼写如此）。
 
+`LISTSORT` / `LISTRETRIVE` 的**属性名参数**写裸名（或字符串字面量），编译成字符串：
+`LISTSORT(Order.items, amount, "正序")`。
+
+引擎排序方式的**升序词面只认 `1` / `true` / `正序`**，其它（包括英文 `"asc"`）一律倒序。
+
+`LISTREMOVE` 的字面量实参按字符串处理：从数字元素集合删除时，用变量传要删的值。
+
 ### 集合聚合 → CommonFunction
 
 `COUNT(xs)` 无属性。`SUM` `AVG` `MAXOF` `MINOF` 第二参是属性 **name**：`SUM(Order.items, amount)`。

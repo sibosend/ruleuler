@@ -56,4 +56,18 @@ class GrayscaleConditionExprMigratorTest {
                 "FlightInfo.name == \"Null\"",
                 GrayscaleConditionExprMigrator.rewrite("FlightInfo.name == \"Null\""));
     }
+
+    @Test
+    void singleQuotePreservedVerbatim() {
+        String out = GrayscaleConditionExprMigrator.rewrite(
+                "FlightInfo.name Contain 'test' AND FlightInfo.level == 'VIP'");
+        assertEquals("FlightInfo.name CONTAIN 'test' AND FlightInfo.level == 'VIP'", out);
+    }
+
+    @Test
+    void doubleQuoteInsideSingleQuotedStringNotCorrupted() {
+        // 值里含 "：重发射必须保留原词素，不能变成 "say "hi""
+        String out = GrayscaleConditionExprMigrator.rewrite("FlightInfo.name == 'say \"hi\"'");
+        assertEquals("FlightInfo.name == 'say \"hi\"'", out);
+    }
 }
