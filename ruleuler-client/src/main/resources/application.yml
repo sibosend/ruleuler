@@ -8,6 +8,8 @@ spring:
 ruleuler:
   mcp:
     enabled: false
+  function-jar:
+    deps-cache-ms: 5000
 
 logging:
   file:

@@ -3,6 +3,7 @@ package com.caritasem.ruleuler.config;
 import com.bstek.urule.runtime.service.RemoteService;
 import com.bstek.urule.runtime.service.RemoteServiceImpl;
 import com.caritasem.ruleuler.function.FunctionAwareRemoteService;
+import com.caritasem.ruleuler.function.FunctionDepsGate;
 import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,13 +38,21 @@ public class RuleConfig {
         return new GrayscaleMetricsReporter(serverUrl);
     }
 
+    @Bean
+    @ConditionalOnProperty(name = "urule.resporityServerUrl")
+    public FunctionDepsGate functionDepsGate(
+            @Value("${urule.resporityServerUrl}") String serverUrl,
+            @Value("${ruleuler.function-jar.deps-cache-ms}") long cacheMs) {
+        return new FunctionDepsGate(serverUrl, cacheMs);
+    }
+
     @Bean(name = RemoteService.BEAN_ID)
     @Primary
     @ConditionalOnProperty(name = "urule.resporityServerUrl")
-    public RemoteService uruleRemoteService(
-            @Value("${urule.resporityServerUrl}") String serverUrl) {
+    public RemoteService uruleRemoteService(FunctionDepsGate functionDepsGate,
+                                            @Value("${urule.resporityServerUrl}") String serverUrl) {
         RemoteServiceImpl delegate = new RemoteServiceImpl();
         delegate.setResporityServerUrl(serverUrl);
-        return new FunctionAwareRemoteService(delegate, serverUrl);
+        return new FunctionAwareRemoteService(delegate, functionDepsGate);
     }
 }

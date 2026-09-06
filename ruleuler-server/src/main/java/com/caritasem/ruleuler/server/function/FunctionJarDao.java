@@ -16,33 +16,35 @@ public class FunctionJarDao {
         this.jdbc = jdbc;
     }
 
-    public void upsert(String companyId, String project, String functionPackage, String version,
+    public void upsert(String project, String functionPackage, String version,
                        String checksum, byte[] blob, String uploadedBy) {
         long now = System.currentTimeMillis();
         jdbc.update("""
                         INSERT INTO ruleuler_function_jar
-                          (company_id, project, function_package, version, checksum, `blob`, uploaded_by, uploaded_at)
-                        VALUES (?,?,?,?,?,?,?,?)
+                          (project, function_package, version, checksum, `blob`, uploaded_by, uploaded_at)
+                        VALUES (?,?,?,?,?,?,?)
                         ON DUPLICATE KEY UPDATE checksum=VALUES(checksum), `blob`=VALUES(`blob`),
                           uploaded_by=VALUES(uploaded_by), uploaded_at=VALUES(uploaded_at)
                         """,
-                companyId, project, functionPackage, version, checksum, blob, uploadedBy, now);
+                project, functionPackage, version, checksum, blob, uploadedBy, now);
     }
 
-    public Optional<Map<String, Object>> find(String project, String functionPackage, String version) {
+    public Optional<String> findChecksum(String project, String functionPackage, String version) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT project, function_package, version, checksum, `blob`, uploaded_by, uploaded_at
-                FROM ruleuler_function_jar
+                SELECT checksum FROM ruleuler_function_jar
                 WHERE project=? AND function_package=? AND version=?
                 """, project, functionPackage, version);
-        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+        if (rows.isEmpty() || rows.get(0).get("checksum") == null) {
+            return Optional.empty();
+        }
+        return Optional.of(String.valueOf(rows.get(0).get("checksum")));
     }
 
-    public Optional<byte[]> findBlob(String functionPackage, String version, String checksum) {
+    public Optional<byte[]> findBlob(String project, String functionPackage, String version, String checksum) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT `blob` FROM ruleuler_function_jar
-                WHERE function_package=? AND version=? AND checksum=?
-                """, functionPackage, version, checksum);
+                WHERE project=? AND function_package=? AND version=? AND checksum=?
+                """, project, functionPackage, version, checksum);
         if (rows.isEmpty()) {
             return Optional.empty();
         }

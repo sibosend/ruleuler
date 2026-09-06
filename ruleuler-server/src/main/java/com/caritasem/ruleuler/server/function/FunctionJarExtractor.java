@@ -4,16 +4,22 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public final class FunctionJarExtractor {
 
     public static final String AL_ENTRY = "META-INF/ruleuler/functions.al.xml";
+    public static final String VERSION_PREFIX = "META-INF/ruleuler/";
+    public static final String VERSION_SUFFIX = ".version";
+
+    public record Extracted(String alXml, Map<String, String> versions) {}
 
     private FunctionJarExtractor() {}
 
-    public static String extractAlXml(byte[] jarBytes, int maxEntries, int maxXmlBytes) {
+    public static Extracted extract(byte[] jarBytes, int maxEntries, int maxXmlBytes) {
         if (jarBytes == null || jarBytes.length == 0) {
             throw new IllegalArgumentException("jar 为空");
         }
@@ -21,6 +27,7 @@ public final class FunctionJarExtractor {
             ZipEntry entry;
             int count = 0;
             String xml = null;
+            Map<String, String> versions = new HashMap<>();
             while ((entry = zis.getNextEntry()) != null) {
                 count++;
                 if (count > maxEntries) {
@@ -32,12 +39,16 @@ public final class FunctionJarExtractor {
                 }
                 if (AL_ENTRY.equals(name)) {
                     xml = readLimited(zis, maxXmlBytes);
+                } else if (name.startsWith(VERSION_PREFIX) && name.endsWith(VERSION_SUFFIX)
+                        && name.indexOf('/', VERSION_PREFIX.length()) < 0) {
+                    String pkg = name.substring(VERSION_PREFIX.length(), name.length() - VERSION_SUFFIX.length());
+                    versions.put(pkg, readLimited(zis, maxXmlBytes).trim());
                 }
             }
             if (xml == null) {
                 throw new IllegalArgumentException("jar 缺少 " + AL_ENTRY);
             }
-            return xml;
+            return new Extracted(xml, versions);
         } catch (IOException e) {
             throw new IllegalArgumentException("jar 无法读取: " + e.getMessage());
         }

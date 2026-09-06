@@ -36,10 +36,10 @@ public class FunctionDepsDao {
                 """, project, packageId);
     }
 
-    public List<Map<String, Object>> findAllCurrent() {
+    public List<Map<String, Object>> findByProject(String project) {
         return jdbc.queryForList("""
                 SELECT function_package, version, checksum
-                FROM ruleuler_function_deps
-                """);
+                FROM ruleuler_function_deps WHERE project=?
+                """, project);
     }
 }

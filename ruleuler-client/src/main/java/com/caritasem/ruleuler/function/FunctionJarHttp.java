@@ -26,17 +26,19 @@ public final class FunctionJarHttp {
 
     public record JarDep(String functionPackage, String version, String checksum) {}
 
-    public static boolean syncAll(String serverUrl, Path libDir) throws IOException {
-        List<JarDep> jars = listAll(serverUrl);
+    public static boolean syncProject(String serverUrl, Path libDir, String project) throws IOException {
+        List<JarDep> jars = listForProject(serverUrl, project);
         boolean changed = false;
         for (JarDep dep : jars) {
-            changed |= ensureOnDisk(serverUrl, libDir, dep);
+            changed |= ensureOnDisk(serverUrl, libDir, project, dep);
         }
         return changed;
     }
 
-    public static List<JarDep> listAll(String serverUrl) throws IOException {
-        String json = get(serverUrl + "/api/function/deps");
+    public static List<JarDep> listForProject(String serverUrl, String project) throws IOException {
+        String url = serverUrl + "/api/function/deps?project="
+                + URLEncoder.encode(project, StandardCharsets.UTF_8);
+        String json = get(url);
         Map<String, Object> body = MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
         return parseList(body.get("jars"));
     }
@@ -49,12 +51,12 @@ public final class FunctionJarHttp {
         return parseList(body.get("deps"));
     }
 
-    public static boolean ensureOnDisk(String serverUrl, Path libDir, JarDep dep) throws IOException {
+    public static boolean ensureOnDisk(String serverUrl, Path libDir, String project, JarDep dep) throws IOException {
         Path file = FunctionJarStore.file(libDir, dep.functionPackage());
         if (Files.exists(file) && dep.checksum().equals(FunctionJarStore.checksum(file))) {
             return false;
         }
-        byte[] bytes = download(serverUrl, dep.functionPackage(), dep.version(), dep.checksum());
+        byte[] bytes = download(serverUrl, project, dep.functionPackage(), dep.version(), dep.checksum());
         String actual = FunctionJarStore.sha256(bytes);
         if (!dep.checksum().equals(actual)) {
             throw new IOException("下载校验和不符: " + dep.functionPackage());
@@ -99,9 +101,11 @@ public final class FunctionJarHttp {
         return out;
     }
 
-    private static byte[] download(String serverUrl, String functionPackage, String version, String checksum) throws IOException {
-        String url = serverUrl + "/api/function/jars?functionPackage="
-                + URLEncoder.encode(functionPackage, StandardCharsets.UTF_8)
+    private static byte[] download(String serverUrl, String project, String functionPackage,
+                                   String version, String checksum) throws IOException {
+        String url = serverUrl + "/api/function/jars?project="
+                + URLEncoder.encode(project, StandardCharsets.UTF_8)
+                + "&functionPackage=" + URLEncoder.encode(functionPackage, StandardCharsets.UTF_8)
                 + "&version=" + URLEncoder.encode(version, StandardCharsets.UTF_8)
                 + "&checksum=" + URLEncoder.encode(checksum, StandardCharsets.UTF_8);
         HttpURLConnection conn = open(url, "GET");

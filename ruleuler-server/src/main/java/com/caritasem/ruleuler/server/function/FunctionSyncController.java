@@ -31,19 +31,24 @@ public class FunctionSyncController {
     }
 
     @GetMapping("/deps")
-    public Map<String, Object> deps(@RequestParam(required = false) String packageId) {
-        if (packageId == null || packageId.isBlank()) {
-            return Map.of("jars", rename(depsService.allCurrentJars()));
+    public Map<String, Object> deps(@RequestParam(required = false) String packageId,
+                                    @RequestParam(required = false) String project) {
+        if (packageId != null && !packageId.isBlank()) {
+            return Map.of("packageId", packageId, "deps", rename(depsService.depsForPackage(packageId)));
         }
-        return Map.of("packageId", packageId, "deps", rename(depsService.depsForPackage(packageId)));
+        if (project == null || project.isBlank()) {
+            throw new IllegalArgumentException("packageId 或 project 必填");
+        }
+        return Map.of("jars", rename(depsService.jarsForProject(project)));
     }
 
     @GetMapping("/jars")
-    public void download(@RequestParam String functionPackage,
+    public void download(@RequestParam String project,
+                         @RequestParam String functionPackage,
                          @RequestParam String version,
                          @RequestParam String checksum,
                          HttpServletResponse response) throws IOException {
-        byte[] blob = jarDao.findBlob(functionPackage, version, checksum)
+        byte[] blob = jarDao.findBlob(project, functionPackage, version, checksum)
                 .orElseThrow(() -> new IllegalArgumentException("函数包不存在"));
         response.setContentType("application/java-archive");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + functionPackage + ".jar\"");

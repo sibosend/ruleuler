@@ -22,16 +22,17 @@ public class FunctionDepsService {
     }
 
     public void writeOnPublish(String project, String packageId, Map<String, String> snapshotContent) {
+        if (snapshotContent == null || snapshotContent.isEmpty()) {
+            return;
+        }
         List<Map<String, String>> deps = new ArrayList<>();
-        if (snapshotContent != null) {
-            for (Map.Entry<String, String> e : snapshotContent.entrySet()) {
-                if (e.getKey() == null || !e.getKey().endsWith(".al.xml") || e.getValue() == null) {
-                    continue;
-                }
-                Map<String, String> dep = readDep(project, e.getValue());
-                if (dep != null) {
-                    deps.add(dep);
-                }
+        for (Map.Entry<String, String> e : snapshotContent.entrySet()) {
+            if (e.getKey() == null || !e.getKey().endsWith(".al.xml") || e.getValue() == null) {
+                continue;
+            }
+            Map<String, String> dep = readDep(project, e.getValue());
+            if (dep != null) {
+                deps.add(dep);
             }
         }
         depsDao.replace(project, packageId, deps);
@@ -42,8 +43,11 @@ public class FunctionDepsService {
         return depsDao.findByPackage(parts[0], parts[1]);
     }
 
-    public List<Map<String, Object>> allCurrentJars() {
-        List<Map<String, Object>> rows = depsDao.findAllCurrent();
+    public List<Map<String, Object>> jarsForProject(String project) {
+        if (project == null || project.isBlank()) {
+            throw new IllegalArgumentException("project 必填");
+        }
+        List<Map<String, Object>> rows = depsDao.findByProject(project);
         Map<String, Map<String, Object>> uniq = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
             String key = row.get("function_package") + "@" + row.get("version");
@@ -67,13 +71,13 @@ public class FunctionDepsService {
             if (version == null || version.isBlank()) {
                 throw new IllegalArgumentException("动作库有 function-package 但缺少 function-version");
             }
-            Map<String, Object> jar = jarDao.find(project, functionPackage, version)
+            String checksum = jarDao.findChecksum(project, functionPackage, version)
                     .orElseThrow(() -> new IllegalArgumentException(
                             "未上传函数包 " + functionPackage + ":" + version + "，无法发布"));
             return Map.of(
                     "functionPackage", functionPackage,
                     "version", version,
-                    "checksum", String.valueOf(jar.get("checksum")));
+                    "checksum", checksum);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

@@ -535,7 +535,6 @@ CREATE TABLE IF NOT EXISTS `ruleuler_migrator_log` (
 
 CREATE TABLE IF NOT EXISTS `ruleuler_function_jar` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `company_id` VARCHAR(64) NOT NULL DEFAULT '',
     `project` VARCHAR(100) NOT NULL,
     `function_package` VARCHAR(100) NOT NULL,
     `version` VARCHAR(64) NOT NULL,
@@ -543,7 +542,7 @@ CREATE TABLE IF NOT EXISTS `ruleuler_function_jar` (
     `blob` LONGBLOB NOT NULL,
     `uploaded_by` VARCHAR(100) NOT NULL,
     `uploaded_at` BIGINT NOT NULL,
-    UNIQUE KEY `uk_func_jar` (`company_id`, `project`, `function_package`, `version`),
+    UNIQUE KEY `uk_func_jar` (`project`, `function_package`, `version`),
     KEY `idx_func_jar_proj` (`project`, `function_package`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

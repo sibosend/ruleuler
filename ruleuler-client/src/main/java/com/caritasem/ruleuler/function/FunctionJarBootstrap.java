@@ -7,11 +7,10 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
- * 启动早期拉 deps 落盘。PropertiesLauncher 已展开 classpath 时，
- * 若本次写了新 jar，同命令行再拉起一次，让 loader.path 吃到。
+ * 启动早期按项目拉 deps 落盘。PropertiesLauncher 已展开 classpath 时，
+ * 落盘有变化则同 JVM 参数再拉起一次（用户看到一次 java -jar）。
  */
 public final class FunctionJarBootstrap {
 
@@ -43,9 +42,24 @@ public final class FunctionJarBootstrap {
         if (server == null || server.isBlank()) {
             throw new IllegalStateException("未配置 urule.resporityServerUrl / SERVER_URL");
         }
+        String projects = System.getProperty("ruleuler.projects");
+        if (projects == null || projects.isBlank()) {
+            projects = System.getenv("RULEULER_PROJECTS");
+        }
+        if (projects == null || projects.isBlank()) {
+            log.info("未配置 ruleuler.projects / RULEULER_PROJECTS，跳过启动预拉 jar");
+            return false;
+        }
         Path libDir = FunctionJarStore.libDir();
         try {
-            boolean changed = FunctionJarHttp.syncAll(trimSlash(server), libDir);
+            boolean changed = false;
+            for (String project : projects.split(",")) {
+                String p = project.trim();
+                if (p.isEmpty()) {
+                    continue;
+                }
+                changed |= FunctionJarHttp.syncProject(trimSlash(server), libDir, p);
+            }
             log.info("函数 jar 启动同步完成, lib={}, changed={}", libDir, changed);
             return changed;
         } catch (Exception e) {
@@ -53,23 +67,36 @@ public final class FunctionJarBootstrap {
         }
     }
 
-    private static void relaunch() {
-        Optional<String> command = ProcessHandle.current().info().command();
-        Optional<String[]> arguments = ProcessHandle.current().info().arguments();
-        if (command.isEmpty() || arguments.isEmpty()) {
-            List<String> vm = ManagementFactory.getRuntimeMXBean().getInputArguments();
-            throw new IllegalStateException(
-                    "已落下函数 jar，但无法重拉进程（无 commandLine）。vmArgs=" + vm);
+    static List<String> composeCommand(String javaBin, List<String> vmArgs, String sunJavaCommand) {
+        if (sunJavaCommand == null || sunJavaCommand.isBlank()) {
+            throw new IllegalStateException("无法重拉：无 sun.java.command");
         }
         List<String> cmd = new ArrayList<>();
-        cmd.add(command.get());
-        cmd.addAll(List.of(arguments.get()));
+        cmd.add(javaBin);
+        cmd.addAll(vmArgs);
+        String[] parts = sunJavaCommand.trim().split("\\s+");
+        if (parts[0].endsWith(".jar")) {
+            cmd.add("-jar");
+        }
+        cmd.addAll(List.of(parts));
+        return cmd;
+    }
+
+    private static void relaunch() {
+        String java = ProcessHandle.current().info().command()
+                .orElseGet(() -> System.getProperty("java.home") + "/bin/java");
+        List<String> cmd = composeCommand(
+                java,
+                ManagementFactory.getRuntimeMXBean().getInputArguments(),
+                System.getProperty("sun.java.command"));
         log.info("函数 jar 已更新，重拉 client 以加载 classpath: {}", cmd);
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.environment().put(SYNCED, "1");
             pb.inheritIO();
-            System.exit(pb.start().waitFor());
+            Process child = pb.start();
+            Runtime.getRuntime().addShutdownHook(new Thread(child::destroyForcibly));
+            System.exit(child.waitFor());
         } catch (Exception e) {
             throw new IllegalStateException("重拉 client 失败: " + e.getMessage(), e);
         }

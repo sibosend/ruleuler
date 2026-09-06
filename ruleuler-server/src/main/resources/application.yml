@@ -11,6 +11,7 @@ ruleuler:
     max-entries: 2000
     max-uncompressed-xml-bytes: 1048576
 
+
 logging:
   file:
     path: logs

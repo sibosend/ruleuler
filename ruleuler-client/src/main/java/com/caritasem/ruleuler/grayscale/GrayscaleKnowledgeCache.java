@@ -1,6 +1,7 @@
 package com.caritasem.ruleuler.grayscale;
 
 import com.bstek.urule.runtime.KnowledgePackage;
+import com.caritasem.ruleuler.function.FunctionDepsGate;
 import com.bstek.urule.runtime.cache.MemoryKnowledgeCache;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -35,9 +36,12 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
     private String serverUrl;
 
     private SnapshotPackageBuilder snapshotPackageBuilder;
+    private final FunctionDepsGate functionDepsGate;
 
-    public GrayscaleKnowledgeCache(SnapshotPackageBuilder snapshotPackageBuilder) {
+    public GrayscaleKnowledgeCache(SnapshotPackageBuilder snapshotPackageBuilder,
+                                   FunctionDepsGate functionDepsGate) {
         this.snapshotPackageBuilder = snapshotPackageBuilder;
+        this.functionDepsGate = functionDepsGate;
     }
 
     private final MemoryKnowledgeCache delegate = new MemoryKnowledgeCache();
@@ -248,6 +252,11 @@ public class GrayscaleKnowledgeCache implements com.bstek.urule.runtime.cache.Kn
             String version = (String) snapshotResp.get("version");
             if (snapshotContent == null || snapshotContent.isEmpty()) {
                 log.warn("灰度 snapshot 内容为空: {}", norm);
+                return null;
+            }
+
+            if (!functionDepsGate.ready(norm)) {
+                log.warn("函数版本不齐，跳过灰度恢复: {}", norm);
                 return null;
             }
 

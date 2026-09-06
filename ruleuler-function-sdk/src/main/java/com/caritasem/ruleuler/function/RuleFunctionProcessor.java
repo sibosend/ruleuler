@@ -46,21 +46,14 @@ public class RuleFunctionProcessor extends AbstractProcessor {
         }
         try {
             List<FunctionAlGenerator.BeanDecl> beans = new ArrayList<>();
-            String configPackage = null;
             for (Element el : elements) {
                 if (el.getKind() != ElementKind.CLASS) {
                     error("@RuleFunction 只能标在类上: " + el);
                     return false;
                 }
-                TypeElement type = (TypeElement) el;
-                if (configPackage == null) {
-                    String qn = type.getQualifiedName().toString();
-                    int dot = qn.lastIndexOf('.');
-                    configPackage = dot < 0 ? "" : qn.substring(0, dot);
-                }
-                beans.add(readBean(type));
+                beans.add(readBean((TypeElement) el));
             }
-            writeOutputs(functionPackage, functionVersion, configPackage, beans);
+            writeOutputs(functionPackage, functionVersion, beans);
         } catch (IllegalArgumentException e) {
             error(e.getMessage());
         } catch (IOException e) {
@@ -110,17 +103,15 @@ public class RuleFunctionProcessor extends AbstractProcessor {
     }
 
     private void writeOutputs(String functionPackage, String functionVersion,
-                              String configPackage, List<FunctionAlGenerator.BeanDecl> beans) throws IOException {
+                              List<FunctionAlGenerator.BeanDecl> beans) throws IOException {
         String xml = FunctionAlGenerator.xml(functionPackage, functionVersion, beans);
         writeResource("META-INF/ruleuler/functions.al.xml", xml.getBytes(StandardCharsets.UTF_8));
         writeResource("META-INF/ruleuler/" + functionPackage + ".version",
                 functionVersion.getBytes(StandardCharsets.UTF_8));
 
         String className = "RuleulerFunctionAutoConfiguration";
-        String java = FunctionAlGenerator.autoConfigJava(
-                configPackage == null || configPackage.isBlank() ? "ruleuler.functions.generated" : configPackage,
-                className, beans);
-        String pkg = configPackage == null || configPackage.isBlank() ? "ruleuler.functions.generated" : configPackage;
+        String pkg = "ruleuler.functions.generated";
+        String java = FunctionAlGenerator.autoConfigJava(pkg, className, beans);
         try (Writer w = processingEnv.getFiler().createSourceFile(pkg + "." + className).openWriter()) {
             w.write(java);
         }

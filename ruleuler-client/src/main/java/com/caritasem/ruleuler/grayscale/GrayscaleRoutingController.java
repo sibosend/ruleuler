@@ -1,6 +1,7 @@
 package com.caritasem.ruleuler.grayscale;
 
 import com.bstek.urule.runtime.KnowledgePackage;
+import com.caritasem.ruleuler.function.FunctionDepsGate;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,9 @@ public class GrayscaleRoutingController {
 
     @Autowired
     private SnapshotPackageBuilder snapshotPackageBuilder;
+
+    @Autowired
+    private FunctionDepsGate functionDepsGate;
 
     /**
      * 激活路由规则 + 版本号（不含包内容，仅路由配置变更时用）
@@ -69,6 +73,11 @@ public class GrayscaleRoutingController {
         Map<String, String> snapshotContent = (Map<String, String>) body.get("snapshotContent");
         if (snapshotContent == null || snapshotContent.isEmpty()) {
             return Map.of("status", "error", "reason", "empty snapshotContent");
+        }
+
+        if (!functionDepsGate.ready(packageId)) {
+            log.warn("函数版本不齐，拒收推送包: {}", packageId);
+            return Map.of("status", "rejected", "reason", "function deps mismatch");
         }
 
         try {

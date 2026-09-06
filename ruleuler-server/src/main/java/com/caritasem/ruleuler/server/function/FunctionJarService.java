@@ -50,13 +50,21 @@ public class FunctionJarService {
             throw new IllegalArgumentException("jar 超过大小上限");
         }
         byte[] bytes = file.getBytes();
-        String xml = FunctionJarExtractor.extractAlXml(bytes, maxEntries, maxXmlBytes);
-        FunctionAlSupport.ParsedAl parsed = alSupport.parse(xml);
+        FunctionJarExtractor.Extracted extracted = FunctionJarExtractor.extract(bytes, maxEntries, maxXmlBytes);
+        FunctionAlSupport.ParsedAl parsed = alSupport.parse(extracted.alXml());
+        String fileVersion = extracted.versions().get(parsed.functionPackage());
+        if (fileVersion == null) {
+            throw new IllegalArgumentException("jar 缺少 META-INF/ruleuler/" + parsed.functionPackage() + ".version");
+        }
+        if (!fileVersion.equals(parsed.functionVersion())) {
+            throw new IllegalArgumentException("version 文件(" + fileVersion + ") 与 function-version("
+                    + parsed.functionVersion() + ") 不一致");
+        }
         String alPath = "/" + project + "/lib/" + parsed.functionPackage() + ".al.xml";
         alSupport.assertNoBeanIdClash(project, alPath, parsed.beanIds());
         upsertAlFile(project, alPath, parsed.functionPackage() + ".al.xml", parsed.xml(), operator);
         String checksum = sha256(bytes);
-        jarDao.upsert("", project, parsed.functionPackage(), parsed.functionVersion(), checksum, bytes, operator);
+        jarDao.upsert(project, parsed.functionPackage(), parsed.functionVersion(), checksum, bytes, operator);
         auditLogService.log("UPLOAD", "FUNCTION_JAR", null, alPath, project, operator,
                 Map.of("functionPackage", parsed.functionPackage(), "version", parsed.functionVersion(),
                         "checksum", checksum), null);

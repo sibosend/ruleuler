@@ -20,11 +20,13 @@ REA 写法：`GEOFUNCTIONS.DISTANCEKM(...)`（bean / 方法全大写）。
 
 | 时机 | 行为 |
 |------|------|
-| 首次部署 | client 启动早期拉 jar 落盘，**一次启动**有 Bean |
-| 运行中改函数并上传、发布 | 落盘新 jar，**拒载新规则包**，旧包继续跑。必须**重启 client** |
+| 首次部署 | 启动早期按 `ruleuler.projects` / `RULEULER_PROJECTS` 拉 jar 落盘。PropertiesLauncher 已展开 classpath 时，进程会**同参数再拉起一次**（用户看到一次 `java -jar`） |
+| 运行中改函数并上传、发布 | 落盘新 jar。**push 和 pull 都不齐则拒载新包**，旧包继续跑。必须**重启 client** |
 | 运行中第一次碰到新 deps | 同步下载，可能慢，然后拒新包 |
 
 刷新绝不换 class。`loader.path` 和自动配置都是启动期语义。
+
+启动预拉必须配置项目列表，否则不预拉（避免把别的项目 jar 拉下来）。未配时靠首次执行 / 发布推送按 `packageId` 落盘，然后重启。
 
 ## 权限
 
@@ -49,7 +51,7 @@ REA 写法：`GEOFUNCTIONS.DISTANCEKM(...)`（bean / 方法全大写）。
 | 坑 | 事实 |
 |----|------|
 | 换 jar | 重启 client 才进 classpath。刷新只落盘、拒载新包 |
-| 首次 | 启动早期拉 jar，一次启动。没有两次启动 |
+| 首次 | 配了 `ruleuler.projects` 时启动预拉；classpath 已展开则进程内重拉一次。没配项目列表则不预拉 |
 | 运行中第一次碰到新 deps | 同步下载（可能慢），然后拒新包，等重启 |
 | 改签名 / 删方法 | 重存并重发引用它的规则。版本对齐 ≠ API 兼容，只升 jar 会在 `classMatch` 才炸 |
 | void 进条件 | 本期 REA 拦不住，写了运行期行为未定义 |
