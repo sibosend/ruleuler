@@ -220,6 +220,8 @@ RISKSERVICE.SCORE(FlightInfo.airline, 10)
 
 动作库仍是 `riskService` / `score`。没导入或对不上直接报错，不猜。规则集需要 `import-action-library`。
 
+自定义函数（模板打 jar 上传）见 [自定义函数](rea-function-extension.md)。
+
 不在编辑器里写脚本当函数。本期不重做动作库编辑器，只消费已有 `.al.xml` 元数据。
 
 ## 条件表达式示例

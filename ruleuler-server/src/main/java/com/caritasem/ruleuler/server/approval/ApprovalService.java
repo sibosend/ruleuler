@@ -16,6 +16,7 @@ import com.caritasem.ruleuler.server.approval.model.*;
 import com.caritasem.ruleuler.server.grayscale.GrayscaleRuleDao;
 import com.caritasem.ruleuler.server.grayscale.SnapshotKnowledgeBuilder;
 import com.caritasem.ruleuler.server.grayscale.model.GrayscaleRule;
+import com.caritasem.ruleuler.server.function.FunctionDepsService;
 import com.caritasem.ruleuler.server.replay.ReplayService;
 import com.caritasem.ruleuler.server.replay.model.TrafficQuery;
 import com.caritasem.ruleuler.server.replay.model.ToleranceConfig;
@@ -52,6 +53,7 @@ public class ApprovalService {
     private final SnapshotKnowledgeBuilder snapshotBuilder;
     private final GrayscaleRuleDao grayscaleRuleDao;
     private final ReplayService replayService;
+    private final FunctionDepsService functionDepsService;
 
     public ApprovalService(ApprovalDao approvalDao,
                            DiffCalculator diffCalculator,
@@ -61,7 +63,8 @@ public class ApprovalService {
                            @Qualifier("urule.knowledgePackageService") KnowledgePackageService knowledgePackageService,
                            SnapshotKnowledgeBuilder snapshotBuilder,
                            GrayscaleRuleDao grayscaleRuleDao,
-                           ReplayService replayService) {
+                           ReplayService replayService,
+                           FunctionDepsService functionDepsService) {
         this.approvalDao = approvalDao;
         this.diffCalculator = diffCalculator;
         this.repositoryService = repositoryService;
@@ -71,6 +74,7 @@ public class ApprovalService {
         this.snapshotBuilder = snapshotBuilder;
         this.grayscaleRuleDao = grayscaleRuleDao;
         this.replayService = replayService;
+        this.functionDepsService = functionDepsService;
     }
 
     // ---- submit ----
@@ -422,6 +426,7 @@ public class ApprovalService {
             kp = knowledgePackageService.buildKnowledgePackage(fullPackageId);
         }
         CacheUtils.getKnowledgeCache().putKnowledge(fullPackageId, kp);
+        functionDepsService.writeOnPublish(project, packageId, snapshotContent);
 
         // 推送 snapshot JSON + version 到 client 新端点（不走 Jackson 1.x 序列化）
         List<ClientConfig> clients = repositoryService.loadClientConfigs(project);

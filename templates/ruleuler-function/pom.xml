@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>geo-functions</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <ruleuler.function.sdk.version>0.1.1</ruleuler.function.sdk.version>
+        <ruleuler.server.url>http://localhost:16009</ruleuler.server.url>
+        <ruleuler.project></ruleuler.project>
+        <ruleuler.token></ruleuler.token>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.caritasem.ruleuler</groupId>
+            <artifactId>ruleuler-function-sdk</artifactId>
+            <version>${ruleuler.function.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>7.0.5</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.caritasem.ruleuler</groupId>
+                            <artifactId>ruleuler-function-sdk</artifactId>
+                            <version>${ruleuler.function.sdk.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-AfunctionPackage=${project.artifactId}</arg>
+                        <arg>-AfunctionVersion=${project.version}</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <executable>curl</executable>
+                    <arguments>
+                        <argument>-fsS</argument>
+                        <argument>-H</argument>
+                        <argument>Authorization: Bearer ${ruleuler.token}</argument>
+                        <argument>-F</argument>
+                        <argument>file=@${project.build.directory}/${project.build.finalName}.jar</argument>
+                        <argument>${ruleuler.server.url}/api/projects/${ruleuler.project}/function-jars</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

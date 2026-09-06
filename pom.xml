@@ -172,5 +172,6 @@
         <module>ruleuler-console</module>
         <module>ruleuler-server</module>
         <module>ruleuler-client</module>
+        <module>ruleuler-function-sdk</module>
     </modules>
 </project>

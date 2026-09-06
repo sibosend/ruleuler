@@ -52,6 +52,12 @@ export const routeConfigs: RouteConfig[] = [
     hideInMenu: true,
   },
   {
+    path: '/projects/:name/functions',
+    label: 'route.functionJars',
+    permissionCode: 'project:function:view',
+    hideInMenu: true,
+  },
+  {
     path: '/projects/:name/autotest',
     label: 'route.autoTest',
     permissionCode: 'menu:projects',

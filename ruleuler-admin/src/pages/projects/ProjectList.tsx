@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Table, Button, Modal, Input, Space, Popconfirm, Upload, message } from 'antd';
-import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, SettingOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, SettingOutlined, ExperimentOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { loadProjects, createProject, deleteProject, exportProject, importProject } from '@/api/project';
 import { useTranslation } from 'react-i18next';
@@ -109,11 +109,12 @@ const ProjectList: React.FC = () => {
     { title: t('project.projectName'), dataIndex: 'name', key: 'name', render: (name: string) => <a onClick={() => navigate(`/console/${name}`)}>{name}</a> },
     { title: t('project.storageType'), dataIndex: 'storageType', key: 'storageType', render: (value: unknown) => formatStorageType(value, t) },
     {
-      title: t('common.operation'), key: 'action', width: 360,
+      title: t('common.operation'), key: 'action', width: 440,
       render: (_: unknown, record: ProjectItem) => (
         <Space>
           <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport(record.name)}>{t('common.export')}</Button>
           <Button size="small" icon={<SettingOutlined />} onClick={() => navigate(`/projects/${record.name}/client-config`)}>{t('project.clientConfigBtn')}</Button>
+          <Button size="small" icon={<AppstoreOutlined />} onClick={() => navigate(`/projects/${record.name}/functions`)}>{t('project.functionJarsBtn')}</Button>
           <Button size="small" icon={<ExperimentOutlined />} onClick={() => navigate(`/projects/${record.name}/autotest`)}>{t('project.testRecordsBtn')}</Button>
           <Popconfirm title={t('project.confirmDeleteProject')} onConfirm={() => handleDelete(record.name)}>
             <Button size="small" danger icon={<DeleteOutlined />}>{t('common.delete')}</Button>

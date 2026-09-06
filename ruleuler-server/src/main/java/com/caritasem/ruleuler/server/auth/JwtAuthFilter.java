@@ -112,7 +112,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private boolean isServiceEndpoint(String path) {
         return "/urule/loadknowledge".equals(path)
-                || "/urule/knowledge-package-service".equals(path);
+                || "/urule/knowledge-package-service".equals(path)
+                || path.startsWith("/api/function/deps")
+                || path.startsWith("/api/function/jars")
+                || path.startsWith("/api/function/status");
     }
 
     private String extractToken(HttpServletRequest request) {

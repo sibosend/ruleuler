@@ -1,11 +1,15 @@
 package com.caritasem.ruleuler.config;
 
+import com.bstek.urule.runtime.service.RemoteService;
+import com.bstek.urule.runtime.service.RemoteServiceImpl;
+import com.caritasem.ruleuler.function.FunctionAwareRemoteService;
 import com.caritasem.ruleuler.grayscale.GrayscaleMetricsReporter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
 /**
@@ -31,5 +35,15 @@ public class RuleConfig {
     public GrayscaleMetricsReporter grayscaleMetricsReporter(
             @Value("${urule.resporityServerUrl}") String serverUrl) {
         return new GrayscaleMetricsReporter(serverUrl);
+    }
+
+    @Bean(name = RemoteService.BEAN_ID)
+    @Primary
+    @ConditionalOnProperty(name = "urule.resporityServerUrl")
+    public RemoteService uruleRemoteService(
+            @Value("${urule.resporityServerUrl}") String serverUrl) {
+        RemoteServiceImpl delegate = new RemoteServiceImpl();
+        delegate.setResporityServerUrl(serverUrl);
+        return new FunctionAwareRemoteService(delegate, serverUrl);
     }
 }

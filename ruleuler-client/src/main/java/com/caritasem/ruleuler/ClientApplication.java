@@ -11,6 +11,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 public class ClientApplication {
 
 	public static void main(String[] args) {
+		com.caritasem.ruleuler.function.FunctionJarBootstrap.syncAndRelaunchIfNeeded();
 		ConfigurableApplicationContext context = SpringApplication.run(ClientApplication.class, args);
 		Environment env = context.getEnvironment();
 		String[] activeProfiles = env.getActiveProfiles();

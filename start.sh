@@ -28,21 +28,24 @@ export JAVA_HOME="${JAVA_HOME:-$(jenv javahome 2>/dev/null || echo $JAVA_HOME)}"
 
 echo "=== 构建 [profile=$ENV] ==="
 
-echo "[1/4] 构建 ruleuler-console-js..."
+echo "[1/5] 构建 ruleuler-console-js..."
 (cd ruleuler-console-js && pnpm install --frozen-lockfile -s && pnpm run start)
 
-echo "[2/4] 构建 ruleuler-admin..."
+echo "[2/5] 构建 ruleuler-admin..."
 (cd ruleuler-admin && pnpm install --frozen-lockfile -s && pnpm run build)
 
-echo "[3/4] 构建 ruleuler-server..."
+echo "[3/5] 构建 ruleuler-server..."
 mvn clean package -pl ruleuler-server -am -DskipTests -P$ENV -q
 cp ruleuler-server/target/ruleuler-server-*.jar dist/server/app.jar
 rm -rf dist/server/lib && cp -r ruleuler-server/target/lib dist/server/
 
-echo "[4/4] 构建 ruleuler-client..."
+echo "[4/5] 构建 ruleuler-client..."
 mvn clean package -pl ruleuler-client -am -DskipTests -P$ENV -q
 cp ruleuler-client/target/ruleuler-client-*.jar dist/client/app.jar
 rm -rf dist/client/lib && cp -r ruleuler-client/target/lib dist/client/
+
+echo "[5/5] 安装 function-sdk..."
+mvn -pl ruleuler-function-sdk install -DskipTests -q
 
 echo ""
 echo "=== 启动服务 (server:$SERVER_PORT, client:$CLIENT_PORT) ==="
@@ -66,26 +69,6 @@ done
 # Ctrl+C 时停止所有子进程
 trap 'echo ""; echo "停止服务..."; kill $SERVER_PID $CLIENT_PID 2>/dev/null; wait; exit 0' INT TERM
 
-java -Dlogging.file.path="$LOG_PATH" \
-     -Dspring.profiles.active="$ENV" \
-     -Dserver.port="$SERVER_PORT" \
-     -Dadmin.staticPath="$ROOT_DIR/ruleuler-admin/dist" \
-     -Dloader.path=dist/server/lib/ \
-     -jar dist/server/app.jar >> "$LOG_PATH/server.log" 2>&1 &
-SERVER_PID=$!
-echo "server  PID=$SERVER_PID  port=$SERVER_PORT  → logs/server.log"
-
-java -Dlogging.file.path="$LOG_PATH" \
-     -Dspring.profiles.active="$ENV" \
-     -Dserver.port="$CLIENT_PORT" \
-     -Durule.resporityServerUrl="http://localhost:$SERVER_PORT" \
-     -Dloader.path=dist/client/lib/ \
-     -jar dist/client/app.jar >> "$LOG_PATH/client.log" 2>&1 &
-CLIENT_PID=$!
-echo "client  PID=$CLIENT_PID  port=$CLIENT_PORT  → logs/client.log"
-
-echo ""
-
 # 等待端口就绪
 wait_port() {
   local name=$1 pid=$2 port=$3 timeout=10 elapsed=0
@@ -106,8 +89,28 @@ wait_port() {
   return 1
 }
 
-SERVER_OK=0; CLIENT_OK=0
+java -Dlogging.file.path="$LOG_PATH" \
+     -Dspring.profiles.active="$ENV" \
+     -Dserver.port="$SERVER_PORT" \
+     -Dadmin.staticPath="$ROOT_DIR/ruleuler-admin/dist" \
+     -Dloader.path=dist/server/lib/ \
+     -jar dist/server/app.jar >> "$LOG_PATH/server.log" 2>&1 &
+SERVER_PID=$!
+echo "server  PID=$SERVER_PID  port=$SERVER_PORT  → logs/server.log"
+
+SERVER_OK=0
 wait_port "server" $SERVER_PID $SERVER_PORT && SERVER_OK=1
+
+java -Dlogging.file.path="$LOG_PATH" \
+     -Dspring.profiles.active="$ENV" \
+     -Dserver.port="$CLIENT_PORT" \
+     -Durule.resporityServerUrl="http://localhost:$SERVER_PORT" \
+     -Dloader.path=dist/client/lib/ \
+     -jar dist/client/app.jar >> "$LOG_PATH/client.log" 2>&1 &
+CLIENT_PID=$!
+echo "client  PID=$CLIENT_PID  port=$CLIENT_PORT  → logs/client.log"
+
+CLIENT_OK=0
 wait_port "client" $CLIENT_PID $CLIENT_PORT && CLIENT_OK=1
 
 echo ""

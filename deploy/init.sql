@@ -248,7 +248,9 @@ INSERT IGNORE INTO `rbac_permission` (`id`, `permission_code`, `name`, `type`, `
 (30, 'menu:approvals',                      '审批管理',       'menu', NULL, 6),
 (31, 'pack:publish:submit',                 '提交发布审批',   'api',  NULL, 50),
 (32, 'pack:publish:approve',                '审批发布',       'api',  NULL, 51),
-(33, 'menu:system:audit',                   '审计日志',       'menu', 4,    3);
+(33, 'menu:system:audit',                   '审计日志',       'menu', 4,    3),
+(50, 'project:function:upload',             '上传自定义函数', 'api',  NULL, 70),
+(51, 'project:function:view',               '查看自定义函数', 'api',  NULL, 71);
 
 INSERT IGNORE INTO `rbac_role_permission` (`role_id`, `permission_id`)
 SELECT 1, `id` FROM `rbac_permission`;
@@ -525,4 +527,46 @@ CREATE TABLE IF NOT EXISTS `ruleuler_migrator_log` (
   `name` varchar(100) NOT NULL,
   `ran_at` bigint NOT NULL,
   PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- 自定义函数 jar
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `ruleuler_function_jar` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `company_id` VARCHAR(64) NOT NULL DEFAULT '',
+    `project` VARCHAR(100) NOT NULL,
+    `function_package` VARCHAR(100) NOT NULL,
+    `version` VARCHAR(64) NOT NULL,
+    `checksum` VARCHAR(64) NOT NULL,
+    `blob` LONGBLOB NOT NULL,
+    `uploaded_by` VARCHAR(100) NOT NULL,
+    `uploaded_at` BIGINT NOT NULL,
+    UNIQUE KEY `uk_func_jar` (`company_id`, `project`, `function_package`, `version`),
+    KEY `idx_func_jar_proj` (`project`, `function_package`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_function_deps` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `project` VARCHAR(100) NOT NULL,
+    `package_id` VARCHAR(100) NOT NULL,
+    `function_package` VARCHAR(100) NOT NULL,
+    `version` VARCHAR(64) NOT NULL,
+    `checksum` VARCHAR(64) NOT NULL,
+    UNIQUE KEY `uk_func_deps` (`project`, `package_id`, `function_package`),
+    KEY `idx_func_deps_pkg` (`project`, `package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ruleuler_function_client_status` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `client_host` VARCHAR(200) NOT NULL,
+    `package_id` VARCHAR(200) NOT NULL,
+    `function_package` VARCHAR(100) NOT NULL,
+    `expected_version` VARCHAR(64) DEFAULT NULL,
+    `actual_version` VARCHAR(64) DEFAULT NULL,
+    `status` VARCHAR(20) NOT NULL,
+    `reported_at` BIGINT NOT NULL,
+    UNIQUE KEY `uk_func_status` (`client_host`, `package_id`, `function_package`),
+    KEY `idx_func_status_pkg` (`package_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

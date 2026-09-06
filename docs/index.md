@@ -90,4 +90,5 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 
 - [Docker 快速启动](getting-started/quickstart.md) — 零依赖，5 分钟跑起来
 - [核心概念](guide/concepts.md) — 理解决策流、知识包、变量类别
+- [自定义函数](guide/rea-function-extension.md) — 写方法、打 jar、上传，独立 client 执行
 - [客户端 API](api/client-api.md) — 集成规则引擎到你的系统

@@ -9,6 +9,7 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import ProjectList from '@/pages/projects/ProjectList';
 import ClientConfigPage from '@/pages/projects/ClientConfigPage';
+import FunctionJarPage from '@/pages/projects/FunctionJarPage';
 import ConsolePage from '@/pages/console/ConsolePage';
 import UserList from '@/pages/system/UserList';
 import RoleList from '@/pages/system/RoleList';
@@ -78,6 +79,14 @@ const App: React.FC = () => (
           element={
             <AuthorizedRoute permissionCode="menu:projects">
               <ClientConfigPage />
+            </AuthorizedRoute>
+          }
+        />
+        <Route
+          path="projects/:name/functions"
+          element={
+            <AuthorizedRoute permissionCode="project:function:view">
+              <FunctionJarPage />
             </AuthorizedRoute>
           }
         />

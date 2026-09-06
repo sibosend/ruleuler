@@ -5,6 +5,12 @@ spring:
     allow-circular-references: true
     allow-bean-definition-overriding: true
 
+ruleuler:
+  function-jar:
+    max-size-bytes: 20971520
+    max-entries: 2000
+    max-uncompressed-xml-bytes: 1048576
+
 logging:
   file:
     path: logs
