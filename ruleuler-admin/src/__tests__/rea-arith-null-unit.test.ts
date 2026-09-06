@@ -154,8 +154,11 @@ describe('比较左 simple-arith 平链', () => {
     roundTripCondition('FlightInfo.score % 10 == 0');
   });
 
-  it('左双引用的合法替代', () => {
-    const xml = roundTripCondition('80 < FlightInfo.score + FlightInfo.bonus');
+  it('数字左值非法，双引用相加先赋值', () => {
+    expect(() => parseCondition('80 < FlightInfo.score + FlightInfo.bonus', libs)).toThrow(
+      /比较左边不能是数字，请先赋值到参数再比较/,
+    );
+    const xml = roundTripCondition('threshold < FlightInfo.score + FlightInfo.bonus');
     expect(xml).toContain('op="LessThen"');
     expect(xml).toContain('type="Add"');
     expect(xml).toContain('var="score"');
@@ -196,7 +199,7 @@ describe('动作 / 函数实参 complex-arith', () => {
     const a = roundTripAssign('can_score = 1.1 * (FlightInfo.score + 10)');
     expect(a).toContain('<paren>');
     roundTripAssign('can_score = 1.1 * (FlightInfo.score + FlightInfo.bonus)');
-    roundTripCondition('80 < 1.1 * (FlightInfo.score + 10)');
+    roundTripCondition('threshold < 1.1 * (FlightInfo.score + 10)');
     roundTripAssign('can_score = FlightInfo.score + (FlightInfo.bonus + 10) * 1.1');
   });
 });
@@ -214,7 +217,7 @@ describe('非法', () => {
     expect(() => parseCondition('(FlightInfo.score + 10) * 2 > 80', libs)).toThrow(/值不能以括号开头/);
     expect(() => parseAssignment('(FlightInfo.score + 10) * 1.1', libs)).toThrow(/期望/);
     expect(() => parseAssignment('can_score = (FlightInfo.score + 10) * 1.1', libs)).toThrow(/值不能以括号开头/);
-    expect(() => parseCondition('80 < (FlightInfo.score + 10) * 1.1', libs)).toThrow(/值不能以括号开头/);
+    expect(() => parseCondition('80 < (FlightInfo.score + 10) * 1.1', libs)).toThrow(/比较左边不能是数字/);
   });
 
   it('冗余括号', () => {

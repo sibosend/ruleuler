@@ -91,10 +91,15 @@ class ConditionEvaluatorTest {
 
     @Test
     void arithmeticCompare() {
-        Map<String, Object> body = Map.of("FlightInfo", Map.of("score", 75, "bonus", 10));
+        Map<String, Object> body = Map.of(
+                "FlightInfo", Map.of("score", 75, "bonus", 10),
+                "threshold", 80);
         assertTrue(ConditionEvaluator.evaluate("FlightInfo.score + 10 > 80", body));
-        assertTrue(ConditionEvaluator.evaluate("80 < FlightInfo.score + FlightInfo.bonus", body));
         assertFalse(ConditionEvaluator.evaluate("FlightInfo.score + 10 > 90", body));
+        assertTrue(ConditionEvaluator.evaluate("threshold < FlightInfo.score + FlightInfo.bonus", body));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> ConditionEvaluator.evaluate("80 < FlightInfo.score + FlightInfo.bonus", body));
+        assertTrue(ex.getMessage().contains("比较左边不能是数字"));
     }
 
     @Test

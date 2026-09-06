@@ -231,6 +231,10 @@ public class ConditionEvaluator {
             return result;
         }
 
+        if (t.type == TokenType.NUMBER) {
+            throw new IllegalArgumentException("比较左边不能是数字，请先赋值到参数再比较");
+        }
+
         Object leftVal = parseAdd(tokens, pos, body);
 
         if (pos[0] >= tokens.size() || tokens.get(pos[0]).type == TokenType.AND

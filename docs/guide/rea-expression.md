@@ -103,7 +103,7 @@ ISNULL(FlightInfo.score) OR FlightInfo.score == -999
 
 ## 四则：`+ - * / %`
 
-条件左边只能是「一个原子 + 一串数字」：`FlightInfo.score + 10 > 80`。两个变量相加不能放左边，写成 `80 < FlightInfo.score + FlightInfo.bonus`，或先赋值。
+条件左边只能是「一个原子 + 一串数字」：`FlightInfo.score + 10 > 80`。两个变量相加不能放左边，先赋值到参数再比较。比较左边不能是数字。
 
 赋值右边、比较右边、函数实参可以挂完整运算：
 
@@ -123,8 +123,8 @@ ABS(FlightInfo.score + 10) > 5
 
 比较两边都是复合运算（`score + a > bonus + b`）非法，先赋值。不会自动翻转比较。
 
-!!! warning "比较左边的数字字面量"
-    `80 < score + bonus` 灰度求值器按数值算。全量规则的引擎 left 只有变量/参数/函数槽，数字会按参数名 `80` 去找，对不上。全量请先赋值，或左边用变量/参数。
+!!! warning "比较左边禁止数字"
+    `80 < score + bonus` 全量、灰度都非法。引擎 left 没有字面量槽，编成参数名会炸。两个变量相加也一样：先赋值到参数再比较。
 
 ## 函数
 
@@ -231,7 +231,7 @@ FlightInfo.airline IN ("CA", "MU", "CZ")
 FlightInfo.arrival_time > 5 AND (FlightInfo.flight_type == "国内" OR FlightInfo.flight_type == "国际")
 ABS(FlightInfo.score) >= 10 AND LISTCONTAINS(FlightInfo.tags, "VIP")
 ISNULL(FlightInfo.gate) OR FlightInfo.score + 10 > 80
-80 < FlightInfo.score + FlightInfo.bonus
+threshold < FlightInfo.score + FlightInfo.bonus
 ```
 
 !!! note
