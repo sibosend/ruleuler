@@ -8,10 +8,12 @@ import type { Extension } from '@codemirror/state';
 import type { StringStream } from '@codemirror/language';
 import { WORD_OPS } from './operatorMap';
 import { FLAT_FUNC_NAMES, FUNC_HINTS, NAMESPACES } from './functionMap';
+import { RESERVED_PREDICATE, PREDICATE_HINTS } from './reservedWords';
 
 const WORD_OP_SET = new Set(WORD_OPS);
-const FUNC_SET = new Set(FLAT_FUNC_NAMES);
+const FUNC_SET = new Set([...FLAT_FUNC_NAMES, ...RESERVED_PREDICATE]);
 const NS_SET = new Set<string>(NAMESPACES);
+const HINTS = new Map<string, string>([...FUNC_HINTS, ...PREDICATE_HINTS]);
 
 interface ReaState {
   inString: boolean;
@@ -61,7 +63,7 @@ const reaStreamParser = {
       return 'operator';
     }
 
-    if (ch === '=') {
+    if ('+-*/%='.includes(ch)) {
       stream.next();
       return 'operator';
     }
@@ -108,7 +110,7 @@ function reaHover(): Extension {
     let m: RegExpExecArray | null;
     while ((m = re.exec(word))) {
       if (local >= m.index && local <= m.index + m[0].length) {
-        const hint = FUNC_HINTS.get(m[0]);
+        const hint = HINTS.get(m[0]);
         if (!hint) return null;
         const from = pos - local + m.index;
         return {

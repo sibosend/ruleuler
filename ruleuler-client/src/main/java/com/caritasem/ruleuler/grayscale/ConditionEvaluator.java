@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * 轻量 REA 条件求值器。系统符号全大写。不支持函数。
+ * 轻量 REA 条件求值器。系统符号全大写。
+ * 认 ISNULL/ISNOTNULL 谓词；后缀 NULL/Null 继续认。
+ * 普通函数仍禁。四则只做数值。
  */
 public class ConditionEvaluator {
 
@@ -32,6 +34,8 @@ public class ConditionEvaluator {
         TEXT_OP_MAP.put("NOTEQUALSIGNORECASE", "NotEqualsIgnoreCase");
         TEXT_OP_MAP.put("NULL", "Null");
         TEXT_OP_MAP.put("NOTNULL", "NotNull");
+        TEXT_OP_MAP.put("Null", "Null");
+        TEXT_OP_MAP.put("NotNull", "NotNull");
     }
 
     private static final Map<String, String> LEGACY_OP = new HashMap<>();
@@ -52,8 +56,6 @@ public class ConditionEvaluator {
         LEGACY_OP.put("NotEndwith", "NOTENDWITH");
         LEGACY_OP.put("EqualsIgnoreCase", "EQUALSIGNORECASE");
         LEGACY_OP.put("NotEqualsIgnoreCase", "NOTEQUALSIGNORECASE");
-        LEGACY_OP.put("Null", "NULL");
-        LEGACY_OP.put("NotNull", "NOTNULL");
     }
 
     public static boolean evaluate(String expression, Map<String, Object> body) {
@@ -87,6 +89,9 @@ public class ConditionEvaluator {
                     tokens.add(new Token(TokenType.LIST, listContent));
                 } else if (prev != null && prev.type == TokenType.VAR) {
                     throw new IllegalArgumentException("灰度条件不支持函数");
+                } else if (prev != null && prev.type == TokenType.PREDICATE) {
+                    tokens.add(new Token(TokenType.LPAREN, "("));
+                    i++;
                 } else {
                     tokens.add(new Token(TokenType.LPAREN, "("));
                     i++;
@@ -122,6 +127,11 @@ public class ConditionEvaluator {
             }
             if (c == '>') { tokens.add(new Token(TokenType.OP, ">")); i++; continue; }
             if (c == '<') { tokens.add(new Token(TokenType.OP, "<")); i++; continue; }
+            if (c == '+' || c == '*' || c == '/' || c == '%') {
+                tokens.add(new Token(TokenType.ARITH, String.valueOf(c)));
+                i++;
+                continue;
+            }
 
             if (c == '"' || c == '\'') {
                 char quote = c;
@@ -145,6 +155,12 @@ public class ConditionEvaluator {
                 continue;
             }
 
+            if (c == '-') {
+                tokens.add(new Token(TokenType.ARITH, "-"));
+                i++;
+                continue;
+            }
+
             if (Character.isLetter(c) || c == '_') {
                 int start = i;
                 while (i < len && (Character.isLetterOrDigit(expr.charAt(i)) || expr.charAt(i) == '_' || expr.charAt(i) == '.')) {
@@ -159,6 +175,8 @@ public class ConditionEvaluator {
                     tokens.add(new Token(TokenType.BOOLEAN, "TRUE".equals(word) ? "true" : "false"));
                 } else if ("true".equals(word) || "false".equals(word)) {
                     throw new IllegalArgumentException("请使用 TRUE/FALSE");
+                } else if ("ISNULL".equals(word) || "ISNOTNULL".equals(word)) {
+                    tokens.add(new Token(TokenType.PREDICATE, word));
                 } else if (TEXT_OP_MAP.containsKey(word)) {
                     tokens.add(new Token(TokenType.OP, word));
                 } else if (LEGACY_OP.containsKey(word)) {
@@ -200,7 +218,11 @@ public class ConditionEvaluator {
         }
 
         Token t = tokens.get(pos[0]);
-        if (t.type == TokenType.LPAREN) {
+        if (t.type == TokenType.PREDICATE) {
+            return parsePredicate(tokens, pos, body);
+        }
+
+        if (t.type == TokenType.LPAREN && isLogicalParen(tokens, pos[0])) {
             pos[0]++;
             boolean result = parseOr(tokens, pos, body);
             if (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.RPAREN) {
@@ -209,16 +231,11 @@ public class ConditionEvaluator {
             return result;
         }
 
-        if (t.type != TokenType.VAR) {
-            throw new IllegalArgumentException("期望变量: " + t.value);
-        }
-        String leftPath = t.value;
-        pos[0]++;
+        Object leftVal = parseAdd(tokens, pos, body);
 
         if (pos[0] >= tokens.size() || tokens.get(pos[0]).type == TokenType.AND
                 || tokens.get(pos[0]).type == TokenType.OR
                 || tokens.get(pos[0]).type == TokenType.RPAREN) {
-            Object leftVal = resolveLeft(leftPath, body);
             return eq(leftVal, "true");
         }
 
@@ -230,7 +247,6 @@ public class ConditionEvaluator {
         pos[0]++;
 
         if (UNARY_OPS.contains(opName)) {
-            Object leftVal = resolveLeft(leftPath, body);
             return switch (opName) {
                 case "Null" -> leftVal == null;
                 case "NotNull" -> leftVal != null;
@@ -241,36 +257,149 @@ public class ConditionEvaluator {
         if (pos[0] >= tokens.size()) {
             throw new IllegalArgumentException("期望右侧值");
         }
-        Token rightToken = tokens.get(pos[0]);
-        pos[0]++;
 
-        Object leftVal = resolveLeft(leftPath, body);
-
-        if (rightToken.type == TokenType.LIST) {
+        if (tokens.get(pos[0]).type == TokenType.LIST) {
+            Token rightToken = tokens.get(pos[0]);
+            pos[0]++;
             boolean inResult = inList(leftVal, rightToken.value);
             return "NotIn".equals(opName) != inResult;
         }
 
-        String rightVal = rightToken.value;
+        Object rightVal = parseAdd(tokens, pos, body);
+        String rightStr = rightVal == null ? "" : rightVal.toString();
         return switch (opName) {
-            case "Equals" -> eq(leftVal, rightVal);
-            case "NotEquals" -> !eq(leftVal, rightVal);
-            case "GreaterThen" -> compare(leftVal, rightVal) > 0;
-            case "GreaterThenEquals" -> compare(leftVal, rightVal) >= 0;
-            case "LessThen" -> compare(leftVal, rightVal) < 0;
-            case "LessThenEquals" -> compare(leftVal, rightVal) <= 0;
-            case "Contain" -> contains(leftVal, rightVal);
-            case "NotContain" -> !contains(leftVal, rightVal);
-            case "StartWith" -> startsWith(leftVal, rightVal);
-            case "NotStartWith" -> !startsWith(leftVal, rightVal);
-            case "EndWith" -> endsWith(leftVal, rightVal);
-            case "NotEndWith" -> !endsWith(leftVal, rightVal);
-            case "Match" -> leftVal != null && leftVal.toString().matches(rightVal);
-            case "NotMatch" -> leftVal == null || !leftVal.toString().matches(rightVal);
-            case "EqualsIgnoreCase" -> leftVal != null && leftVal.toString().equalsIgnoreCase(rightVal);
-            case "NotEqualsIgnoreCase" -> leftVal == null || !leftVal.toString().equalsIgnoreCase(rightVal);
+            case "Equals" -> eq(leftVal, rightStr);
+            case "NotEquals" -> !eq(leftVal, rightStr);
+            case "GreaterThen" -> compare(leftVal, rightStr) > 0;
+            case "GreaterThenEquals" -> compare(leftVal, rightStr) >= 0;
+            case "LessThen" -> compare(leftVal, rightStr) < 0;
+            case "LessThenEquals" -> compare(leftVal, rightStr) <= 0;
+            case "Contain" -> contains(leftVal, rightStr);
+            case "NotContain" -> !contains(leftVal, rightStr);
+            case "StartWith" -> startsWith(leftVal, rightStr);
+            case "NotStartWith" -> !startsWith(leftVal, rightStr);
+            case "EndWith" -> endsWith(leftVal, rightStr);
+            case "NotEndWith" -> !endsWith(leftVal, rightStr);
+            case "Match" -> leftVal != null && leftVal.toString().matches(rightStr);
+            case "NotMatch" -> leftVal == null || !leftVal.toString().matches(rightStr);
+            case "EqualsIgnoreCase" -> leftVal != null && leftVal.toString().equalsIgnoreCase(rightStr);
+            case "NotEqualsIgnoreCase" -> leftVal == null || !leftVal.toString().equalsIgnoreCase(rightStr);
             default -> throw new IllegalArgumentException("未知操作符: " + opName);
         };
+    }
+
+    private static boolean parsePredicate(List<Token> tokens, int[] pos, Map<String, Object> body) {
+        Token pred = tokens.get(pos[0]);
+        pos[0]++;
+        if (pos[0] >= tokens.size() || tokens.get(pos[0]).type != TokenType.LPAREN) {
+            throw new IllegalArgumentException(pred.value + " 需要括号");
+        }
+        pos[0]++;
+        if (pos[0] >= tokens.size() || tokens.get(pos[0]).type != TokenType.VAR) {
+            throw new IllegalArgumentException(pred.value + " 实参必须是变量");
+        }
+        String path = tokens.get(pos[0]).value;
+        pos[0]++;
+        if (pos[0] >= tokens.size() || tokens.get(pos[0]).type != TokenType.RPAREN) {
+            throw new IllegalArgumentException("期望 \")\"");
+        }
+        pos[0]++;
+        Object val = resolveLeft(path, body);
+        return "ISNULL".equals(pred.value) ? val == null : val != null;
+    }
+
+    private static boolean isLogicalParen(List<Token> tokens, int start) {
+        int depth = 0;
+        for (int i = start; i < tokens.size(); i++) {
+            Token tok = tokens.get(i);
+            if (tok.type == TokenType.LPAREN) depth++;
+            else if (tok.type == TokenType.RPAREN) {
+                depth--;
+                if (depth == 0) return false;
+            } else if (depth >= 1 && (tok.type == TokenType.AND || tok.type == TokenType.OR || tok.type == TokenType.OP)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Object parseAdd(List<Token> tokens, int[] pos, Map<String, Object> body) {
+        Object left = parseMul(tokens, pos, body);
+        while (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.ARITH
+                && ("+".equals(tokens.get(pos[0]).value) || "-".equals(tokens.get(pos[0]).value))) {
+            String op = tokens.get(pos[0]).value;
+            pos[0]++;
+            Object right = parseMul(tokens, pos, body);
+            left = arith(op, left, right);
+        }
+        return left;
+    }
+
+    private static Object parseMul(List<Token> tokens, int[] pos, Map<String, Object> body) {
+        Object left = parsePrimary(tokens, pos, body);
+        while (pos[0] < tokens.size() && tokens.get(pos[0]).type == TokenType.ARITH
+                && ("*".equals(tokens.get(pos[0]).value) || "/".equals(tokens.get(pos[0]).value) || "%".equals(tokens.get(pos[0]).value))) {
+            String op = tokens.get(pos[0]).value;
+            pos[0]++;
+            Object right = parsePrimary(tokens, pos, body);
+            left = arith(op, left, right);
+        }
+        return left;
+    }
+
+    private static Object parsePrimary(List<Token> tokens, int[] pos, Map<String, Object> body) {
+        if (pos[0] >= tokens.size()) {
+            throw new IllegalArgumentException("期望值");
+        }
+        Token t = tokens.get(pos[0]);
+        if (t.type == TokenType.LPAREN) {
+            pos[0]++;
+            Object inner = parseAdd(tokens, pos, body);
+            if (pos[0] >= tokens.size() || tokens.get(pos[0]).type != TokenType.RPAREN) {
+                throw new IllegalArgumentException("期望 \")\"");
+            }
+            pos[0]++;
+            return inner;
+        }
+        if (t.type == TokenType.NUMBER) {
+            pos[0]++;
+            return t.value;
+        }
+        if (t.type == TokenType.STRING) {
+            pos[0]++;
+            return t.value;
+        }
+        if (t.type == TokenType.BOOLEAN) {
+            pos[0]++;
+            return t.value;
+        }
+        if (t.type == TokenType.VAR) {
+            pos[0]++;
+            return resolveLeft(t.value, body);
+        }
+        throw new IllegalArgumentException("期望变量: " + t.value);
+    }
+
+    private static Object arith(String op, Object left, Object right) {
+        BigDecimal a = toNum(left);
+        BigDecimal b = toNum(right);
+        return switch (op) {
+            case "+" -> a.add(b);
+            case "-" -> a.subtract(b);
+            case "*" -> a.multiply(b);
+            case "/" -> a.divide(b, java.math.MathContext.DECIMAL64);
+            case "%" -> a.remainder(b);
+            default -> throw new IllegalArgumentException("未知运算符: " + op);
+        };
+    }
+
+    private static BigDecimal toNum(Object o) {
+        if (o == null) throw new IllegalArgumentException("四则运算操作数不能为空");
+        try {
+            return new BigDecimal(o.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("灰度四则只支持数值");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -324,7 +453,7 @@ public class ConditionEvaluator {
     }
 
     public enum TokenType {
-        VAR, OP, STRING, NUMBER, BOOLEAN, LIST,
+        VAR, OP, ARITH, PREDICATE, STRING, NUMBER, BOOLEAN, LIST,
         AND, OR, LPAREN, RPAREN
     }
 

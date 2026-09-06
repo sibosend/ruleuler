@@ -58,10 +58,57 @@ class ConditionEvaluatorTest {
     }
 
     @Test
-    void legacyNullRejected() {
-        Map<String, Object> body = Map.of("FlightInfo", Map.of("gate", "A"));
+    void legacyNullStillAccepted() {
+        Map<String, Object> inner = new java.util.HashMap<>();
+        inner.put("gate", null);
+        Map<String, Object> body = Map.of("FlightInfo", inner);
+        assertTrue(ConditionEvaluator.evaluate("FlightInfo.gate Null", body));
+        assertTrue(ConditionEvaluator.evaluate("FlightInfo.gate NULL", body));
+        assertFalse(ConditionEvaluator.evaluate("FlightInfo.gate NotNull", body));
+    }
+
+    @Test
+    void isnullPredicate() {
+        Map<String, Object> inner = new java.util.HashMap<>();
+        inner.put("gate", null);
+        Map<String, Object> body = Map.of("FlightInfo", inner);
+        assertTrue(ConditionEvaluator.evaluate("ISNULL(FlightInfo.gate)", body));
+        assertFalse(ConditionEvaluator.evaluate("ISNOTNULL(FlightInfo.gate)", body));
+    }
+
+    @Test
+    void isnullEmptyStringIsFalse() {
+        Map<String, Object> body = Map.of("FlightInfo", Map.of("gate", ""));
+        assertFalse(ConditionEvaluator.evaluate("ISNULL(FlightInfo.gate)", body));
+        assertTrue(ConditionEvaluator.evaluate("ISNOTNULL(FlightInfo.gate)", body));
+    }
+
+    @Test
+    void isnullMissingFieldIsTrue() {
+        Map<String, Object> body = Map.of("FlightInfo", Map.of());
+        assertTrue(ConditionEvaluator.evaluate("ISNULL(FlightInfo.gate)", body));
+    }
+
+    @Test
+    void arithmeticCompare() {
+        Map<String, Object> body = Map.of("FlightInfo", Map.of("score", 75, "bonus", 10));
+        assertTrue(ConditionEvaluator.evaluate("FlightInfo.score + 10 > 80", body));
+        assertTrue(ConditionEvaluator.evaluate("80 < FlightInfo.score + FlightInfo.bonus", body));
+        assertFalse(ConditionEvaluator.evaluate("FlightInfo.score + 10 > 90", body));
+    }
+
+    @Test
+    void inListStillWorks() {
+        Map<String, Object> body = Map.of("FlightInfo", Map.of("gate", "A1"));
+        assertTrue(ConditionEvaluator.evaluate("FlightInfo.gate IN (\"A1\", \"A2\")", body));
+        assertFalse(ConditionEvaluator.evaluate("FlightInfo.gate IN (\"B1\", \"B2\")", body));
+    }
+
+    @Test
+    void absStillForbidden() {
+        Map<String, Object> body = Map.of("FlightInfo", Map.of("score", 1));
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> ConditionEvaluator.evaluate("FlightInfo.gate Null", body));
-        assertTrue(ex.getMessage().contains("NULL"));
+                () -> ConditionEvaluator.evaluate("ABS(FlightInfo.score) + 1 > 0", body));
+        assertTrue(ex.getMessage().contains("函数"));
     }
 }

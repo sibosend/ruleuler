@@ -7,6 +7,7 @@ import type { Extension } from '@codemirror/state';
 import type { LibraryData } from './expressionParser';
 import { ALL_TEXT_OPERATORS } from './operatorMap';
 import { allFuncs, funcsInNamespace, isNamespace, NAMESPACES, type BuiltinFunc } from './functionMap';
+import { RESERVED_PREDICATE, PREDICATE_HINTS } from './reservedWords';
 
 export interface AutocompleteOptions {
   allowFunctions?: boolean;
@@ -73,6 +74,14 @@ export function buildCompletions(
     items.push({ label: 'OR', type: 'keyword', detail: '逻辑连接' });
     items.push({ label: 'TRUE', type: 'constant', detail: '布尔值' });
     items.push({ label: 'FALSE', type: 'constant', detail: '布尔值' });
+    for (const pred of RESERVED_PREDICATE) {
+      items.push({
+        label: pred,
+        type: 'function',
+        detail: PREDICATE_HINTS.get(pred) || '谓词',
+        apply: applyCall(pred),
+      });
+    }
   }
 
   if (allowFunctions) {

@@ -83,24 +83,85 @@ function formatCommonCall(el: Element): { text: string; hasError: boolean } {
   return { text: `${fn.rea}(${obj.text})`, hasError: obj.hasError };
 }
 
+function arithSymbol(type: string): string {
+  switch (type) {
+    case 'Add': return '+';
+    case 'Sub': return '-';
+    case 'Mul': return '*';
+    case 'Div': return '/';
+    case 'Mod': return '%';
+    default: return type;
+  }
+}
+
+function formatSimpleArith(el: Element): string {
+  let node: Element | undefined = childElements(el, 'simple-arith')[0];
+  let text = '';
+  while (node) {
+    text += ` ${arithSymbol(node.getAttribute('type') || '')} ${node.getAttribute('value') || ''}`;
+    node = childElements(node, 'simple-arith')[0];
+  }
+  return text;
+}
+
+function formatComplexChain(el: Element): { text: string; hasError: boolean } {
+  let text = '';
+  let hasError = false;
+  let node: Element | undefined = childElements(el, 'complex-arith')[0];
+  while (node) {
+    const sym = arithSymbol(node.getAttribute('type') || '');
+    const paren = childElements(node, 'paren')[0];
+    const valueEl = childElements(node, 'value')[0];
+    if (paren) {
+      const inner = formatParen(paren);
+      if (inner.hasError) hasError = true;
+      text += ` ${sym} ${inner.text}`;
+      break;
+    }
+    if (!valueEl) {
+      hasError = true;
+      text += ` ${sym} ${ERROR_MARKER}`;
+      break;
+    }
+    const v = formatValue(valueEl);
+    if (v.hasError) hasError = true;
+    text += ` ${sym} ${v.text}`;
+    break;
+  }
+  return { text, hasError };
+}
+
+function formatParen(el: Element): { text: string; hasError: boolean } {
+  const valueEl = childElements(el, 'value')[0];
+  if (!valueEl) return { text: ERROR_MARKER, hasError: true };
+  const inner = formatValue(valueEl);
+  const chain = formatComplexChain(el);
+  return {
+    text: `(${inner.text})${chain.text}`,
+    hasError: inner.hasError || chain.hasError,
+  };
+}
+
 function formatLeft(el: Element): { text: string; hasError: boolean } {
   const type = el.getAttribute('type') || '';
-  if (type === 'method') return formatMethodCall(el, 'bean-name');
-  if (type === 'commonfunction') return formatCommonCall(el);
-  if (type === 'parameter') {
+  let atom: { text: string; hasError: boolean };
+  if (type === 'method') atom = formatMethodCall(el, 'bean-name');
+  else if (type === 'commonfunction') atom = formatCommonCall(el);
+  else if (type === 'parameter') {
+    atom = { text: el.getAttribute('var') || '', hasError: false };
+  } else {
+    const category = el.getAttribute('var-category') || '';
     const varName = el.getAttribute('var') || '';
-    return { text: varName, hasError: false };
+    atom = { text: `${category}.${varName}`, hasError: false };
   }
-  const category = el.getAttribute('var-category') || '';
-  const varName = el.getAttribute('var') || '';
-  return { text: `${category}.${varName}`, hasError: false };
+  return { text: `${atom.text}${formatSimpleArith(el)}`, hasError: atom.hasError };
 }
 
 function isNumeric(s: string): boolean {
   return /^-?\d+(\.\d+)?$/.test(s);
 }
 
-function formatValue(el: Element): { text: string; hasError: boolean } {
+function formatValueAtom(el: Element): { text: string; hasError: boolean } {
   const type = el.getAttribute('type') || '';
 
   if (type === 'Method') return formatMethodCall(el, 'bean-name');
@@ -144,16 +205,35 @@ function formatValue(el: Element): { text: string; hasError: boolean } {
   return { text: ERROR_MARKER, hasError: true };
 }
 
+function formatValue(el: Element): { text: string; hasError: boolean } {
+  const atom = formatValueAtom(el);
+  const chain = formatComplexChain(el);
+  return {
+    text: `${atom.text}${chain.text}`,
+    hasError: atom.hasError || chain.hasError,
+  };
+}
+
 function formatAtom(atom: Element): { text: string; hasError: boolean } {
   const op = atom.getAttribute('op') || '';
+  const leftEl = atom.querySelector(':scope > left');
+  if (!leftEl) {
+    return { text: ERROR_MARKER, hasError: true };
+  }
+
+  if (op === 'Null' || op === 'NotNull') {
+    const pred = op === 'Null' ? 'ISNULL' : 'ISNOTNULL';
+    const left = formatLeft(leftEl);
+    return { text: `${pred}(${left.text})`, hasError: left.hasError };
+  }
+
   const textOp = xmlOpToText.get(op);
   if (!textOp) {
     return { text: ERROR_MARKER, hasError: true };
   }
 
-  const leftEl = atom.querySelector(':scope > left');
   const valueEl = atom.querySelector(':scope > value');
-  if (!leftEl || !valueEl) {
+  if (!valueEl) {
     return { text: ERROR_MARKER, hasError: true };
   }
 

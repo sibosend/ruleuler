@@ -9,6 +9,14 @@ import { FLAT_FUNC_NAMES, NAMESPACES } from './functionMap';
 export const RESERVED_LOGIC = ['AND', 'OR'] as const;
 export const RESERVED_BOOLEAN = ['TRUE', 'FALSE'] as const;
 
+/** 谓词：编成 Op.Null/NotNull，不进 functionMap（没有 Bean） */
+export const RESERVED_PREDICATE = ['ISNULL', 'ISNOTNULL'] as const;
+
+export const PREDICATE_HINTS: ReadonlyMap<string, string> = new Map([
+  ['ISNULL', '为空（引擎把空串也当空；灰度只认 == null，空串不算空）'],
+  ['ISNOTNULL', '不为空'],
+]);
+
 /** 所有硬保留字（英文整词） */
 export const ALL_RESERVED: Set<string> = new Set<string>([
   ...RESERVED_LOGIC,
@@ -16,6 +24,7 @@ export const ALL_RESERVED: Set<string> = new Set<string>([
   ...WORD_OPS,
   ...FLAT_FUNC_NAMES,
   ...NAMESPACES,
+  ...RESERVED_PREDICATE,
 ]);
 
 const ENGLISH_WORD = /^[A-Za-z][A-Za-z0-9]*$/;

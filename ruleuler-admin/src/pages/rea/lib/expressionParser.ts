@@ -6,7 +6,7 @@
  */
 
 import { textToXmlOp, WORD_OPS } from './operatorMap';
-import { isReservedIdent, suggestReserved } from './reservedWords';
+import { isReservedIdent, suggestReserved, RESERVED_PREDICATE } from './reservedWords';
 import {
   FLAT_FUNC_NAMES,
   lookupByRea,
@@ -214,6 +214,7 @@ type TokenType =
   | 'FUNC'
   | 'DOT'
   | 'OP'
+  | 'ARITH'
   | 'STRING'
   | 'NUMBER'
   | 'BOOLEAN'
@@ -235,6 +236,27 @@ interface Token {
 const SYMBOL_OPS = ['>=', '<=', '!=', '==', '>', '<'] as const;
 const FLAT_FUNC_SET = new Set(FLAT_FUNC_NAMES);
 const WORD_OP_SET = new Set(WORD_OPS);
+const PREDICATE_SET = new Set<string>(RESERVED_PREDICATE);
+const LEGACY_NULL = new Set(['NULL', 'NOTNULL', 'Null', 'NotNull']);
+const ARITH_XML: Record<string, string> = {
+  '+': 'Add',
+  '-': 'Sub',
+  '*': 'Mul',
+  '/': 'Div',
+  '%': 'Mod',
+};
+
+function isPredicateName(name: string): boolean {
+  return PREDICATE_SET.has(name);
+}
+
+function predicateAssignError(name: string, pos: number): never {
+  throw new ParseError(`${name} 是谓词，不能赋值`, pos);
+}
+
+function predicateCompareError(name: string, pos: number): never {
+  throw new ParseError(`${name} 本身就是判断，不能再比较`, pos);
+}
 
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
@@ -307,6 +329,12 @@ function tokenize(text: string): Token[] {
     }
     if (matched) continue;
 
+    if (text[i] === '+' || text[i] === '*' || text[i] === '/' || text[i] === '%') {
+      tokens.push({ type: 'ARITH', value: text[i]!, pos });
+      i++;
+      continue;
+    }
+
     if (text[i] === '=') {
       tokens.push({ type: 'EQ', value: '=', pos });
       i++;
@@ -327,6 +355,12 @@ function tokenize(text: string): Token[] {
       continue;
     }
 
+    if (text[i] === '-') {
+      tokens.push({ type: 'ARITH', value: '-', pos });
+      i++;
+      continue;
+    }
+
     if (/[a-zA-Z_\u4e00-\u9fff]/.test(text[i]!)) {
       let word = '';
       while (i < len && /[a-zA-Z0-9_\u4e00-\u9fff]/.test(text[i]!)) {
@@ -342,7 +376,7 @@ function tokenize(text: string): Token[] {
         tokens.push({ type: 'OR', value: 'OR', pos });
       } else if (WORD_OP_SET.has(word)) {
         tokens.push({ type: 'OP', value: word, pos });
-      } else if (FLAT_FUNC_SET.has(word)) {
+      } else if (FLAT_FUNC_SET.has(word) || PREDICATE_SET.has(word)) {
         tokens.push({ type: 'FUNC', value: word, pos });
       } else {
         tokens.push({ type: 'IDENT', value: word, pos });
@@ -399,6 +433,51 @@ class Parser {
     return this.peek().type === 'EOF';
   }
 
+  isPredicatePeek(): boolean {
+    const t = this.peek();
+    return t.type === 'FUNC' && isPredicateName(t.value);
+  }
+
+  /** 当前 LPAREN 内是否是逻辑分组（出现比较 / AND / OR） */
+  isLogicalGrouping(): boolean {
+    if (this.peek().type !== 'LPAREN') return false;
+    let depth = 0;
+    for (let i = this.pos; i < this.tokens.length; i++) {
+      const t = this.tokens[i]!;
+      if (t.type === 'LPAREN') depth++;
+      else if (t.type === 'RPAREN') {
+        depth--;
+        if (depth === 0) return false;
+      } else if (depth >= 1 && (t.type === 'AND' || t.type === 'OR' || t.type === 'OP')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  tokenAfterMatchingParen(): Token {
+    let depth = 0;
+    for (let i = this.pos; i < this.tokens.length; i++) {
+      const t = this.tokens[i]!;
+      if (t.type === 'LPAREN') depth++;
+      else if (t.type === 'RPAREN') {
+        depth--;
+        if (depth === 0) {
+          return this.tokens[i + 1] ?? this.tokens[this.tokens.length - 1]!;
+        }
+      }
+    }
+    return this.peek();
+  }
+
+  throwParenHeadError(): never {
+    const after = this.tokenAfterMatchingParen();
+    if (after.type === 'ARITH') {
+      throw new ParseError('值不能以括号开头，请改写成 1.1 * (...) 或去掉括号', this.peek().pos);
+    }
+    throw new ParseError('请去掉括号', this.peek().pos);
+  }
+
   /** 解析 `类别.变量名` 或裸参数名。点后字段可以是保留字（FUNC）。 */
   parseRef(): { category: string; name: string } {
     const first = this.peek();
@@ -437,7 +516,48 @@ class Parser {
     return { category: PARAMETER_CATEGORY, name: first.value };
   }
 
-  parseValue(libs?: LibraryData): string {
+  parseValue(libs?: LibraryData, opts?: { allowList?: boolean }): string {
+    const t = this.peek();
+
+    if (t.type === 'LPAREN') {
+      if (opts?.allowList) return this.parseListValue();
+      this.throwParenHeadError();
+    }
+
+    if (this.isPredicatePeek()) {
+      predicateAssignError(t.value, t.pos);
+    }
+
+    const head = this.parseValueAtom(libs);
+    return this.attachComplexChain(head, libs);
+  }
+
+  private parseListValue(): string {
+    this.advance();
+    const items: string[] = [];
+    while (this.peek().type !== 'RPAREN') {
+      if (items.length > 0) {
+        this.expect('COMMA', '期望 ","');
+      }
+      const vt = this.peek();
+      if (vt.type === 'STRING') {
+        this.advance();
+        items.push(escapeXml(vt.value));
+      } else if (vt.type === 'NUMBER') {
+        this.advance();
+        items.push(escapeXml(vt.value));
+      } else if (vt.type === 'IDENT' || vt.type === 'FUNC') {
+        const ref = this.parseRef();
+        items.push(escapeXml(`${ref.category}.${ref.name}`));
+      } else {
+        throw new ParseError('期望值', vt.pos);
+      }
+    }
+    this.expect('RPAREN', '期望 ")"');
+    return `<value content="${items.join(',')}" type="Input"/>`;
+  }
+
+  private parseValueAtom(libs?: LibraryData): string {
     const t = this.peek();
 
     if (t.type === 'STRING') {
@@ -454,6 +574,10 @@ class Parser {
       return `<value content="${xmlBool}" type="Input"/>`;
     }
 
+    if (this.isPredicatePeek()) {
+      predicateAssignError(t.value, t.pos);
+    }
+
     const call = detectCall(this);
     if (call) {
       const inv = parseInvocation(this, libs, 'value');
@@ -462,31 +586,6 @@ class Parser {
 
     if (t.type === 'FUNC') {
       throw new ParseError('函数需要括号', t.pos);
-    }
-
-    if (t.type === 'LPAREN') {
-      this.advance();
-      const items: string[] = [];
-      while (this.peek().type !== 'RPAREN') {
-        if (items.length > 0) {
-          this.expect('COMMA', '期望 ","');
-        }
-        const vt = this.peek();
-        if (vt.type === 'STRING') {
-          this.advance();
-          items.push(escapeXml(vt.value));
-        } else if (vt.type === 'NUMBER') {
-          this.advance();
-          items.push(escapeXml(vt.value));
-        } else if (vt.type === 'IDENT' || vt.type === 'FUNC') {
-          const ref = this.parseRef();
-          items.push(escapeXml(`${ref.category}.${ref.name}`));
-        } else {
-          throw new ParseError('期望值', vt.pos);
-        }
-      }
-      this.expect('RPAREN', '期望 ")"');
-      return `<value content="${items.join(',')}" type="Input"/>`;
     }
 
     if (t.type === 'IDENT') {
@@ -504,6 +603,65 @@ class Parser {
 
     throw new ParseError('期望值（字符串、数字、变量引用或函数）', t.pos);
   }
+
+  private parseArithOperand(libs?: LibraryData): string {
+    if (this.peek().type === 'LPAREN') {
+      this.advance();
+      const inner = this.parseValueAtom(libs);
+      const expr = this.attachComplexChain(inner, libs);
+      this.expect('RPAREN', '期望 ")"');
+      return `<paren>${expr}</paren>`;
+    }
+    return this.parseValueAtom(libs);
+  }
+
+  private attachComplexChain(headXml: string, libs?: LibraryData): string {
+    const chain: Array<{ type: string; operand: string }> = [];
+    while (this.peek().type === 'ARITH') {
+      const opTok = this.advance();
+      const xmlType = ARITH_XML[opTok.value];
+      if (!xmlType) throw new ParseError(`未知运算符: ${opTok.value}`, opTok.pos);
+      chain.push({ type: xmlType, operand: this.parseArithOperand(libs) });
+    }
+    if (chain.length === 0) return headXml;
+    return foldComplex(headXml, chain);
+  }
+}
+
+function insertBeforeClose(xml: string, closeTag: string, inner: string): string {
+  if (xml.endsWith('/>')) {
+    return `${xml.slice(0, -2)}>${inner}</${closeTag}>`;
+  }
+  const token = `</${closeTag}>`;
+  const idx = xml.lastIndexOf(token);
+  if (idx === -1) return xml + inner;
+  return xml.slice(0, idx) + inner + xml.slice(idx);
+}
+
+function attachComplex(headXml: string, arithType: string, operandXml: string): string {
+  const inner = `<complex-arith type="${arithType}">${operandXml}</complex-arith>`;
+  if (headXml.startsWith('<paren>')) {
+    return insertBeforeClose(headXml, 'paren', inner);
+  }
+  return insertBeforeClose(headXml, 'value', inner);
+}
+
+function foldComplex(headXml: string, chain: Array<{ type: string; operand: string }>): string {
+  if (chain.length === 0) return headXml;
+  const rest = foldComplex(chain[0]!.operand, chain.slice(1));
+  return attachComplex(headXml, chain[0]!.type, rest);
+}
+
+function buildSimpleArithChain(parts: Array<{ type: string; value: string }>): string {
+  let xml = '';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]!;
+    const val = escapeXml(p.value);
+    xml = xml
+      ? `<simple-arith type="${p.type}" value="${val}">${xml}</simple-arith>`
+      : `<simple-arith type="${p.type}" value="${val}"/>`;
+  }
+  return xml;
 }
 
 interface CallHead {
@@ -557,8 +715,11 @@ function resolveFunc(head: CallHead, libs?: LibraryData): BuiltinFunc {
 
   if (!head.ns) {
     const near = suggestReserved(head.name);
-    if (near && FLAT_FUNC_SET.has(near)) {
+    if (near && (FLAT_FUNC_SET.has(near) || PREDICATE_SET.has(near))) {
       throw new ParseError(`请使用 ${near}`, head.pos);
+    }
+    if (isPredicateName(head.name)) {
+      predicateAssignError(head.name, head.pos);
     }
     throw new ParseError(`未知函数: ${head.name}`, head.pos);
   }
@@ -591,6 +752,12 @@ function parseInvocation(
   const head = detectCall(parser);
   if (!head) {
     throw new ParseError('期望函数调用', parser.peek().pos);
+  }
+  if (!head.ns && isPredicateName(head.name)) {
+    if (ctx === 'left') {
+      throw new ParseError(`${head.name} 本身就是判断，不能再比较`, head.pos);
+    }
+    predicateAssignError(head.name, head.pos);
   }
   if (parser.options.allowFunctions === false) {
     throw new ParseError('灰度条件不支持函数', head.pos);
@@ -671,11 +838,69 @@ function parseInvocation(
   return { xml, fn };
 }
 
-function buildLeftXml(info: VarInfo): string {
+function buildLeftXml(info: VarInfo, simpleArithXml = ''): string {
+  const inner = simpleArithXml ? `\n      ${simpleArithXml}\n    ` : '\n      ';
   if (info.kind === 'parameter') {
-    return `<left var="${escapeXml(info.name)}" var-label="${escapeXml(info.label)}" datatype="${escapeXml(info.datatype)}" type="parameter">\n      </left>`;
+    return `<left var="${escapeXml(info.name)}" var-label="${escapeXml(info.label)}" datatype="${escapeXml(info.datatype)}" type="parameter">${inner}</left>`;
   }
-  return `<left var-category="${escapeXml(info.category)}" var="${escapeXml(info.name)}" var-label="${escapeXml(info.label)}" datatype="${escapeXml(info.datatype)}" type="variable">\n      </left>`;
+  return `<left var-category="${escapeXml(info.category)}" var="${escapeXml(info.name)}" var-label="${escapeXml(info.label)}" datatype="${escapeXml(info.datatype)}" type="variable">${inner}</left>`;
+}
+
+function withSimpleArith(leftXml: string, simpleArithXml: string): string {
+  if (!simpleArithXml) return leftXml;
+  return insertBeforeClose(leftXml, 'left', simpleArithXml);
+}
+
+function parseOptionalSimpleArith(parser: Parser): string {
+  const parts: Array<{ type: string; value: string }> = [];
+  while (parser.peek().type === 'ARITH') {
+    const opTok = parser.advance();
+    const xmlType = ARITH_XML[opTok.value];
+    if (!xmlType) throw new ParseError(`未知运算符: ${opTok.value}`, opTok.pos);
+    const next = parser.peek();
+    if (next.type !== 'NUMBER') {
+      throw new ParseError('左边不能是两个引用相加，请先赋值', next.pos);
+    }
+    parts.push({ type: xmlType, value: parser.advance().value });
+  }
+  return buildSimpleArithChain(parts);
+}
+
+function parsePredicate(parser: Parser, libs?: LibraryData): { xml: string; name: string } {
+  const nameTok = parser.advance();
+  const name = nameTok.value;
+  parser.expect('LPAREN', '期望 "("');
+
+  const arg = parser.peek();
+  if (arg.type === 'NUMBER' || arg.type === 'STRING' || arg.type === 'BOOLEAN') {
+    throw new ParseError(`${name} 实参必须是变量、参数或函数`, arg.pos);
+  }
+  if (parser.isPredicatePeek()) {
+    throw new ParseError(`${arg.value} 是谓词，不能当实参`, arg.pos);
+  }
+
+  let leftXml: string;
+  const call = detectCall(parser);
+  if (call) {
+    const inv = parseInvocation(parser, libs, 'left');
+    leftXml = inv.xml;
+  } else {
+    const ref = parser.parseRef();
+    leftXml = buildLeftXml(lookupVar(ref.category, ref.name, libs));
+  }
+
+  if (parser.peek().type === 'ARITH') {
+    throw new ParseError(`${name} 实参不能是运算`, parser.peek().pos);
+  }
+  parser.expect('RPAREN', '期望 ")"');
+
+  const xmlOp = name === 'ISNULL' ? 'Null' : 'NotNull';
+  return { xml: `<atom op="${xmlOp}">\n      ${leftXml}\n    </atom>`, name };
+}
+
+function parseComparisonValue(parser: Parser, opValue: string, libs?: LibraryData): string {
+  const allowList = opValue === 'IN' || opValue === 'NOTIN';
+  return parser.parseValue(libs, { allowList });
 }
 
 function expectOp(parser: Parser): Token {
@@ -691,30 +916,59 @@ function expectOp(parser: Parser): Token {
 }
 
 function parseSingleAtom(parser: Parser, libs?: LibraryData): string {
+  if (parser.isPredicatePeek()) {
+    const pred = parsePredicate(parser, libs);
+    if (parser.peek().type === 'OP') {
+      predicateCompareError(pred.name, parser.peek().pos);
+    }
+    return pred.xml;
+  }
+
+  if (parser.peek().type === 'NUMBER') {
+    throw new ParseError('比较左边不能是数字，请先赋值到参数再比较', parser.peek().pos);
+  }
+
   const call = detectCall(parser);
   if (call) {
     const inv = parseInvocation(parser, libs, 'left');
+    const simpleArith = parseOptionalSimpleArith(parser);
+    const leftXml = withSimpleArith(inv.xml, simpleArith);
     const next = parser.peek();
     if (next.type !== 'OP') {
-      if (inv.fn.returnType === 'Boolean') {
-        return `<atom op="Equals">\n      ${inv.xml}\n      <value content="true" type="Input"/>\n    </atom>`;
+      if (!simpleArith && inv.fn.returnType === 'Boolean') {
+        return `<atom op="Equals">\n      ${leftXml}\n      <value content="true" type="Input"/>\n    </atom>`;
       }
-      throw new ParseError('期望操作符', next.pos);
+      throw new ParseError(simpleArith ? '条件里没有比较' : '期望操作符', next.pos);
     }
     const opToken = expectOp(parser);
     const xmlOp = textToXmlOp.get(opToken.value);
     if (!xmlOp) throw new ParseError(`未知操作符: ${opToken.value}`, opToken.pos);
-    const valueXml = parser.parseValue(libs);
-    return `<atom op="${xmlOp}">\n      ${inv.xml}\n      ${valueXml}\n    </atom>`;
+    const valueXml = parseComparisonValue(parser, opToken.value, libs);
+    return `<atom op="${xmlOp}">\n      ${leftXml}\n      ${valueXml}\n    </atom>`;
   }
 
   const ref = parser.parseRef();
   const leftInfo = lookupVar(ref.category, ref.name, libs);
-  const leftXml = buildLeftXml(leftInfo);
+
+  const suffix = parser.peek();
+  if ((suffix.type === 'IDENT' || suffix.type === 'FUNC') && LEGACY_NULL.has(suffix.value)) {
+    if (parser.options.allowFunctions === false) {
+      parser.advance();
+      const xmlOp = suffix.value === 'NOTNULL' || suffix.value === 'NotNull' ? 'NotNull' : 'Null';
+      return `<atom op="${xmlOp}">\n      ${buildLeftXml(leftInfo)}\n    </atom>`;
+    }
+    throw new ParseError('请使用 ISNULL(...)', suffix.pos);
+  }
+
+  const simpleArith = parseOptionalSimpleArith(parser);
+  const leftXml = buildLeftXml(leftInfo, simpleArith);
 
   const next = parser.peek();
-  if (next.type !== 'OP' && leftInfo.datatype === 'Boolean') {
-    return `<atom op="Equals">\n      ${leftXml}\n      <value content="true" type="Input"/>\n    </atom>`;
+  if (next.type !== 'OP') {
+    if (!simpleArith && leftInfo.datatype === 'Boolean') {
+      return `<atom op="Equals">\n      ${leftXml}\n      <value content="true" type="Input"/>\n    </atom>`;
+    }
+    throw new ParseError(simpleArith ? '条件里没有比较' : '期望操作符', next.pos);
   }
 
   const opToken = expectOp(parser);
@@ -722,16 +976,19 @@ function parseSingleAtom(parser: Parser, libs?: LibraryData): string {
   if (!xmlOp) {
     throw new ParseError(`未知操作符: ${opToken.value}`, opToken.pos);
   }
-  const valueXml = parser.parseValue(libs);
+  const valueXml = parseComparisonValue(parser, opToken.value, libs);
   return `<atom op="${xmlOp}">\n      ${leftXml}\n      ${valueXml}\n    </atom>`;
 }
 
 function parseUnit(parser: Parser, libs?: LibraryData): string {
   if (parser.peek().type === 'LPAREN') {
-    parser.advance();
-    const innerXml = parseExpression(parser, libs);
-    parser.expect('RPAREN', '期望 ")"');
-    return innerXml;
+    if (parser.isLogicalGrouping()) {
+      parser.advance();
+      const innerXml = parseExpression(parser, libs);
+      parser.expect('RPAREN', '期望 ")"');
+      return innerXml;
+    }
+    parser.throwParenHeadError();
   }
   return parseSingleAtom(parser, libs);
 }
@@ -778,6 +1035,9 @@ export function parseCondition(text: string, libs?: LibraryData, options?: Parse
 }
 
 function parseOneAction(parser: Parser, libs?: LibraryData): string {
+  if (parser.isPredicatePeek()) {
+    predicateAssignError(parser.peek().value, parser.peek().pos);
+  }
   const call = detectCall(parser);
   if (call) {
     const inv = parseInvocation(parser, libs, 'action');

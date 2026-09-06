@@ -49,6 +49,7 @@ REA（Rule Expression Assistant）是 RulEuler 的规则文本编辑器，将人
 | 参数引用 | 裸参数名 | `threshold` |
 | 列表 | 圆括号逗号分隔 | `("A", "B", "C")` |
 | 函数 | 见下方 | `TRIM(FlightInfo.name)` |
+| 运算 | `+ - * / %`，两侧空格 | `FlightInfo.score + 10` |
 
 ## Boolean 类型
 
@@ -74,6 +75,56 @@ FlightInfo.is_international = TRUE
 
 !!! warning
     布尔值只认 `TRUE` / `FALSE`，`true`、`True` 会报错。
+
+## 空值：`ISNULL` / `ISNOTNULL`
+
+条件里的谓词，对齐 `LISTEMPTY`。编成引擎「为空 / 不为空」，不是函数，不能赋值、不能再比较。
+
+```
+ISNULL(FlightInfo.gate)
+ISNOTNULL(FlightInfo.gate)
+ISNULL(FlightInfo.gate) AND FlightInfo.score > 0
+ISNULL(TRIM(FlightInfo.name))
+ISNULL(FlightInfo.score) OR FlightInfo.score == -999
+```
+
+这些非法：`FlightInfo.gate NULL`（不要后缀）、`ISNULL(x) == TRUE`、`flag = ISNULL(x)`、`ISNULL(1)`、`ISNULL(score + 10)`。
+
+哨兵默认值（业务用 `-999` 表示缺失）写 `==`，不要另造函数。
+
+!!! warning "同一条 ISNULL，空串在两条路径结果不同"
+    `ISNULL("")`：引擎 `NullAssertor` 当空（`isBlank` → **true**，全量命中）。灰度 `ConditionEvaluator` 只认 `== null`（**false**，灰度放过）。`x=""` 时灰度切全量会翻案。不要改灰度去对齐。缺字段 / `null` 两边都是 true。
+
+### 灰度 SDK
+
+`condition_expr` 是跨进程契约：服务端下发文本，业务方 `ruleuler-client` 本地求值。存量后缀 `x NULL` / `x Null` 求值器永久认，不会改写成 `ISNULL`。
+
+新写 `ISNULL(...)` 或四则的灰度规则，要求业务方 `ruleuler-client` 升到本期及以后。未升级的老 SDK 遇到 `ISNULL(` 会报「灰度条件不支持函数」，遇到 `*` 会报意外字符。
+
+## 四则：`+ - * / %`
+
+条件左边只能是「一个原子 + 一串数字」：`FlightInfo.score + 10 > 80`。两个变量相加不能放左边，写成 `80 < FlightInfo.score + FlightInfo.bonus`，或先赋值。
+
+赋值右边、比较右边、函数实参可以挂完整运算：
+
+```
+can_score = FlightInfo.score + 10
+can_score = FlightInfo.amount * 1.1
+can_score = ABS(FlightInfo.score) + 10
+can_score = 1.1 * (FlightInfo.score + 10)
+ABS(FlightInfo.score + 10) > 5
+```
+
+优先级 `* / %` 先于 `+ -`（引擎 MVEL）。括号只出现在运算符**右边**。值不能以括号开头：`(score + 10) * 1.1` 写成 `1.1 * (score + 10)`；`(score + 10) > 80` 去掉括号。
+
+二元运算符两侧都要空格：`score - 10` 合法；`score-10`、`score -10` 非法（后者 `-10` 被认成负数）。
+
+`+` 不做字符串拼接承诺。`IN ("A1", "A2")` 的括号是列表，不是运算。
+
+比较两边都是复合运算（`score + a > bonus + b`）非法，先赋值。不会自动翻转比较。
+
+!!! warning "比较左边的数字字面量"
+    `80 < score + bonus` 灰度求值器按数值算。全量规则的引擎 left 只有变量/参数/函数槽，数字会按参数名 `80` 去找，对不上。全量请先赋值，或左边用变量/参数。
 
 ## 函数
 
@@ -157,9 +208,7 @@ SUM(Order.items.amount)                  # 第二参是属性名，不要写成�
 
 `MAX`/`MIN` 留给两参数值比较。集合对象属性用 `MAXOF`/`MINOF`。
 
-本期没有 `a + b` 算术。
-
-灰度条件不支持函数。
+灰度条件不支持普通函数（`ISNULL` / `ISNOTNULL` 除外），四则按上面的规则可以写。
 
 ### 自定义（项目动作库）
 
@@ -181,6 +230,8 @@ FlightInfo.arrival_time > 5 AND FlightInfo.is_international
 FlightInfo.airline IN ("CA", "MU", "CZ")
 FlightInfo.arrival_time > 5 AND (FlightInfo.flight_type == "国内" OR FlightInfo.flight_type == "国际")
 ABS(FlightInfo.score) >= 10 AND LISTCONTAINS(FlightInfo.tags, "VIP")
+ISNULL(FlightInfo.gate) OR FlightInfo.score + 10 > 80
+80 < FlightInfo.score + FlightInfo.bonus
 ```
 
 !!! note
@@ -192,12 +243,14 @@ ABS(FlightInfo.score) >= 10 AND LISTCONTAINS(FlightInfo.tags, "VIP")
 can_score = 5
 can_score = 5; risk_level = "high"
 can_score = ABS(FlightInfo.score)
+can_score = FlightInfo.amount * 1.1
+can_score = 1.1 * (FlightInfo.score + 10)
 LISTADD(FlightInfo.tags, "INTL"); risk_level = "high"
 ```
 
 ## 自动补全
 
-- 无 `.` 时提示：变量类别名、参数名、操作符、`AND`/`OR`、`TRUE`/`FALSE`、函数
+- 无 `.` 时提示：变量类别名、参数名、操作符、`AND`/`OR`、`TRUE`/`FALSE`、`ISNULL()`、函数
 - 输入 `.` 后提示：该类别下的变量属性
 - `STRING.` / `MATH.` / `DATE.` / `LIST.` / `MAP.` 以及自定义 Bean 名后只出该组方法
 - 选中函数插入 `TRIM()`，光标进括号
