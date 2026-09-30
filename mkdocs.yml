@@ -36,6 +36,7 @@ nav:
     - 变量定义: guide/general-entity.md
     - 规则类型: guide/rule-types.md
     - REA 表达式: guide/rea-expression.md
+    - 自定义函数: guide/rea-function-extension.md
     - 自动测试: guide/autotest.md
     - 存储模式: guide/storage.md
     - 变量监控: guide/monitoring.md
