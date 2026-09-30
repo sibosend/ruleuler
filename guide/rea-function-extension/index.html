@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://sibosend.github.io/ruleuler/api/server-api/">
+        <link rel="canonical" href="https://sibosend.github.io/ruleuler/guide/rea-function-extension/">
       
       
-        <link rel="prev" href="../client-api/">
+        <link rel="prev" href="../rea-expression/">
       
       
-        <link rel="next" href="../../architecture/overview/">
+        <link rel="next" href="../autotest/">
       
       
         
@@ -31,7 +31,7 @@
     
     
       
-        <title>管理端 API - RulEuler 规则引擎</title>
+        <title>自定义函数 - RulEuler 规则引擎</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api" class="md-skip">
+        <a href="#_1" class="md-skip">
           跳转至
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              管理端 API
+              自定义函数
             
           </span>
         </div>
@@ -456,20 +456,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -490,7 +490,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -508,7 +508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/concepts/" class="md-nav__link">
+      <a href="../concepts/" class="md-nav__link">
         
   
   
@@ -536,7 +536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/general-entity/" class="md-nav__link">
+      <a href="../general-entity/" class="md-nav__link">
         
   
   
@@ -564,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/rule-types/" class="md-nav__link">
+      <a href="../rule-types/" class="md-nav__link">
         
   
   
@@ -592,7 +592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/rea-expression/" class="md-nav__link">
+      <a href="../rea-expression/" class="md-nav__link">
         
   
   
@@ -600,369 +600,6 @@
     
   
     REA 表达式
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/rea-function-extension/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    自定义函数
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/autotest/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    自动测试
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/storage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    存储模式
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/monitoring/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    变量监控
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/release-management/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    上线管理
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/traffic-replay/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    流量回放
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/dependency-analysis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    依赖分析
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/rbac/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    权限管理
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/audit-log/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    审计日志
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guide/mcp-server/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    MCP Server 接入
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    API 参考
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    API 参考
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../client-api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    客户端 API
   
 
     
@@ -999,7 +636,7 @@
   <span class="md-ellipsis">
     
   
-    管理端 API
+    自定义函数
   
 
     
@@ -1017,7 +654,7 @@
   <span class="md-ellipsis">
     
   
-    管理端 API
+    自定义函数
   
 
     
@@ -1043,10 +680,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        项目管理
+        三步
       
     </span>
   </a>
@@ -1054,30 +691,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        文件操作
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="文件操作">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        文件类型
+        启动与换版
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1085,7 +705,40 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        健康检查
+        权限
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        约束
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        坑
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        模板上传
       
     </span>
   </a>
@@ -1096,6 +749,369 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    自动测试
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储模式
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    变量监控
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    上线管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../traffic-replay/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    流量回放
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependency-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依赖分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    权限管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    审计日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server 接入
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API 参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/client-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    客户端 API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/server-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    管理端 API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1358,10 +1374,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        项目管理
+        三步
       
     </span>
   </a>
@@ -1369,30 +1385,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        文件操作
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="文件操作">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        文件类型
+        启动与换版
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1400,7 +1399,40 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        健康检查
+        权限
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        约束
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        坑
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        模板上传
       
     </span>
   </a>
@@ -1427,159 +1459,130 @@
   
 
 
-<h1 id="api">管理端 API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p>Base URL: <code>http://{host}:{port}</code> 默认端口: 16009</p>
-</blockquote>
-<p>所有管理 API 均为 POST 请求，参数通过 form 表单提交。</p>
-<h2 id="_1">项目管理<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h1 id="_1">自定义函数<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>按官方模板写几个方法，打一个 jar，上传给 server。独立 client 启动时落到盘上并加载。server 不执行用户代码。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>按模板写方法 → mvn package → 上传一份 jar
+</code></pre></div>
+<p>不要把 <code>ruleuler-client</code> 引进函数包，不要拷 <code>lib/</code>，不要编本仓库。</p>
+<h2 id="_2">三步<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li>复制 <code>templates/ruleuler-function/</code>，按里面的类写方法。</li>
+<li><code>mvn package</code>，把打出来的 jar 上传（管理后台或模板里的 curl，同一个接口）。</li>
+<li>发布引用了该动作库的知识包。重启 client 后新 jar 进 classpath。</li>
+</ol>
+<p>REA 写法：<code>GEOFUNCTIONS.DISTANCEKM(...)</code>（bean / 方法全大写）。</p>
+<h2 id="_3">启动与换版<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>API</th>
-<th>参数</th>
-<th>说明</th>
+<th>时机</th>
+<th>行为</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>createProject</code></td>
-<td><code>newProjectName</code>, <code>storageType</code>(<code>jcr</code>/<code>db</code>)</td>
-<td>创建项目</td>
+<td>首次部署</td>
+<td>启动早期按 <code>ruleuler.projects</code> / <code>RULEULER_PROJECTS</code> 拉 jar 落盘。PropertiesLauncher 已展开 classpath 时，进程会<strong>同参数再拉起一次</strong>（用户看到一次 <code>java -jar</code>）</td>
 </tr>
 <tr>
-<td><code>loadProjects</code></td>
-<td><code>projectName</code>(可选), <code>classify</code>(可选), <code>types</code>(可选)</td>
-<td>加载项目列表</td>
+<td>运行中改函数并上传、发布</td>
+<td>落盘新 jar。<strong>push 和 pull 都不齐则拒载新包</strong>，旧包继续跑。必须<strong>重启 client</strong></td>
 </tr>
 <tr>
-<td><code>projectExistCheck</code></td>
-<td><code>newProjectName</code></td>
-<td>检查项目是否存在</td>
-</tr>
-<tr>
-<td><code>deleteFile</code></td>
-<td><code>path</code>(如 <code>/&lt;项目名&gt;</code>), <code>isFolder=true</code></td>
-<td>删除项目</td>
-</tr>
-<tr>
-<td><code>importProject</code></td>
-<td><code>file</code>(multipart), <code>overwriteProject</code>(可选)</td>
-<td>导入项目备份</td>
-</tr>
-<tr>
-<td><code>exportProjectBackupFile</code></td>
-<td><code>path</code>(如 <code>/&lt;项目名&gt;</code>)</td>
-<td>导出项目备份</td>
+<td>运行中第一次碰到新 deps</td>
+<td>同步下载，可能慢，然后拒新包</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_2">文件操作<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>刷新绝不换 class。<code>loader.path</code> 和自动配置都是启动期语义。</p>
+<p>启动预拉必须配置项目列表，否则不预拉（避免把别的项目 jar 拉下来）。<code>./start.sh</code> 和 docker compose 默认 <code>RULEULER_PROJECTS=airport_gate_allocation_db</code>，可覆盖。未配时靠首次执行 / 发布推送按 <code>packageId</code> 落盘，然后重启。</p>
+<h2 id="_4">权限<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>上传自定义函数 = 向该项目全部 client 分发可执行字节码。按项目授权，并有审计。不要把这个权限随便给人。</p>
+<p>拉取接口走既有 client↔server 服务端点认证（IP 白名单），不能公网裸奔。</p>
+<h2 id="_5">约束<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>API</th>
-<th>参数</th>
-<th>说明</th>
+<th>项</th>
+<th>规则</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>createFile</code></td>
-<td><code>path</code>, <code>type</code></td>
-<td>创建规则文件</td>
+<td>执行位置</td>
+<td>独立 client，不是 server</td>
 </tr>
 <tr>
-<td><code>createFolder</code></td>
-<td><code>fullFolderName</code></td>
-<td>创建文件夹</td>
+<td>无状态</td>
+<td>方法必须可并发</td>
 </tr>
 <tr>
-<td><code>copyFile</code></td>
-<td><code>oldFullPath</code>, <code>newFullPath</code></td>
-<td>复制文件</td>
+<td>参数类型</td>
+<td><code>String / Integer / Long / Double / BigDecimal / Boolean / Date / List / Map</code>。禁 <code>Object</code>、禁 POJO。<code>Date</code> = <code>java.util.Date</code></td>
 </tr>
 <tr>
-<td><code>deleteFile</code></td>
-<td><code>path</code>, <code>isFolder</code>(可选)</td>
-<td>删除文件/文件夹</td>
+<td>返回值</td>
+<td><code>void</code> 或上表（<code>Object</code> 仅返回擦除）</td>
 </tr>
 <tr>
-<td><code>fileRename</code></td>
-<td><code>path</code>, <code>newPath</code></td>
-<td>重命名文件</td>
+<td>重载</td>
+<td>禁止，同名方法编译失败</td>
 </tr>
 <tr>
-<td><code>fileExistCheck</code></td>
-<td><code>fullFileName</code></td>
-<td>检查文件是否存在</td>
+<td>灰度条件</td>
+<td>条件里不能调自定义函数</td>
 </tr>
 <tr>
-<td><code>fileSource</code></td>
-<td><code>path</code></td>
-<td>查看文件 XML 源码</td>
-</tr>
-<tr>
-<td><code>lockFile</code> / <code>unlockFile</code></td>
-<td><code>file</code></td>
-<td>锁定/解锁文件</td>
+<td><code>function-package</code></td>
+<td><code>[a-zA-Z0-9_-]+</code>，一包一份 version 文件，落盘名 <code>&lt;function-package&gt;.jar</code>（不带版本号）</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_3">文件类型<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<h2 id="_6">坑<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>类型代码</th>
-<th>说明</th>
+<th>坑</th>
+<th>事实</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>vl.xml</code></td>
-<td>变量库</td>
+<td>换 jar</td>
+<td>重启 client 才进 classpath。刷新只落盘、拒载新包</td>
 </tr>
 <tr>
-<td><code>cl.xml</code></td>
-<td>常量库</td>
+<td>首次</td>
+<td><code>start.sh</code> / compose 默认预拉示例项目。没配 <code>RULEULER_PROJECTS</code> 则不预拉</td>
 </tr>
 <tr>
-<td><code>pl.xml</code></td>
-<td>参数库</td>
+<td>运行中第一次碰到新 deps</td>
+<td>同步下载（可能慢），然后拒新包，等重启</td>
 </tr>
 <tr>
-<td><code>al.xml</code></td>
-<td>动作库</td>
+<td>改签名 / 删方法</td>
+<td>重存并重发引用它的规则。版本对齐 ≠ API 兼容，只升 jar 会在 <code>classMatch</code> 才炸</td>
 </tr>
 <tr>
-<td><code>rs.xml</code></td>
-<td>规则集</td>
+<td>void 进条件</td>
+<td>本期 REA 拦不住，写了运行期行为未定义</td>
 </tr>
 <tr>
-<td><code>dt.xml</code></td>
-<td>决策表</td>
+<td>上传权限</td>
+<td>等于向该项目全部 client 推代码</td>
 </tr>
 <tr>
-<td><code>dts.xml</code></td>
-<td>脚本决策表</td>
+<td>存量手写动作库</td>
+<td>不校验、不炸，jar 仍要人拷 <code>lib/</code>。想走自动分发必须迁到模板</td>
 </tr>
 <tr>
-<td><code>dtree.xml</code></td>
-<td>决策树</td>
-</tr>
-<tr>
-<td><code>rl.xml</code></td>
-<td>决策流</td>
-</tr>
-<tr>
-<td><code>sc</code></td>
-<td>评分卡</td>
+<td>回滚</td>
+<td>表留历史版本。发布时 deps 指回旧 version，不必重传 jar</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_4">健康检查<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<p><code>GET /health</code></p>
-<p>返回 ip、port、status。</p>
+<h2 id="_7">模板上传<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p>模板 pom 用 <code>exec-maven-plugin</code> + <code>curl</code> 打 <code>POST /api/projects/{project}/function-jars</code>，带登录 token。不提供 maven 插件。</p>
 
 
 
