@@ -105,6 +105,7 @@ java -Dlogging.file.path="$LOG_PATH" \
      -Dspring.profiles.active="$ENV" \
      -Dserver.port="$CLIENT_PORT" \
      -Durule.resporityServerUrl="http://localhost:$SERVER_PORT" \
+     -Druleuler.projects="${RULEULER_PROJECTS:-airport_gate_allocation_db}" \
      -Dloader.path=dist/client/lib/ \
      -jar dist/client/app.jar >> "$LOG_PATH/client.log" 2>&1 &
 CLIENT_PID=$!

@@ -26,10 +26,16 @@ class FunctionDepsGateTest {
     @Test
     void reportOnlyOnChange() {
         FunctionDepsGate gate = new FunctionDepsGate("http://localhost:16009", 5000);
-        assertTrue(gate.noteAndShouldReport("p/pkg", "geo", "mismatch"));
-        assertFalse(gate.noteAndShouldReport("p/pkg", "geo", "mismatch"));
-        assertTrue(gate.noteAndShouldReport("p/pkg", "geo", "ok"));
-        assertFalse(gate.noteAndShouldReport("p/pkg", "geo", "ok"));
+        assertTrue(gate.needsReport("p/pkg", "geo", "mismatch"));
+        gate.rememberStatus("p/pkg", "geo", "mismatch");
+        assertFalse(gate.needsReport("p/pkg", "geo", "mismatch"));
+        assertTrue(gate.needsReport("p/pkg", "geo", "ok"));
+    }
+
+    @Test
+    void readyWhenNoServerUrl() {
+        FunctionDepsGate gate = new FunctionDepsGate("", 5000);
+        assertTrue(gate.ready("p/pkg"));
     }
 
     @Test

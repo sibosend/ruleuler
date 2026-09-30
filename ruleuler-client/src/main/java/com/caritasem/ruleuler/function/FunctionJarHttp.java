@@ -53,7 +53,11 @@ public final class FunctionJarHttp {
 
     public static boolean ensureOnDisk(String serverUrl, Path libDir, String project, JarDep dep) throws IOException {
         Path file = FunctionJarStore.file(libDir, dep.functionPackage());
+        if (Files.exists(file) && FunctionJarStore.checksumConfirmed(dep.functionPackage(), dep.checksum())) {
+            return false;
+        }
         if (Files.exists(file) && dep.checksum().equals(FunctionJarStore.checksum(file))) {
+            FunctionJarStore.confirmChecksum(dep.functionPackage(), dep.checksum());
             return false;
         }
         byte[] bytes = download(serverUrl, project, dep.functionPackage(), dep.version(), dep.checksum());
@@ -62,12 +66,13 @@ public final class FunctionJarHttp {
             throw new IOException("下载校验和不符: " + dep.functionPackage());
         }
         FunctionJarStore.writeReplace(libDir, dep.functionPackage(), bytes);
+        FunctionJarStore.confirmChecksum(dep.functionPackage(), dep.checksum());
         log.info("已落盘函数 jar: {} {}", dep.functionPackage(), dep.version());
         return true;
     }
 
-    public static void report(String serverUrl, String clientHost, String packageId,
-                              String functionPackage, String expected, String actual, String status) {
+    public static boolean report(String serverUrl, String clientHost, String packageId,
+                                 String functionPackage, String expected, String actual, String status) {
         try {
             String json = MAPPER.writeValueAsString(Map.of(
                     "clientHost", clientHost,
@@ -77,8 +82,10 @@ public final class FunctionJarHttp {
                     "actualVersion", actual == null ? "" : actual,
                     "status", status));
             post(serverUrl + "/api/function/status", json);
+            return true;
         } catch (Exception e) {
             log.warn("上报函数版本失败: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -32,6 +32,9 @@ public class FunctionDepsGate {
     }
 
     public boolean ready(String packageId) {
+        if (serverUrl == null || serverUrl.isBlank()) {
+            return true;
+        }
         try {
             List<FunctionJarHttp.JarDep> deps = cachedDeps(packageId);
             if (deps.isEmpty()) {
@@ -78,10 +81,12 @@ public class FunctionDepsGate {
         return id.substring(0, slash);
     }
 
-    boolean noteAndShouldReport(String packageId, String functionPackage, String status) {
-        String key = packageId + "|" + functionPackage;
-        String prev = lastStatus.put(key, status);
-        return !status.equals(prev);
+    boolean needsReport(String packageId, String functionPackage, String status) {
+        return !status.equals(lastStatus.get(packageId + "|" + functionPackage));
+    }
+
+    void rememberStatus(String packageId, String functionPackage, String status) {
+        lastStatus.put(packageId + "|" + functionPackage, status);
     }
 
     private List<FunctionJarHttp.JarDep> cachedDeps(String packageId) throws Exception {
@@ -97,10 +102,12 @@ public class FunctionDepsGate {
 
     private void reportIfChanged(String packageId, String functionPackage,
                                  String expected, String actual, String status) {
-        if (!noteAndShouldReport(packageId, functionPackage, status)) {
+        if (!needsReport(packageId, functionPackage, status)) {
             return;
         }
-        FunctionJarHttp.report(serverUrl, clientHost, packageId, functionPackage, expected, actual, status);
+        if (FunctionJarHttp.report(serverUrl, clientHost, packageId, functionPackage, expected, actual, status)) {
+            rememberStatus(packageId, functionPackage, status);
+        }
     }
 
     private static String resolveHost() {

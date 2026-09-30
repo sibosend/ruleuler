@@ -48,6 +48,7 @@ cp .env.example .env
 ```
 
 `.env` 里的默认值可以直接用于本地开发，生产环境需修改密码和 JWT secret。
+`RULEULER_PROJECTS` 控制 client 启动预拉哪些项目的函数 jar，默认示例项目。
 
 ### 2. 启动
 
@@ -137,6 +138,7 @@ mysql -u root -p ruleuler_data < deploy/example_airport_gate.sql
 ```
 
 自动完成：构建 console-js → 构建 admin → 打包 server → 打包 client → 启动两个进程。
+client 默认预拉示例项目函数 jar（`RULEULER_PROJECTS=airport_gate_allocation_db`，可覆盖）。
 
 支持自定义端口：
 ```bash

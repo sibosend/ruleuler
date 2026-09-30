@@ -26,7 +26,7 @@ REA 写法：`GEOFUNCTIONS.DISTANCEKM(...)`（bean / 方法全大写）。
 
 刷新绝不换 class。`loader.path` 和自动配置都是启动期语义。
 
-启动预拉必须配置项目列表，否则不预拉（避免把别的项目 jar 拉下来）。未配时靠首次执行 / 发布推送按 `packageId` 落盘，然后重启。
+启动预拉必须配置项目列表，否则不预拉（避免把别的项目 jar 拉下来）。`./start.sh` 和 docker compose 默认 `RULEULER_PROJECTS=airport_gate_allocation_db`，可覆盖。未配时靠首次执行 / 发布推送按 `packageId` 落盘，然后重启。
 
 ## 权限
 
@@ -51,7 +51,7 @@ REA 写法：`GEOFUNCTIONS.DISTANCEKM(...)`（bean / 方法全大写）。
 | 坑 | 事实 |
 |----|------|
 | 换 jar | 重启 client 才进 classpath。刷新只落盘、拒载新包 |
-| 首次 | 配了 `ruleuler.projects` 时启动预拉；classpath 已展开则进程内重拉一次。没配项目列表则不预拉 |
+| 首次 | `start.sh` / compose 默认预拉示例项目。没配 `RULEULER_PROJECTS` 则不预拉 |
 | 运行中第一次碰到新 deps | 同步下载（可能慢），然后拒新包，等重启 |
 | 改签名 / 删方法 | 重存并重发引用它的规则。版本对齐 ≠ API 兼容，只升 jar 会在 `classMatch` 才炸 |
 | void 进条件 | 本期 REA 拦不住，写了运行期行为未定义 |

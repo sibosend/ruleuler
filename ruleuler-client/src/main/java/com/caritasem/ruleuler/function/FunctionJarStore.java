@@ -5,8 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class FunctionJarStore {
+
+    private static final ConcurrentHashMap<String, String> confirmedChecksum = new ConcurrentHashMap<>();
 
     private FunctionJarStore() {}
 
@@ -14,7 +17,16 @@ public final class FunctionJarStore {
         return dir.resolve(functionPackage + ".jar");
     }
 
+    public static boolean checksumConfirmed(String functionPackage, String checksum) {
+        return checksum != null && checksum.equals(confirmedChecksum.get(functionPackage));
+    }
+
+    public static void confirmChecksum(String functionPackage, String checksum) {
+        confirmedChecksum.put(functionPackage, checksum);
+    }
+
     public static void writeReplace(Path dir, String functionPackage, byte[] bytes) throws IOException {
+        confirmedChecksum.remove(functionPackage);
         Files.createDirectories(dir);
         Path target = file(dir, functionPackage);
         Files.deleteIfExists(target);

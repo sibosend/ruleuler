@@ -39,9 +39,8 @@ public class RuleConfig {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "urule.resporityServerUrl")
     public FunctionDepsGate functionDepsGate(
-            @Value("${urule.resporityServerUrl}") String serverUrl,
+            @Value("${urule.resporityServerUrl:}") String serverUrl,
             @Value("${ruleuler.function-jar.deps-cache-ms}") long cacheMs) {
         return new FunctionDepsGate(serverUrl, cacheMs);
     }

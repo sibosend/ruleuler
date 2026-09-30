@@ -87,6 +87,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_URL: http://server:16009
+      RULEULER_PROJECTS: ${RULEULER_PROJECTS:-airport_gate_allocation_db}
       CLICKHOUSE_URL: ${CLICKHOUSE_URL:-jdbc:ch://clickhouse:8123/default}
       JAVA_OPTS: ${CLIENT_JAVA_OPTS:--Xms256m -Xmx1g}
       TZ: ${TZ:-Asia/Shanghai}
