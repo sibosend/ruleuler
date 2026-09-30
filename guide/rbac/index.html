@@ -1993,7 +1993,7 @@
 </ol>
 <h3 id="3-requirepermission">3. 注解鉴权（@RequirePermission）<a class="headerlink" href="#3-requirepermission" title="Permanent link">&para;</a></h3>
 <p>用于非 <code>/api/rbac/</code> 路径的接口，通过 AOP 切面校验：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@RequirePermission</span><span class="p">(</span><span class="s">&quot;pack:publish:submit&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@RequirePermission</span><span class="p">(</span><span class="s">"pack:publish:submit"</span><span class="p">)</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">public</span><span class="w"> </span><span class="n">ApiResult</span><span class="w"> </span><span class="nf">submit</span><span class="p">(...)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <p>校验逻辑：
@@ -2002,8 +2002,8 @@
 3. 匹配具体权限码</p>
 <h3 id="4">4. 前端菜单控制<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
 <p>前端通过 <code>usePermission</code> hook 判断菜单可见性：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canMonitoring</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">&#39;menu:monitoring&#39;</span><span class="p">);</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canApproval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">&#39;menu:approvals&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canMonitoring</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">'menu:monitoring'</span><span class="p">);</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">canApproval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">usePermission</span><span class="p">(</span><span class="s1">'menu:approvals'</span><span class="p">);</span>
 </code></pre></div>
 <p>用户登录后，Token 解析出角色列表，前端据此控制菜单渲染和操作按钮显示。</p>
 <hr />

@@ -1962,8 +1962,8 @@
 <p>REA 对用户只暴露一套调用语法。编译期落到引擎已有的 Method / CommonFunction，不改运行时。</p>
 <p>值函数进条件左/右、赋值右边。动作函数只进那么/否则。<code>LISTSORT</code> 两种都能写。</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># 扁平（推荐）
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>TRIM(FlightInfo.name) == &quot;&quot;
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>LISTEMPTY(FlightInfo.tags) AND MAPHAS(FlightInfo.extra, &quot;k&quot;)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>TRIM(FlightInfo.name) == ""
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>LISTEMPTY(FlightInfo.tags) AND MAPHAS(FlightInfo.extra, "k")
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ABS(FlightInfo.score) &gt;= 10
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>NOW()
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
@@ -1982,14 +1982,14 @@
 <a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>can_score = ABS(MIN(FlightInfo.score, 100))
 <a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
 <a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a># 那么 / 否则（动作函数，无返回值）
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>LISTADD(FlightInfo.tags, &quot;INTL&quot;); risk_level = &quot;high&quot;
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>MAPPUT(FlightInfo.extra, &quot;level&quot;, &quot;VIP&quot;)
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>LISTADD(FlightInfo.tags, "INTL"); risk_level = "high"
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>MAPPUT(FlightInfo.extra, "level", "VIP")
 </code></pre></div>
 <p>这些会报错：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>LISTADD(FlightInfo.tags, &quot;VIP&quot;) == TRUE   # 动作函数不能进条件
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>can_score = LISTADD(FlightInfo.tags, &quot;VIP&quot;)  # 动作函数没有返回值
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>LISTADD(FlightInfo.tags, "VIP") == TRUE   # 动作函数不能进条件
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>can_score = LISTADD(FlightInfo.tags, "VIP")  # 动作函数没有返回值
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>TRIM(FlightInfo.name)                    # 值函数不能当一句动作，必须赋值
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>listAdd(xs, &quot;VIP&quot;)                       # 只认全大写
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>listAdd(xs, "VIP")                       # 只认全大写
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>SUM(Order.items.amount)                  # 第二参是属性名，不要写成点号路径
 </code></pre></div>
 <p>命名空间前缀 <code>STRING</code> <code>MATH</code> <code>DATE</code> <code>LIST</code> <code>MAP</code> 硬保留，大小写不敏感拦类别名/参数名。<code>Date</code> / <code>date</code> / <code>DATE</code> 都不能当类别。不拦中文：<code>日期.arrival</code> 合法。<code>DateInfo</code> 合法。</p>
@@ -2029,9 +2029,9 @@
 <h2 id="_7">条件表达式示例<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>FlightInfo.arrival_time &gt; 5
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>FlightInfo.arrival_time &gt; 5 AND FlightInfo.is_international
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>FlightInfo.airline IN (&quot;CA&quot;, &quot;MU&quot;, &quot;CZ&quot;)
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>FlightInfo.arrival_time &gt; 5 AND (FlightInfo.flight_type == &quot;国内&quot; OR FlightInfo.flight_type == &quot;国际&quot;)
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>ABS(FlightInfo.score) &gt;= 10 AND LISTCONTAINS(FlightInfo.tags, &quot;VIP&quot;)
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>FlightInfo.airline IN ("CA", "MU", "CZ")
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>FlightInfo.arrival_time &gt; 5 AND (FlightInfo.flight_type == "国内" OR FlightInfo.flight_type == "国际")
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>ABS(FlightInfo.score) &gt;= 10 AND LISTCONTAINS(FlightInfo.tags, "VIP")
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>ISNULL(FlightInfo.gate) OR FlightInfo.score + 10 &gt; 80
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>threshold &lt; FlightInfo.score + FlightInfo.bonus
 </code></pre></div>
@@ -2041,11 +2041,11 @@
 </div>
 <h2 id="_8">赋值表达式示例<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>can_score = 5
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>can_score = 5; risk_level = &quot;high&quot;
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>can_score = 5; risk_level = "high"
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>can_score = ABS(FlightInfo.score)
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>can_score = FlightInfo.amount * 1.1
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>can_score = 1.1 * (FlightInfo.score + 10)
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>LISTADD(FlightInfo.tags, &quot;INTL&quot;); risk_level = &quot;high&quot;
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>LISTADD(FlightInfo.tags, "INTL"); risk_level = "high"
 </code></pre></div>
 <h2 id="_9">自动补全<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>

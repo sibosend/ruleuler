@@ -1634,11 +1634,11 @@
 <p>最核心的库文件。定义输入/输出变量，按类别分组。</p>
 <p>每个变量类别对应 API 请求体中的一个顶层 key：</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;FlightInfo&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">          </span><span class="err">←</span><span class="w"> </span><span class="err">变量类别</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;aircraft_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A380&quot;</span><span class="p">,</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">变量</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">&quot;arrival_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"FlightInfo"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">          </span><span class="err">←</span><span class="w"> </span><span class="err">变量类别</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"aircraft_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"A380"</span><span class="p">,</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">变量</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">"arrival_time"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;GateResult&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">         </span><span class="err">←</span><span class="w"> </span><span class="err">输出类别，规则执行后填充</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">"GateResult"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">         </span><span class="err">←</span><span class="w"> </span><span class="err">输出类别，规则执行后填充</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
 </code></pre></div>
 <p>详见 <a href="../general-entity/">变量定义</a>。</p>
@@ -1738,8 +1738,8 @@
 <li>调用：</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/gate_allocation_flow<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;FlightInfo&quot;: {&quot;aircraft_type&quot;: &quot;A380&quot;, &quot;arrival_time&quot;: 8, &quot;is_international&quot;: true, &quot;passenger_count&quot;: 260}, &quot;GateResult&quot;: {}}&#39;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"FlightInfo": {"aircraft_type": "A380", "arrival_time": 8, "is_international": true, "passenger_count": 260}, "GateResult": {}}'</span>
 </code></pre></div>
 <h2 id="rete">Rete 算法<a class="headerlink" href="#rete" title="Permanent link">&para;</a></h2>
 <p>RulEuler 使用 Rete 算法进行规则匹配。Rete 构建规则网络避免重复计算条件，大量规则场景下性能显著优于逐条匹配。用户无需关心内部实现。</p>
