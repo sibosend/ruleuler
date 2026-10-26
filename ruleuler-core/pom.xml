@@ -5,6 +5,7 @@
   <version>2.1.6</version>
   <properties>
 	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<antlr.version>4.5.3</antlr.version>
   </properties>
 
 	<parent>
@@ -17,7 +18,7 @@
 	<dependency>
 	    <groupId>org.antlr</groupId>
 	    <artifactId>antlr4-runtime</artifactId>
-	    <version>4.5</version>
+	    <version>${antlr.version}</version>
 	</dependency>
 	<dependency>
 		<groupId>org.slf4j</groupId>
@@ -99,5 +100,34 @@
 	</dependency>
 
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>${antlr.version}</version>
+        <configuration>
+          <sourceDirectory>${project.basedir}/dsl</sourceDirectory>
+          <libDirectory>${project.basedir}/dsl</libDirectory>
+          <listener>false</listener>
+          <visitor>true</visitor>
+          <arguments>
+            <argument>-package</argument>
+            <argument>com.bstek.urule.dsl</argument>
+          </arguments>
+        </configuration>
+        <executions>
+          <execution>
+            <id>generate-rule-parser</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>antlr4</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
