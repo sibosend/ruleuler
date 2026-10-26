@@ -63,3 +63,4 @@ site/
 memo.md
 *.pyc
 .codebuddy
+pushgit.sh
