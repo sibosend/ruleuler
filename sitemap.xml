@@ -1,103 +1,339 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-         <loc>https://sibosend.github.io/ruleuler/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/contributing/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/contributing/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/contributing/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/contributing/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/api/client-api/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/api/client-api/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/api/client-api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/api/client-api/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/api/server-api/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/api/server-api/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/api/server-api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/api/server-api/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/architecture/overview/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/architecture/overview/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/architecture/overview/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/architecture/overview/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/deployment/docker/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/deployment/docker/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/deployment/docker/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/deployment/docker/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/deployment/standalone/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/deployment/standalone/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/deployment/standalone/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/deployment/standalone/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/en/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/getting-started/configuration/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/configuration/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/getting-started/configuration/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/getting-started/local-dev/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/local-dev/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/local-dev/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/getting-started/local-dev/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/getting-started/quickstart/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/quickstart/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/getting-started/quickstart/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/audit-log/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/audit-log/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/audit-log/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/audit-log/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/autotest/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/autotest/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/autotest/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/autotest/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/concepts/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/concepts/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/concepts/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/concepts/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/dependency-analysis/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/dependency-analysis/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/dependency-analysis/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/dependency-analysis/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/general-entity/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/general-entity/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/general-entity/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/general-entity/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/mcp-server/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/mcp-server/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/mcp-server/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/mcp-server/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/monitoring/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/monitoring/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/monitoring/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/rbac/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rbac/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rbac/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/rbac/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/rea-expression/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rea-expression/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rea-expression/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/rea-expression/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/rea-function-extension/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rea-function-extension/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rea-function-extension/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/rea-function-extension/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/release-management/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/release-management/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/release-management/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/release-management/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/rule-types/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rule-types/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rule-types/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/rule-types/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/storage/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/storage/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/storage/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/storage/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/guide/traffic-replay/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/traffic-replay/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/traffic-replay/"/>
     </url>
     <url>
-         <loc>https://sibosend.github.io/ruleuler/guide/traffic-replay/</loc>
-         <lastmod>2026-09-30</lastmod>
+        <loc>https://sibosend.github.io/ruleuler/en/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/contributing/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/contributing/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/contributing/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/api/client-api/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/api/client-api/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/api/client-api/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/api/server-api/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/api/server-api/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/api/server-api/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/architecture/overview/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/architecture/overview/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/architecture/overview/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/deployment/docker/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/deployment/docker/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/deployment/docker/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/deployment/standalone/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/deployment/standalone/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/deployment/standalone/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/getting-started/configuration/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/configuration/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/getting-started/local-dev/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/local-dev/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/local-dev/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/getting-started/quickstart/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/getting-started/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/getting-started/quickstart/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/audit-log/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/audit-log/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/audit-log/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/autotest/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/autotest/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/autotest/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/concepts/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/concepts/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/concepts/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/dependency-analysis/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/dependency-analysis/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/dependency-analysis/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/general-entity/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/general-entity/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/general-entity/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/mcp-server/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/mcp-server/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/mcp-server/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/monitoring/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/monitoring/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/rbac/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rbac/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rbac/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/rea-expression/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rea-expression/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rea-expression/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/rea-function-extension/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rea-function-extension/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rea-function-extension/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/release-management/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/release-management/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/release-management/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/rule-types/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/rule-types/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/rule-types/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/storage/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/storage/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/storage/"/>
+    </url>
+    <url>
+        <loc>https://sibosend.github.io/ruleuler/en/guide/traffic-replay/</loc>
+        <lastmod>2026-10-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://sibosend.github.io/ruleuler/en/guide/traffic-replay/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://sibosend.github.io/ruleuler/guide/traffic-replay/"/>
     </url>
 </urlset>
