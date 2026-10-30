@@ -40,14 +40,16 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 ## Project Structure
 
 ```
-├── ruleuler-core          # Core engine (Rete algorithm), do not modify
-├── ruleuler-console       # Legacy admin servlet (editor rendering)
-├── ruleuler-console-js    # Legacy editor frontend (webpack + React)
-├── ruleuler-admin         # Modern admin frontend (Vite + React + Ant Design)
-├── ruleuler-server        # Server (Spring Boot, JWT auth, REST API)
-├── ruleuler-client        # Client (Spring Boot, rule execution API)
-├── deploy/             # SQL init scripts
-└── docs/               # Documentation
+├── ruleuler-core               # Core engine (Rete algorithm), do not modify
+├── ruleuler-console            # Legacy admin servlet (editor rendering)
+├── ruleuler-console-js         # Legacy editor frontend (webpack + React)
+├── ruleuler-admin              # Modern admin frontend (Vite + React + Ant Design)
+├── ruleuler-server             # Server (Spring Boot, JWT auth, REST API)
+├── ruleuler-client             # Client (Spring Boot, rule execution API)
+├── ruleuler-function-sdk       # Custom function annotations & compile-time APT (client-independent)
+├── templates/ruleuler-function # Project template for custom functions
+├── deploy/                     # SQL init scripts
+└── docs/                       # Documentation
 ```
 
 ## Key Improvements over URule
@@ -59,6 +61,7 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
 | Admin UI | jQuery + Bootstrap 3 | React 18 + Ant Design 5 |
 | Rule editing | Wizard only | Added REA text expression editor |
 | Variables | Requires Java POJO | GeneralEntity dynamic type |
+| Custom Functions | Manual JAR copy to `lib/` | Template-based SDK, JAR upload & distribution to standalone clients |
 | Access control | None | RBAC users/roles/permissions |
 | Auto testing | None | Path coverage + test case batch generation & execution |
 | Variable Monitoring| None | Execution trace paths, PSI/Enum drift, time-series anomaly alerts |
@@ -104,9 +107,10 @@ See [MCP Server Guide](docs/guide/mcp-server.md) for details.
 ## Documentation
 
 - [Full Documentation](https://sibosend.github.io/ruleuler/)
-- [Client API](docs/api.md)
-- [Server API](docs/api.internal.md)
-- [REA Expression Syntax](docs/rea-expression.md)
+- [Client API](docs/api/client-api.md)
+- [Server API](docs/api/server-api.md)
+- [REA Expression Syntax](docs/guide/rea-expression.md)
+- [Custom Functions Extension](docs/guide/rea-function-extension.md)
 
 ## Testing
 

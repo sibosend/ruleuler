@@ -11,6 +11,7 @@
 ## 系统功能
 
 - **规则编辑**：决策表、决策树、决策流、规则集、评分卡、REA 表达式等可视化编辑
+- **自定义方法**：基于模板开发 Java 方法并打包上传 jar，由独立 client 加载执行，支持在规则与 REA 表达式中调用
 - **知识包管理**：项目级资源组织，支持子文件夹，知识包打包与版本管理
 - **依赖分析**：可视化系统依赖图谱，提供所有决策资源的上下游关联血缘查找与受影响面推算
 - **自动测试**：用例包定义、批量执行、测试报告
@@ -29,6 +30,8 @@
 ├── ruleuler-admin             # 新管理后台前端（Vite + React + Ant Design）
 ├── ruleuler-server            # 服务端（Spring Boot，JWT 认证，REST API）
 ├── ruleuler-client            # 客户端（Spring Boot，规则执行，对外 API）
+├── ruleuler-function-sdk      # 自定义函数注解与编译期 APT（不依赖 client）
+├── templates/ruleuler-function # 自定义函数开发模板工程
 ├── deploy/                 # SQL 初始化脚本
 ├── docs/                   # API 文档
 ├── dist/                   # 构建产物
@@ -230,9 +233,10 @@ Claude Desktop / Claude Code / Cursor 等客户端配置示例：
 
 ## 关键文档
 
-- API 列表：docs/api.md
-- 内部 API：docs/api.internal.md
-- REA 表达式语法：docs/rea-expression.md
+- 客户端 API：[docs/api/client-api.md](docs/api/client-api.md)
+- 服务端 API：[docs/api/server-api.md](docs/api/server-api.md)
+- REA 表达式语法：[docs/guide/rea-expression.md](docs/guide/rea-expression.md)
+- 自定义函数扩展：[docs/guide/rea-function-extension.md](docs/guide/rea-function-extension.md)
 
 ## 测试
 
