@@ -77,14 +77,47 @@ markdown_extensions:
 extra_css:
   - stylesheets/extra.css
 
-extra:
-  alternate:
-    - name: 中文
-      link: /ruleuler/
-      lang: zh
-    - name: English
-      link: /ruleuler/en/
-      lang: en
-
 plugins:
   - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: zh
+          default: true
+          name: 中文
+          build: true
+        - locale: en
+          name: English
+          build: true
+          site_name: RulEuler Rule Engine
+          site_description: An open-source rule engine built on the Rete algorithm
+          nav_translations:
+            首页: Home
+            快速开始: Getting Started
+            Docker 启动: Docker Quick Start
+            本地开发: Local Development
+            配置说明: Configuration
+            使用指南: User Guide
+            核心概念: Core Concepts
+            变量定义: Variable Definition
+            规则类型: Rule Types
+            REA 表达式: REA Expressions
+            自定义函数: Custom Functions
+            自动测试: Auto Testing
+            存储模式: Storage Modes
+            变量监控: Variable Monitoring
+            上线管理: Release Management
+            流量回放: Traffic Replay
+            依赖分析: Dependency Analysis
+            权限管理: Access Control (RBAC)
+            审计日志: Audit Log
+            MCP Server 接入: MCP Server
+            API 参考: API Reference
+            客户端 API: Client API
+            管理端 API: Server API
+            架构设计: Architecture
+            系统概览: System Overview
+            部署: Deployment
+            Docker 部署: Docker Deployment
+            独立部署: Standalone Deployment
+            贡献指南: Contributing

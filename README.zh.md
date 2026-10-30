@@ -1,6 +1,6 @@
 # RulEuler 规则引擎
 
-中文 | [English](README.en.md)
+中文 | [English](README.md)
 
 基于 rete 算法的规则引擎，支持 db 和 jcr 两种存储方式，默认 db 存储。
 

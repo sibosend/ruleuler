@@ -1,6 +1,6 @@
 # RulEuler Rule Engine
 
-[中文](readme.md) | English
+[中文](README.zh.md) | English
 
 An open-source rule engine built on the Rete algorithm. Separate business rules from code, manage them through visual editors or text expressions, with hot-reload support.
 

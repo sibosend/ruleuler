@@ -53,9 +53,9 @@ graph LR
 - Rule execution (ruleuler-client) — loads knowledge packages, executes rule flows, exposes REST API
 - Two services deployed independently, sharing rule data via MySQL
 
-![REA Expression Editor](../assets/images/rea.png)
+![REA Expression Editor](assets/images/rea.png)
 
-![Auto Testing](../assets/images/test.png)
+![Auto Testing](assets/images/test.png)
 
 ## Quick Start
 
@@ -83,3 +83,10 @@ curl -X POST http://localhost:16001/process/airport_gate_allocation_db/gate_pkg/
   "GateResult": {}
 }'
 ```
+
+## Next Steps
+
+- [Docker Quick Start](getting-started/quickstart.md) — Zero local dependencies, up and running in 5 minutes
+- [Core Concepts](guide/concepts.md) — Understand rule flows, knowledge packages, and variable categories
+- [Custom Functions](guide/rea-function-extension.md) — Write Java methods, package into a JAR, upload, and execute on standalone clients
+- [Client API](api/client-api.md) — Integrate the rule engine into your system
